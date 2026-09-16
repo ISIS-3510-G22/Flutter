@@ -37,7 +37,7 @@ class AuthGate extends StatelessWidget {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         final user = snapshot.data;
-        return user == null ? const LoginView() : const HomeShell();
+        return user == null ? const LoginView() : HomeShell(user: user);
       },
     );
   }
