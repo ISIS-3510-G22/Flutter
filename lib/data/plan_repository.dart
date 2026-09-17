@@ -9,7 +9,7 @@ class PlanRepository {
       name: 'Saturday in Brooklyn',
       date: DateTime(2026, 10, 28),
       meetupTime: const TimeOfDay(hour: 14, minute: 0),
-      creatorId: 'u1',
+      creatorId: 'YNGXzrllyWQ5RgFJkp6EldugeuZ2',
       activityIds: ['a1'],
       invitations: const [
         Invitation(userId: 'u1', rsvp: RsvpStatus.going),
@@ -25,16 +25,14 @@ class PlanRepository {
       meetupTime: const TimeOfDay(hour: 9, minute: 0),
       creatorId: 'u1',
       activityIds: ['a2'],
-      invitations: const [
-        Invitation(userId: 'u1', rsvp: RsvpStatus.going),
-      ],
+      invitations: const [Invitation(userId: 'u1', rsvp: RsvpStatus.going)],
     ),
     Plan(
       id: '3',
       name: 'Rooftop Brunch',
       date: DateTime(2026, 6, 28),
       meetupTime: const TimeOfDay(hour: 10, minute: 0),
-      creatorId: 'u5',
+      creatorId: 'YNGXzrllyWQ5RgFJkp6EldugeuZ2',
       activityIds: ['a3'],
       invitations: const [
         Invitation(userId: 'u1', rsvp: RsvpStatus.going),
@@ -46,7 +44,7 @@ class PlanRepository {
       name: 'Wine tasting in Bogota',
       date: DateTime(2026, 10, 28),
       meetupTime: const TimeOfDay(hour: 22, minute: 0),
-      creatorId: 'u6',
+      creatorId: 'YNGXzrllyWQ5RgFJkp6EldugeuZ2',
       activityIds: ['a4'],
       invitations: const [
         Invitation(userId: 'u1', rsvp: RsvpStatus.invited),
@@ -59,9 +57,11 @@ class PlanRepository {
 
   Future<List<Plan>> getPlansForUser(String userId) async {
     return _mockPlans
-        .where((p) =>
-            p.creatorId == userId ||
-            p.invitations.any((i) => i.userId == userId))
+        .where(
+          (p) =>
+              p.creatorId == userId ||
+              p.invitations.any((i) => i.userId == userId),
+        )
         .toList();
   }
 }

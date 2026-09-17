@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/views/activities/my_activities_view.dart';
 import 'package:plansync/views/explore/explore_view.dart';
+import 'package:plansync/views/plan_view.dart';
 import 'package:plansync/views/profile/my_profile_view.dart';
 
 class HomeShell extends StatefulWidget {
@@ -17,7 +18,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final tabs = [
       const ExploreView(),
-      const _PlaceholderTab(title: 'My Plans'),
+      PlanView(user: context.read<User>()),
       const MyActivitiesView(),
       const _PlaceholderTab(title: 'Groups'),
       const MyProfileView(),
