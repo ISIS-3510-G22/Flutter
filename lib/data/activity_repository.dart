@@ -49,4 +49,27 @@ class ActivityRepository {
       'likedBy': <String>[],
     });
   }
+
+  Future<void> delete(String activityId) {
+    return _activities.doc(activityId).delete();
+  }
+
+  Future<void> update(Activity activity) {
+    return _activities.doc(activity.id).update({
+      'name': activity.name,
+      'address': activity.address,
+      'expectedPrice': activity.expectedPrice,
+      'notes': activity.notes,
+      'categories': activity.categories.map((c) => c.name).toList(),
+      'visibility': activity.visibility.name,
+    });
+  }
+
+  Future<void> toggleLiked(String activityId, String uid, bool liked) {
+    return _activities.doc(activityId).update({
+      'likedBy': liked
+          ? FieldValue.arrayUnion([uid])
+          : FieldValue.arrayRemove([uid]),
+    });
+  }
 }
