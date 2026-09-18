@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
+import 'package:plansync/views/activities/my_activities_view.dart';
+import 'package:provider/provider.dart';
 
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key, required this.user});
-
-  final User user;
+  const HomeShell({super.key});
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -19,9 +19,9 @@ class _HomeShellState extends State<HomeShell> {
     final tabs = [
       const _PlaceholderTab(title: 'Explore'),
       const _PlaceholderTab(title: 'My Plans'),
-      const _PlaceholderTab(title: 'Activities'),
+      const MyActivitiesView(),
       const _PlaceholderTab(title: 'Groups'),
-      _ProfileTab(user: widget.user),
+      _ProfileTab(user: context.read<User>()),
     ];
 
     return Scaffold(
@@ -31,15 +31,30 @@ class _HomeShellState extends State<HomeShell> {
         onDestinationSelected: (i) => setState(() => _selectedIndex = i),
         destinations: const [
           NavigationDestination(
-              icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Explore'),
+            icon: Icon(Icons.explore_outlined),
+            selectedIcon: Icon(Icons.explore),
+            label: 'Explore',
+          ),
           NavigationDestination(
-              icon: Icon(Icons.calendar_today_outlined), selectedIcon: Icon(Icons.calendar_today), label: 'My Plans'),
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_today),
+            label: 'My Plans',
+          ),
           NavigationDestination(
-              icon: Icon(Icons.local_activity_outlined), selectedIcon: Icon(Icons.local_activity), label: 'Activities'),
+            icon: Icon(Icons.local_activity_outlined),
+            selectedIcon: Icon(Icons.local_activity),
+            label: 'Activities',
+          ),
           NavigationDestination(
-              icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'Groups'),
+            icon: Icon(Icons.groups_outlined),
+            selectedIcon: Icon(Icons.groups),
+            label: 'Groups',
+          ),
           NavigationDestination(
-              icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
@@ -96,12 +111,21 @@ class _ProfileTab extends StatelessWidget {
                     color: colors.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(Icons.person_outline, size: 48, color: colors.primary),
+                  child: Icon(
+                    Icons.person_outline,
+                    size: 48,
+                    color: colors.primary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text('${user.name} ${user.lastName}', style: text.titleLarge),
                 const SizedBox(height: 4),
-                Text(user.email, style: text.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
+                Text(
+                  user.email,
+                  style: text.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
