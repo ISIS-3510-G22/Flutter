@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:plansync/viewmodels/login_viewmodel.dart';
+import 'package:plansync/views/auth/reset_password_view.dart';
 import 'package:plansync/views/sign_up_view.dart';
 
 class LoginView extends StatelessWidget {
@@ -77,7 +78,9 @@ class _LoginForm extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const ResetPasswordView()),
+                        ),
                         child: Text('FORGOT PASSWORD?',
                             style: text.labelLarge?.copyWith(color: colors.primary)),
                       ),
