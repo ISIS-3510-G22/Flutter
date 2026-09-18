@@ -50,16 +50,16 @@ class _ActivityDetailBody extends StatelessWidget {
                   if (updated != null) {
                     vm.applyUpdate(updated);
                   }
-                } else if (value == 'delete') {
+                } /* else if (value == 'delete') {
                   final success = await vm.delete();
                   if (success && context.mounted) {
                     Navigator.pop(context);
                   }
-                }
+                } Volver a poner cuando planes esten funcionando */
               },
               itemBuilder: (context) => const [
                 PopupMenuItem(value: 'edit', child: Text('Edit')),
-                PopupMenuItem(value: 'delete', child: Text('Delete')),
+                //PopupMenuItem(value: 'delete', child: Text('Delete')), Volver a poner cuando planes esten funcionando
               ],
             ),
         ],
