@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:plansync/viewmodels/login_viewmodel.dart';
+import 'package:plansync/views/sign_up_view.dart';
 
 class LoginView extends StatelessWidget {
   const LoginView({super.key});
@@ -109,7 +110,9 @@ class _LoginForm extends StatelessWidget {
                       children: [
                         const Text("Don't have an account? "),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const SignUpView()),
+                          ),
                           style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
                           child: Text('Sign Up',
                               style: text.labelLarge?.copyWith(color: colors.primary)),
