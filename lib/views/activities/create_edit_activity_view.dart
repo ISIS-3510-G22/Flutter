@@ -128,9 +128,9 @@ class _CreateEditActivityForm extends StatelessWidget {
                     onPressed: vm.isLoading
                         ? null
                         : () async {
-                            final success = await vm.save();
-                            if (success && context.mounted) {
-                              Navigator.pop(context);
+                            final saved = await vm.save();
+                            if (saved != null && context.mounted) {
+                              Navigator.pop(context, saved);
                             }
                           },
                     child: vm.isLoading

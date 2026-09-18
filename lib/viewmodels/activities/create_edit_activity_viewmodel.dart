@@ -44,22 +44,22 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> save() async {
+  Future<Activity?> save() async {
     final price = double.tryParse(expectedPriceController.text.trim());
     if (nameController.text.trim().isEmpty) {
       errorMessage = 'Place name is required.';
       notifyListeners();
-      return false;
+      return null;
     }
     if (addressController.text.trim().isEmpty) {
       errorMessage = 'Address is required';
       notifyListeners();
-      return false;
+      return null;
     }
     if (price == null) {
       errorMessage = 'Enter a valid price.';
       notifyListeners();
-      return false;
+      return null;
     }
 
     isLoading = true;
@@ -85,10 +85,10 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
         await _repository.update(activity);
       }
 
-      return true;
+      return activity;
     } catch (_) {
       errorMessage = 'Something went wrong. Try again.';
-      return false;
+      return null;
     } finally {
       isLoading = false;
       notifyListeners();

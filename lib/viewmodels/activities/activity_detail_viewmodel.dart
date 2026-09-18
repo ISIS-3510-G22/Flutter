@@ -14,6 +14,11 @@ class ActivityDetailViewmodel extends ChangeNotifier {
   bool get isOwner => activity.ownerId == _uid;
   bool get isLiked => activity.likedBy.contains(_uid);
 
+  void applyUpdate(Activity updated) {
+    activity = updated;
+    notifyListeners();
+  }
+
   Future<void> toggleLike() async {
     final liked = !isLiked;
     await _repository.toggleLiked(activity.id, _uid, liked);

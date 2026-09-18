@@ -40,13 +40,16 @@ class _ActivityDetailBody extends StatelessWidget {
               icon: const Icon(Icons.edit_outlined),
               onSelected: (value) async {
                 if (value == 'edit') {
-                  Navigator.push(
+                  final updated = await Navigator.push<Activity>(
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
                           CreateEditActivityView(activity: vm.activity),
                     ),
                   );
+                  if (updated != null) {
+                    vm.applyUpdate(updated);
+                  }
                 } else if (value == 'delete') {
                   final success = await vm.delete();
                   if (success && context.mounted) {
