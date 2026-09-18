@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
-import 'package:plansync/viewmodels/my_activities_viewmodel.dart';
+import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
-import 'package:plansync/views/activities/create_activity_view.dart';
+import 'package:plansync/views/activities/create_edit_activity_view.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:provider/provider.dart';
 
@@ -39,7 +39,9 @@ class _MyActivitiesBody extends StatelessWidget {
                 icon: const Icon(Icons.add),
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const CreateActivityView()),
+                  MaterialPageRoute(
+                    builder: (_) => const CreateEditActivityView(),
+                  ),
                 ),
               ),
             ],
