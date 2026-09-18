@@ -17,4 +17,14 @@ class UserRepository {
       phone: data['phone'] as String,
     );
   }
+
+  Future<void> createUser(User user) {
+    return _users.doc(user.id).set({
+      'name': user.name,
+      'lastName': user.lastName,
+      'username': user.username,
+      'email': user.email,
+      'phone': user.phone,
+    });
+  }
 }
