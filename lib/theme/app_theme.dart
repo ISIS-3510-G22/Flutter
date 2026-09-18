@@ -25,5 +25,21 @@ class AppTheme {
       headlineMedium: TextStyle(fontWeight: FontWeight.bold, color: black),
       labelLarge: TextStyle(fontWeight: FontWeight.bold),
     ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: white,
+      indicatorColor: coral.withValues(alpha: 0.15),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return IconThemeData(color: selected ? coral : greyDark);
+      }),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: selected ? coral : greyDark,
+        );
+      }),
+    ),
   );
 }

@@ -41,8 +41,8 @@ class _HomeShellState extends State<HomeShell> {
             label: 'My Plans',
           ),
           NavigationDestination(
-            icon: Icon(Icons.local_activity_outlined),
-            selectedIcon: Icon(Icons.local_activity),
+            icon: Icon(Icons.checklist_outlined),
+            selectedIcon: Icon(Icons.checklist),
             label: 'Activities',
           ),
           NavigationDestination(
