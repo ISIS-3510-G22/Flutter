@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
 import 'package:plansync/views/activities/my_activities_view.dart';
+import 'package:plansync/views/explore/explore_view.dart';
 import 'package:provider/provider.dart';
 
 class HomeShell extends StatefulWidget {
@@ -17,7 +18,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final tabs = [
-      const _PlaceholderTab(title: 'Explore'),
+      const ExploreView(),
       const _PlaceholderTab(title: 'My Plans'),
       const MyActivitiesView(),
       const _PlaceholderTab(title: 'Groups'),
