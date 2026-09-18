@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
+import 'package:plansync/views/my_crew_view.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.user});
@@ -20,7 +21,7 @@ class _HomeShellState extends State<HomeShell> {
       const _PlaceholderTab(title: 'Explore'),
       const _PlaceholderTab(title: 'My Plans'),
       const _PlaceholderTab(title: 'Activities'),
-      const _PlaceholderTab(title: 'Groups'),
+      const MyCrewView(),
       _ProfileTab(user: widget.user),
     ];
 
@@ -37,7 +38,7 @@ class _HomeShellState extends State<HomeShell> {
           NavigationDestination(
               icon: Icon(Icons.local_activity_outlined), selectedIcon: Icon(Icons.local_activity), label: 'Activities'),
           NavigationDestination(
-              icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'Groups'),
+              icon: Icon(Icons.groups_outlined), selectedIcon: Icon(Icons.groups), label: 'My Crew'),
           NavigationDestination(
               icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],
