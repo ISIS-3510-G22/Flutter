@@ -6,6 +6,7 @@ import 'package:plansync/services/auth_service.dart';
 import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/views/home_shell.dart';
 import 'package:plansync/views/login_view.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,10 +19,7 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: AppTheme.light,
-      home: const AuthGate(),
-    );
+    return MaterialApp(theme: AppTheme.light, home: const AuthGate());
   }
 }
 
@@ -32,12 +30,16 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: AuthService().authStateChanges,
-       builder: (context, snapshot) {
+      builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         final user = snapshot.data;
-        return user == null ? const LoginView() : HomeShell(user: user);
+        return user == null
+            ? const LoginView()
+            : Provider<User>.value(value: user, child: HomeShell());
       },
     );
   }
