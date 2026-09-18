@@ -51,7 +51,7 @@ class _MyActivitiesBody extends StatelessWidget {
             children: [
               Expanded(
                 child: TabButton(
-                  label: 'Saved',
+                  label: 'Liked',
                   selected: vm.currentTab == ActivitiesTab.liked,
                   onPressed: () => vm.selectTab(ActivitiesTab.liked),
                 ),
