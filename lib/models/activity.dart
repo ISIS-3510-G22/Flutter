@@ -1,4 +1,16 @@
-enum ActivityCategory { food, outdoors, culture, shopping }
+enum ActivityCategory {
+  food,
+  outdoors,
+  culture,
+  shopping;
+
+  String get label => switch (this) {
+    ActivityCategory.food => 'Food',
+    ActivityCategory.outdoors => 'Outdoors',
+    ActivityCategory.culture => 'Culture',
+    ActivityCategory.shopping => 'Shopping',
+  };
+}
 
 enum ActivityVisibility { private, public }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
-import 'package:plansync/viewmodels/myactivities_viewmodel.dart';
+import 'package:plansync/views/activities/my_activities/my_activities_view.dart';
 import 'package:provider/provider.dart';
 
 class HomeShell extends StatefulWidget {
@@ -19,12 +19,9 @@ class _HomeShellState extends State<HomeShell> {
     final tabs = [
       const _PlaceholderTab(title: 'Explore'),
       const _PlaceholderTab(title: 'My Plans'),
-      ChangeNotifierProvider(
-        create: (context) => MyActivitiesViewmodel(context.read<User>().id),
-        child: const _ActivitiesBody(),
-      ),
+      const MyActivitiesView(),
       const _PlaceholderTab(title: 'Groups'),
-      const _PlaceholderTab(title: 'Profile'),
+      _ProfileTab(user: context.read<User>()),
     ];
 
     return Scaffold(

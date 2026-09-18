@@ -5,7 +5,7 @@ import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
 import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/views/home_shell.dart';
-import 'package:plansync/views/login_view.dart';
+import 'package:plansync/views/login/login_view.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -39,7 +39,7 @@ class AuthGate extends StatelessWidget {
         final user = snapshot.data;
         return user == null
             ? const LoginView()
-            : Provider<User>.value(value: user, child: HomeShell());
+            : Provider<User>.value(value: user, child: const HomeShell());
       },
     );
   }
