@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
-import 'package:plansync/viewmodels/plan_viewmodel.dart';
-import 'package:plansync/views/plan_card.dart';
+import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
+import 'package:plansync/views/plans/plan_card.dart';
 import 'package:provider/provider.dart';
 
 class PlanView extends StatelessWidget {

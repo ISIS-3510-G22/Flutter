@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/plan.dart';
-import 'package:plansync/viewmodels/plan_viewmodel.dart';
+import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
 
 class _AvatarRow extends StatelessWidget {
   const _AvatarRow({required this.count});
@@ -88,7 +88,7 @@ class PlanCard extends StatelessWidget {
     final peopleLabel = count == 1 ? 'Solo Trip' : '$count People';
     final subtitle = tab == PlanTab.upcoming
         ? '${_formatDate(plan.date)} • $peopleLabel'
-        : '${_formatDate(plan.date)} · ${_formatTime(plan.meetupTime)} • $peopleLabel';
+        : '${_formatDate(plan.date)} · ${_formatTime(TimeOfDay.fromDateTime(plan.date))} • $peopleLabel';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
