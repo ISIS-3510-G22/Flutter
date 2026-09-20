@@ -15,6 +15,7 @@ class UserRepository {
       username: data['username'] as String,
       email: data['email'] as String,
       phone: data['phone'] as String,
+      photoUrl: data['photoUrl'] as String?,
     );
   }
 
@@ -25,6 +26,11 @@ class UserRepository {
       'username': user.username,
       'email': user.email,
       'phone': user.phone,
+      'photoUrl': user.photoUrl,
     });
+  }
+
+  Future<void> updatePhotoUrl(String userId, String photoUrl) {
+    return _users.doc(userId).update({'photoUrl': photoUrl});
   }
 }

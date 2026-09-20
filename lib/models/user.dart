@@ -5,6 +5,7 @@ class User {
   final String username;
   final String email;
   final String phone;
+  final String? photoUrl;
 
   const User({
     required this.id,
@@ -13,5 +14,6 @@ class User {
     required this.username,
     required this.email,
     required this.phone,
+    this.photoUrl,
   });
 }
