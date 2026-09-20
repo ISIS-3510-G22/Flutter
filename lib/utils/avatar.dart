@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class _AvatarRow extends StatelessWidget {
-  const _AvatarRow({required this.count});
+class AvatarRow extends StatelessWidget {
+  const AvatarRow({required this.count, super.key});
 
   final int count;
 
@@ -46,8 +46,8 @@ class _AvatarRow extends StatelessWidget {
   }
 }
 
-class _InitialsAvatar extends StatelessWidget {
-  const _InitialsAvatar({required this.name});
+class InitialsAvatar extends StatelessWidget {
+  const InitialsAvatar({required this.name, super.key});
 
   final String name;
 
