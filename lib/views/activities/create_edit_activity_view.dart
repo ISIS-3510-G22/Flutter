@@ -1,31 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/activity.dart';
 import 'package:plansync/models/user.dart';
-import 'package:plansync/viewmodels/create_activity_viewmodel.dart';
+import 'package:plansync/viewmodels/activities/create_edit_activity_viewmodel.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:provider/provider.dart';
 
-class CreateActivityView extends StatelessWidget {
-  const CreateActivityView({super.key});
+class CreateEditActivityView extends StatelessWidget {
+  const CreateEditActivityView({this.activity, super.key});
+
+  final Activity? activity;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => CreateActivityViewmodel(context.read<User>().id),
-      child: const _CreateActivityForm(),
+      create: (context) =>
+          CreateEditActivityViewmodel(context.read<User>().id, activity),
+      child: const _CreateEditActivityForm(),
     );
   }
 }
 
-class _CreateActivityForm extends StatelessWidget {
-  const _CreateActivityForm();
+class _CreateEditActivityForm extends StatelessWidget {
+  const _CreateEditActivityForm();
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<CreateActivityViewmodel>();
+    final vm = context.watch<CreateEditActivityViewmodel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Activity')),
+      appBar: AppBar(
+        title: Text(vm.isEditing ? 'Edit Activity' : 'Create Activity'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -123,9 +128,9 @@ class _CreateActivityForm extends StatelessWidget {
                     onPressed: vm.isLoading
                         ? null
                         : () async {
-                            final success = await vm.save();
-                            if (success && context.mounted) {
-                              Navigator.pop(context);
+                            final saved = await vm.save();
+                            if (saved != null && context.mounted) {
+                              Navigator.pop(context, saved);
                             }
                           },
                     child: vm.isLoading
@@ -134,7 +139,7 @@ class _CreateActivityForm extends StatelessWidget {
                             height: 24,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Save Activity'),
+                        : Text(vm.isEditing ? 'Save Changes' : 'Save Activity'),
                   ),
                 ),
               ],

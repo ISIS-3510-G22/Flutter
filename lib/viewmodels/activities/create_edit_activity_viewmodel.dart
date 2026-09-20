@@ -2,10 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/models/activity.dart';
 
-class CreateActivityViewmodel extends ChangeNotifier {
-  CreateActivityViewmodel(this._ownerId);
+class CreateEditActivityViewmodel extends ChangeNotifier {
+  CreateEditActivityViewmodel(this._ownerId, [this._editingActivity]) {
+    if (_editingActivity case final activity?) {
+      nameController.text = activity.name;
+      addressController.text = activity.address;
+      notesController.text = activity.notes;
+      expectedPriceController.text = activity.expectedPrice.toString();
+      categories = activity.categories.toSet();
+      activityVisibility = activity.visibility;
+    }
+  }
+
   final String _ownerId;
   final _repository = ActivityRepository();
+  final Activity? _editingActivity;
 
   final nameController = TextEditingController();
   final addressController = TextEditingController();
@@ -13,6 +24,8 @@ class CreateActivityViewmodel extends ChangeNotifier {
   final expectedPriceController = TextEditingController();
   Set<ActivityCategory> categories = {};
   ActivityVisibility activityVisibility = ActivityVisibility.private;
+
+  bool get isEditing => _editingActivity != null;
 
   bool isLoading = false;
   String? errorMessage;
@@ -31,22 +44,22 @@ class CreateActivityViewmodel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> save() async {
+  Future<Activity?> save() async {
     final price = double.tryParse(expectedPriceController.text.trim());
     if (nameController.text.trim().isEmpty) {
       errorMessage = 'Place name is required.';
       notifyListeners();
-      return false;
+      return null;
     }
     if (addressController.text.trim().isEmpty) {
       errorMessage = 'Address is required';
       notifyListeners();
-      return false;
+      return null;
     }
     if (price == null) {
       errorMessage = 'Enter a valid price.';
       notifyListeners();
-      return false;
+      return null;
     }
 
     isLoading = true;
@@ -54,23 +67,28 @@ class CreateActivityViewmodel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.create(
-        Activity(
-          id: '',
-          name: nameController.text.trim(),
-          address: addressController.text.trim(),
-          expectedPrice: price,
-          notes: notesController.text.trim(),
-          categories: categories.toList(),
-          visibility: activityVisibility,
-          ownerId: _ownerId,
-          likedBy: [],
-        ),
+      final activity = Activity(
+        id: _editingActivity?.id ?? '',
+        name: nameController.text.trim(),
+        address: addressController.text.trim(),
+        expectedPrice: price,
+        notes: notesController.text.trim(),
+        categories: categories.toList(),
+        visibility: activityVisibility,
+        ownerId: _editingActivity?.ownerId ?? _ownerId,
+        likedBy: _editingActivity?.likedBy ?? [],
       );
-      return true;
+
+      if (_editingActivity == null) {
+        await _repository.create(activity);
+      } else {
+        await _repository.update(activity);
+      }
+
+      return activity;
     } catch (_) {
       errorMessage = 'Something went wrong. Try again.';
-      return false;
+      return null;
     } finally {
       isLoading = false;
       notifyListeners();
