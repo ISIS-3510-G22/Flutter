@@ -47,11 +47,13 @@ class UserRepository {
   Future<void> updateProfile(
     String userId, {
     required String name,
+    required String lastName,
     required String phone,
     required List<ReimbursementMethod> reimbursementMethods,
   }) {
     return _users.doc(userId).update({
       'name': name,
+      'lastName': lastName,
       'phone': phone,
       'reimbursementMethods': reimbursementMethods
           .map((m) => {'id': m.id, 'type': m.type, 'account': m.account})
