@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/add_activity_to_plan_viewmodel.dart';
+import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:provider/provider.dart';
 
@@ -68,15 +69,10 @@ class _AddActivityToPlanBody extends StatelessWidget {
                 final activity = vm.activities[index];
                 final added = vm.isAdded(activity);
 
-                return ListTile(
-                  title: Text(activity.name),
-                  subtitle: Text(activity.address),
-                  trailing: added
-                      ? const Icon(Icons.check_circle)
-                      : IconButton(
-                          icon: const Icon(Icons.add_circle_outline),
-                          onPressed: () => vm.addActivity(activity),
-                        ),
+                return ActivityCard(
+                  activity: activity,
+                  onTap: () => vm.addActivity(activity),
+                  trailing: added ? const Icon(Icons.check_circle) : null,
                 );
               },
             ),
