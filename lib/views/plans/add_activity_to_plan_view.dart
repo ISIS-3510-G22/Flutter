@@ -71,7 +71,7 @@ class _AddActivityToPlanBody extends StatelessWidget {
 
                 return ActivityCard(
                   activity: activity,
-                  onTap: () => vm.addActivity(activity),
+                  onTap: () => vm.toggleActivity(activity),
                   trailing: added ? const Icon(Icons.check_circle) : null,
                 );
               },

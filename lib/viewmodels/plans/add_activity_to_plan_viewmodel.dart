@@ -40,7 +40,12 @@ class AddActivityToPlanViewModel extends ChangeNotifier {
 
   bool isAdded(Activity activity) => _addedIds.contains(activity.id);
 
-  Future<void> addActivity(Activity activity) {
+  Future<void> toggleActivity(Activity activity) {
+    if (isAdded(activity)) {
+      _addedIds.remove(activity.id);
+      notifyListeners();
+      return _planRepository.removeActivity(_planId, activity.id);
+    }
     _addedIds.add(activity.id);
     notifyListeners();
     return _planRepository.addActivity(_planId, activity.id);

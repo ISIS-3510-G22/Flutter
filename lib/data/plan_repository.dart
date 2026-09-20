@@ -43,4 +43,10 @@ class PlanRepository {
       'activityIds': FieldValue.arrayUnion([activityId]),
     });
   }
+
+  Future<void> removeActivity(String planId, String activityId) {
+    return _plans.doc(planId).update({
+      'activityIds': FieldValue.arrayRemove([activityId]),
+    });
+  }
 }
