@@ -1,3 +1,5 @@
+import 'package:plansync/models/reimbursement_method.dart';
+
 class User {
   final String id;
   final String name;
@@ -6,6 +8,7 @@ class User {
   final String email;
   final String phone;
   final String? photoUrl;
+  final List<ReimbursementMethod> reimbursementMethods;
 
   const User({
     required this.id,
@@ -15,5 +18,6 @@ class User {
     required this.email,
     required this.phone,
     this.photoUrl,
+    this.reimbursementMethods = const [],
   });
 }
