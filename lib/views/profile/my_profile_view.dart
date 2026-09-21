@@ -2,24 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
+import 'package:plansync/views/profile/edit_profile_view.dart';
 import 'package:provider/provider.dart';
 
-class ProfileView extends StatelessWidget {
-  const ProfileView({super.key, required this.user});
-
-  final User user;
+class MyProfileView extends StatelessWidget {
+  const MyProfileView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ProfileViewModel(user),
-      child: const _ProfileBody(),
+      create: (context) => ProfileViewModel(context.read<User>()),
+      child: const _MyProfileBody(),
     );
   }
 }
 
-class _ProfileBody extends StatelessWidget {
-  const _ProfileBody();
+class _MyProfileBody extends StatelessWidget {
+  const _MyProfileBody();
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +28,12 @@ class _ProfileBody extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
-          IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => EditProfileView(user: vm.user)),
+            ),
+          ),
         ],
       ),
       body: Padding(
