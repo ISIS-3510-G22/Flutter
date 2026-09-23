@@ -15,8 +15,8 @@ class ProfileViewModel extends ChangeNotifier {
   final _picker = ImagePicker();
   bool isUploadingPhoto = false;
 
-  Future<void> pickAndUploadPhoto() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
+  Future<void> pickAndUploadPhoto(ImageSource source) async {
+    final picked = await _picker.pickImage(source: source);
     if (picked == null) return;
 
     isUploadingPhoto = true;

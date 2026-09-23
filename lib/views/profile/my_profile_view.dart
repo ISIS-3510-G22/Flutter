@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
@@ -42,7 +43,9 @@ class _MyProfileBody extends StatelessWidget {
           children: [
             const Spacer(),
             GestureDetector(
-              onTap: vm.isUploadingPhoto ? null : vm.pickAndUploadPhoto,
+              onTap: vm.isUploadingPhoto
+                  ? null
+                  : () => _showPhotoSourceSheet(context, vm),
               child: Container(
                 width: 96,
                 height: 96,
@@ -58,12 +61,6 @@ class _MyProfileBody extends StatelessWidget {
                 ),
                 child: vm.isUploadingPhoto
                     ? const Center(child: CircularProgressIndicator())
-                    : vm.user.photoUrl == null
-                    ? Icon(
-                        Icons.person_outline,
-                        size: 48,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
                     : null,
               ),
             ),
@@ -96,6 +93,34 @@ class _MyProfileBody extends StatelessWidget {
               ),
             ),
             const Spacer(flex: 2),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPhotoSourceSheet(BuildContext context, ProfileViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take photo'),
+              onTap: () {
+                Navigator.pop(context);
+                vm.pickAndUploadPhoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                vm.pickAndUploadPhoto(ImageSource.gallery);
+              },
+            ),
           ],
         ),
       ),
