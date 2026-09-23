@@ -82,12 +82,6 @@ class ExploreViewModel extends ChangeNotifier {
   }
 
   List<Plan> _filterPlans() {
-    final minRating = switch (selectedRating) {
-      '4+' => 4.0,
-      '3+' => 3.0,
-      _ => 0.0,
-    };
-
     return _plans.where((plan) {
       final matchesSearch =
           searchQuery.isEmpty ||
@@ -95,7 +89,7 @@ class ExploreViewModel extends ChangeNotifier {
       final matchesCategory =
           selectedCategory == 'All' || plan.tags.contains(selectedCategory);
 
-      return matchesSearch;
+      return matchesSearch && matchesCategory;
     }).toList();
   }
 }

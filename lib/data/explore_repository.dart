@@ -1,53 +1,46 @@
+import 'package:flutter/material.dart';
 import 'package:plansync/models/plan.dart';
 
 class ExploreRepository {
   Future<List<Plan>> getPlans() async {
     await Future.delayed(const Duration(milliseconds: 800));
 
-    return const [
+    return [
       Plan(
         id: 'p1',
-        title: 'Downtown Art Walk & Cafe Crawl',
-        date: 'Nov 8, 2025',
-        estimatedCostPerPerson: 45,
-        participants: [],
-        activityCount: 3,
-        rating: 4.8,
-        category: 'Food & Drink',
-        planType: 'Group',
+        name: 'Downtown Art Walk & Cafe Crawl',
+        date: DateTime(2025, 11, 8),
+        meetupTime: const TimeOfDay(hour: 11, minute: 0),
+        creatorId: 'u1',
+        tags: const ['Food & Drink'],
+        activityIds: const ['a1', 'a2', 'a3'],
       ),
       Plan(
         id: 'p2',
-        title: 'Sunset Hike & Picnic',
-        date: 'Nov 15, 2025',
-        estimatedCostPerPerson: 15,
-        participants: [],
-        activityCount: 2,
-        rating: 4.5,
-        category: 'Outdoors',
-        planType: 'Couple',
+        name: 'Sunset Hike & Picnic',
+        date: DateTime(2025, 11, 15),
+        meetupTime: const TimeOfDay(hour: 16, minute: 0),
+        creatorId: 'u1',
+        tags: const ['Outdoors'],
+        activityIds: const ['a4', 'a5'],
       ),
       Plan(
         id: 'p3',
-        title: 'Weekend Getaway to the Coast',
-        date: 'Nov 22, 2025',
-        estimatedCostPerPerson: 120,
-        participants: [],
-        activityCount: 5,
-        rating: 4.9,
-        category: 'Weekend Getaways',
-        planType: 'Family',
+        name: 'Weekend Getaway to the Coast',
+        date: DateTime(2025, 11, 22),
+        meetupTime: const TimeOfDay(hour: 9, minute: 0),
+        creatorId: 'u1',
+        tags: const ['Weekend Getaways'],
+        activityIds: const ['a6', 'a7', 'a8', 'a9', 'a10'],
       ),
       Plan(
         id: 'p4',
-        title: 'Solo Museum Afternoon',
-        date: 'Nov 29, 2025',
-        estimatedCostPerPerson: 0,
-        participants: [],
-        activityCount: 1,
-        rating: 4.2,
-        category: 'Culture',
-        planType: 'Solo',
+        name: 'Solo Museum Afternoon',
+        date: DateTime(2025, 11, 29),
+        meetupTime: const TimeOfDay(hour: 13, minute: 0),
+        creatorId: 'u1',
+        tags: const ['Culture'],
+        activityIds: const ['a11'],
       ),
     ];
   }
