@@ -64,4 +64,22 @@ class UserRepository {
   Future<void> updatePhotoUrl(String userId, String photoUrl) {
     return _users.doc(userId).update({'photoUrl': photoUrl});
   }
+
+  Future<List<User>> getUsers(List<String> ids) async {
+    if (ids.isEmpty) return [];
+    final snapshot = await _users
+        .where(FieldPath.documentId, whereIn: ids)
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return User(
+        id: doc.id,
+        name: data['name'] as String,
+        lastName: data['lastName'] as String,
+        username: data['username'] as String,
+        email: data['email'] as String,
+        phone: data['phone'] as String,
+      );
+    }).toList();
+  }
 }

@@ -3,9 +3,16 @@ import 'package:plansync/models/activity.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 
 class ActivityCard extends StatelessWidget {
-  const ActivityCard({required this.activity, super.key});
+  const ActivityCard({
+    required this.activity,
+    this.onTap,
+    this.trailing,
+    super.key,
+  });
 
   final Activity activity;
+  final VoidCallback? onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -18,12 +25,14 @@ class ActivityCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ActivityDetailView(activity: activity),
-          ),
-        ),
+        onTap:
+            onTap ??
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ActivityDetailView(activity: activity),
+              ),
+            ),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -46,6 +55,7 @@ class ActivityCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (trailing != null) trailing!,
                     Row(
                       children: [
                         Icon(

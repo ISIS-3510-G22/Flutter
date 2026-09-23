@@ -72,4 +72,12 @@ class ActivityRepository {
           : FieldValue.arrayRemove([uid]),
     });
   }
+
+  Future<List<Activity>> getByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+    final snapshot = await _activities
+        .where(FieldPath.documentId, whereIn: ids)
+        .get();
+    return snapshot.docs.map(_fromDoc).toList();
+  }
 }
