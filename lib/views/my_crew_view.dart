@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/widgets/crew_group_card.dart';
+import 'package:plansync/widgets/crew_friends_card.dart';
 
 class MyCrewView extends StatefulWidget {
   const MyCrewView({super.key});
@@ -11,34 +12,35 @@ class MyCrewView extends StatefulWidget {
 class _MyCrewViewState extends State<MyCrewView> {
   bool _showGroups = true;
 
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: const Color(0xFFFAFAFA),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(34, 20, 20, 10),
-            child: Text(
-              'My Crew',
-              style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
-            ),
+@override
+Widget build(BuildContext context) {
+  return ColoredBox(
+    color: const Color(0xFFFAFAFA),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(34, 20, 20, 10),
+          child: Text(
+            'My Crew',
+            style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
           ),
-          const Divider(height: 1, color: Color(0xFFE5E5E5)),
+        ),
+        const Divider(height: 1, color: Color(0xFFE5E5E5)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
+          child: _CrewTabs(
+            showGroups: _showGroups,
+            onGroupsPressed: () => setState(() => _showGroups = true),
+            onFriendsPressed: () => setState(() => _showGroups = false),
+          ),
+        ),
+        Expanded(
+          child: _showGroups ? const _GroupsList() : const _FriendsList(),
+        ),
+        if (_showGroups)
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
-            child: _CrewTabs(
-              showGroups: _showGroups,
-              onGroupsPressed: () => setState(() => _showGroups = true),
-              onFriendsPressed: () => setState(() => _showGroups = false),
-            ),
-          ),
-          Expanded(
-            child: _showGroups ? const _GroupsList() : const _FriendsPlaceholder(),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(36, 8, 36, 28),
+            padding: const EdgeInsets.fromLTRB(36, 8, 36, 8),
             child: SizedBox(
               height: 46,
               child: FilledButton(
@@ -52,12 +54,50 @@ class _MyCrewViewState extends State<MyCrewView> {
                 ),
               ),
             ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(36, 8, 36, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: FilledButton(
+                      onPressed: () {},
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text(
+                        'Add Friend',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: FilledButton(
+                      onPressed: () {},
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text(
+                        'Requests (1)',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-    );
-  }
-}
+      ],
+    ),
+  );
+}}
 
 class _CrewTabs extends StatelessWidget {
   const _CrewTabs({
@@ -131,13 +171,31 @@ class _GroupsList extends StatelessWidget {
   }
 }
 
-class _FriendsPlaceholder extends StatelessWidget {
-  const _FriendsPlaceholder();
+class _FriendsList extends StatelessWidget {
+  const _FriendsList();
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('No friends to show yet.', style: TextStyle(color: Color(0xFF747987))),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(34, 2, 34, 12),
+      children: const [
+        CrewFriendsCard(name: 'Andres Martinez', email: 'andres@example.com', initials: 'AM', avatarColors: Color(0xFFFFB5A6),),
+        SizedBox(height: 14),
+        CrewFriendsCard(name: 'Juan Diego Restrepo', email: 'juan@example.com', initials: 'JD', avatarColors: Color(0xFFD8C5FF),),
+        SizedBox(height: 14),
+        CrewFriendsCard(name: 'Julian Ramirez', email: 'julian@example.com', initials: 'JR', avatarColors: Color(0xFFAEC8E8),),
+        SizedBox(height: 14),
+        CrewFriendsCard(name: 'Samuel Ochoa', email: 'samuel@example.com', initials: 'So', avatarColors: Color(0xFFFFB5A6),),
+        SizedBox(height: 14),
+        CrewFriendsCard(name: 'Carolina Lopez', email: 'carolina@example.com', initials: 'CL', avatarColors: Color(0xFFD8C5FF),),
+        SizedBox(height: 14),
+        CrewFriendsCard(name: 'Carolina Lopez', email: 'carolina@example.com', initials: 'CL', avatarColors: Color(0xFFD8C5FF),),
+        SizedBox(height: 14),
+        CrewFriendsCard(name: 'Carolina Lopez', email: 'carolina@example.com', initials: 'CL', avatarColors: Color(0xFFD8C5FF),),
+        SizedBox(height: 14),
+        CrewFriendsCard(name: 'Carolina Lopez', email: 'carolina@example.com', initials: 'CL', avatarColors: Color(0xFFD8C5FF),),
+        SizedBox(height: 14),
+      ],
     );
   }
 }
