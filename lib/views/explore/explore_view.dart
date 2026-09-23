@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/viewmodels/explore_viewmodel.dart';
+import 'package:provider/provider.dart';
 
 class ExploreView extends StatelessWidget {
   const ExploreView({super.key});
@@ -101,7 +101,10 @@ class _ExploreBody extends StatelessWidget {
         else if (vm.errorMessage != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text(vm.errorMessage!, style: TextStyle(color: colors.error)),
+            child: Text(
+              vm.errorMessage!,
+              style: TextStyle(color: colors.error),
+            ),
           )
         else if (vm.filteredPlans.isEmpty)
           Padding(
@@ -142,7 +145,9 @@ class _SearchRow extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'Search plans or activities',
               prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
         ),
@@ -162,7 +167,11 @@ class _SearchRow extends StatelessWidget {
 }
 
 class _CategoryChipsRow extends StatelessWidget {
-  const _CategoryChipsRow({required this.options, required this.selected, required this.onSelect});
+  const _CategoryChipsRow({
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+  });
 
   final List<String> options;
   final String selected;
@@ -206,7 +215,10 @@ class _FilterGroupCard extends StatelessWidget {
   final ValueChanged<String> onSelect;
 
   List<List<String>> _chunked(List<String> items, int size) {
-    return [for (var i = 0; i < items.length; i += size) items.skip(i).take(size).toList()];
+    return [
+      for (var i = 0; i < items.length; i += size)
+        items.skip(i).take(size).toList(),
+    ];
   }
 
   @override
@@ -228,7 +240,12 @@ class _FilterGroupCard extends StatelessWidget {
             children: [
               Icon(icon, size: 14, color: colors.onSurfaceVariant),
               const SizedBox(width: 4),
-              Text(title, style: text.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
+              Text(
+                title,
+                style: text.labelSmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -291,13 +308,18 @@ class _SelectableChip extends StatelessWidget {
             borderRadius: borderRadius,
             border: selected ? null : Border.all(color: colors.outline),
           ),
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: 8,
+          ),
           child: Text(
             text,
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: style?.copyWith(color: selected ? colors.onPrimary : colors.onSurface),
+            style: style?.copyWith(
+              color: selected ? colors.onPrimary : colors.onSurface,
+            ),
           ),
         ),
       ),
@@ -339,7 +361,8 @@ class _DashedLinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DashedLinePainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _DashedLinePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _FeaturedPlanCard extends StatelessWidget {
@@ -368,7 +391,9 @@ class _FeaturedPlanCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
                 child: Container(
                   width: double.infinity,
                   height: 160,
@@ -376,13 +401,20 @@ class _FeaturedPlanCard extends StatelessWidget {
                   child: Stack(
                     children: [
                       Center(
-                        child: Icon(Icons.image_outlined, size: 40, color: colors.onSurfaceVariant),
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: 40,
+                          color: colors.onSurfaceVariant,
+                        ),
                       ),
                       Positioned(
                         top: 10,
                         right: 10,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: colors.surface,
                             borderRadius: BorderRadius.circular(50),
@@ -393,8 +425,10 @@ class _FeaturedPlanCard extends StatelessWidget {
                               Icon(Icons.star, size: 14, color: colors.primary),
                               const SizedBox(width: 2),
                               Text(
-                                plan.rating.toString(),
-                                style: text.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+                                "5.0",
+                                style: text.labelMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
@@ -409,11 +443,18 @@ class _FeaturedPlanCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(plan.title, style: text.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      plan.name,
+                      style: text.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
-                      '${plan.activityCount} Activities   ${plan.priceTier}',
-                      style: text.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+                      '${plan.activityIds.length} Activities   Cost: 10000',
+                      style: text.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),

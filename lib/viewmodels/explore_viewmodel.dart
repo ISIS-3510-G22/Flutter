@@ -5,7 +5,13 @@ import 'package:plansync/models/plan.dart';
 class ExploreViewModel extends ChangeNotifier {
   final _repository = ExploreRepository();
 
-  static const categoryOptions = ['All', 'Weekend Getaways', 'Food & Drink', 'Outdoors', 'Culture'];
+  static const categoryOptions = [
+    'All',
+    'Weekend Getaways',
+    'Food & Drink',
+    'Outdoors',
+    'Culture',
+  ];
   static const planTypeOptions = ['Solo', 'Couple', 'Group', 'Family'];
   static const priceOptions = ['Free', r'$', r'$$', r'$$$'];
   static const ratingOptions = ['4+', '3+', 'All'];
@@ -76,22 +82,14 @@ class ExploreViewModel extends ChangeNotifier {
   }
 
   List<Plan> _filterPlans() {
-    final minRating = switch (selectedRating) {
-      '4+' => 4.0,
-      '3+' => 3.0,
-      _ => 0.0,
-    };
-
     return _plans.where((plan) {
-      final matchesSearch = searchQuery.isEmpty ||
-          plan.title.toLowerCase().contains(searchQuery.toLowerCase());
-      final matchesCategory = selectedCategory == 'All' || plan.category == selectedCategory;
+      final matchesSearch =
+          searchQuery.isEmpty ||
+          plan.name.toLowerCase().contains(searchQuery.toLowerCase());
+      final matchesCategory =
+          selectedCategory == 'All' || plan.tags.contains(selectedCategory);
 
-      return matchesSearch &&
-          matchesCategory &&
-          plan.planType == selectedPlanType &&
-          plan.priceTier == selectedPrice &&
-          plan.rating >= minRating;
+      return matchesSearch && matchesCategory;
     }).toList();
   }
 }
