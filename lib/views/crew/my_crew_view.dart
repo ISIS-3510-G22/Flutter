@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/widgets/crew_friends_card.dart';
-import 'package:plansync/widgets/crew_group_card.dart';
+import 'package:plansync/views/widgets/crew_friends_card.dart';
+import 'package:plansync/views/widgets/crew_group_card.dart';
 
 class MyCrewView extends StatefulWidget {
   const MyCrewView({super.key});
