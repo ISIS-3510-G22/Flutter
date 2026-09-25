@@ -9,6 +9,7 @@ class CrewGroupCard extends StatelessWidget {
     this.overflowCount,
     this.onAccept,
     this.onDeny,
+    this.onTap,
   });
 
   final String name;
@@ -17,6 +18,7 @@ class CrewGroupCard extends StatelessWidget {
   final int? overflowCount;
   final VoidCallback? onAccept;
   final VoidCallback? onDeny;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -28,21 +30,27 @@ class CrewGroupCard extends StatelessWidget {
     final avatarTotal = avatarCount + (overflowCount == null ? 0 : 1);
     final showActions = onAccept != null || onDeny != null;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1F000000),
-            blurRadius: 8,
-            offset: Offset(0, 5),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xFFE0E0E0)),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1F000000),
+                blurRadius: 8,
+                offset: Offset(0, 5),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -132,6 +140,8 @@ class CrewGroupCard extends StatelessWidget {
             ),
           ],
         ],
+          ),
+        ),
       ),
     );
   }

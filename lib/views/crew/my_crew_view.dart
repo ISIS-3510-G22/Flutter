@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
@@ -59,7 +60,7 @@ class _MyCrewViewState extends State<MyCrewView> {
                               ),
                             ),
                             child: const Text(
-                              'Create Group',
+                              'Invitations',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -80,7 +81,7 @@ class _MyCrewViewState extends State<MyCrewView> {
                               ),
                             ),
                             child: const Text(
-                              'Invitations (1)',
+                              'Create Group',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -107,7 +108,7 @@ class _MyCrewViewState extends State<MyCrewView> {
                               ),
                             ),
                             child: const Text(
-                              'Add Friend',
+                              'Requests',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -128,7 +129,7 @@ class _MyCrewViewState extends State<MyCrewView> {
                               ),
                             ),
                             child: const Text(
-                              'Requests (1)',
+                              'Add Friends',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -224,25 +225,41 @@ class _GroupsList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(34, 2, 34, 12),
-      children: const [
+      children: [
         CrewGroupCard(
           name: 'Weekend Hikers',
           memberCount: 7,
           avatarCount: 3,
           overflowCount: 4,
+          onTap: () => _openGroup(context, 'Weekend Hikers', 8),
         ),
-        SizedBox(height: 28),
-        CrewGroupCard(name: 'Dinner Club', memberCount: 3, avatarCount: 3),
-        SizedBox(height: 28),
+        const SizedBox(height: 28),
+        CrewGroupCard(
+          name: 'Dinner Club',
+          memberCount: 3,
+          avatarCount: 3,
+          onTap: () => _openGroup(context, 'Dinner Club', 3),
+        ),
+        const SizedBox(height: 28),
         CrewGroupCard(
           name: 'College Reunion',
           memberCount: 13,
           avatarCount: 1,
           overflowCount: 12,
+          onTap: () => _openGroup(context, 'College Reunion', 13),
         ),
       ],
     );
   }
+}
+
+void _openGroup(BuildContext context, String name, int memberCount) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) =>
+          GroupDetailView(groupName: name, memberCount: memberCount),
+    ),
+  );
 }
 
 class _FriendsList extends StatelessWidget {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
 
 class GroupInviteView extends StatefulWidget {
@@ -47,9 +48,14 @@ class _GroupInviteViewState extends State<GroupInviteView> {
                   memberCount: 7,
                   avatarCount: 3,
                   overflowCount: 4,
-                  onAccept: () {
-                    // handle join
-                  },
+                  onAccept: () => Navigator.of(context).pushReplacement(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const GroupDetailView(
+                        groupName: 'Old School Film',
+                        memberCount: 8,
+                      ),
+                    ),
+                  ),
                   onDeny: () {
                     // handle deny
                   },
