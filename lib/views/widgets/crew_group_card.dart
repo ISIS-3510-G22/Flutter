@@ -85,7 +85,7 @@ class CrewGroupCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '$memberCount Members',
+            '$memberCount ${memberCount == 1 ? 'Member' : 'Members'}',
             style: const TextStyle(fontSize: 14, color: Color(0xFF60636D)),
           ),
           const SizedBox(height: 10),

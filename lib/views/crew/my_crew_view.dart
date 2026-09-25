@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/models/crew_group.dart';
+import 'package:plansync/views/crew/create_group_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
@@ -13,6 +15,42 @@ class MyCrewView extends StatefulWidget {
 
 class _MyCrewViewState extends State<MyCrewView> {
   bool _showGroups = true;
+  final List<CrewGroup> _groups = [
+    const CrewGroup(name: 'Weekend Hikers', memberCount: 7),
+    const CrewGroup(name: 'Dinner Club', memberCount: 3),
+    const CrewGroup(name: 'College Reunion', memberCount: 13),
+  ];
+
+  Future<void> _createGroup() async {
+    final group = await Navigator.of(context).push<CrewGroup>(
+      MaterialPageRoute<CrewGroup>(builder: (_) => const CreateGroupView()),
+    );
+    if (group == null || !mounted) return;
+
+    setState(() => _groups.insert(0, group));
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GroupDetailView(
+          groupName: group.name,
+          description: group.description,
+          memberCount: group.memberCount,
+        ),
+      ),
+    );
+  }
+
+  void _openGroup(CrewGroup group) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GroupDetailView(
+          groupName: group.name,
+          description: group.description,
+          memberCount: group.memberCount,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +76,9 @@ class _MyCrewViewState extends State<MyCrewView> {
             ),
           ),
           Expanded(
-            child: _showGroups ? const _GroupsList() : const _FriendsList(),
+            child: _showGroups
+                ? _GroupsList(groups: _groups, onGroupTap: _openGroup)
+                : const _FriendsList(),
           ),
           _showGroups
               ? Padding(
@@ -74,7 +114,7 @@ class _MyCrewViewState extends State<MyCrewView> {
                         child: SizedBox(
                           height: 46,
                           child: FilledButton(
-                            onPressed: () {},
+                            onPressed: _createGroup,
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -219,47 +259,31 @@ class _TabButton extends StatelessWidget {
 }
 
 class _GroupsList extends StatelessWidget {
-  const _GroupsList();
+  const _GroupsList({required this.groups, required this.onGroupTap});
+
+  final List<CrewGroup> groups;
+  final ValueChanged<CrewGroup> onGroupTap;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(34, 2, 34, 12),
       children: [
-        CrewGroupCard(
-          name: 'Weekend Hikers',
-          memberCount: 7,
-          avatarCount: 3,
-          overflowCount: 4,
-          onTap: () => _openGroup(context, 'Weekend Hikers', 8),
-        ),
-        const SizedBox(height: 28),
-        CrewGroupCard(
-          name: 'Dinner Club',
-          memberCount: 3,
-          avatarCount: 3,
-          onTap: () => _openGroup(context, 'Dinner Club', 3),
-        ),
-        const SizedBox(height: 28),
-        CrewGroupCard(
-          name: 'College Reunion',
-          memberCount: 13,
-          avatarCount: 1,
-          overflowCount: 12,
-          onTap: () => _openGroup(context, 'College Reunion', 13),
-        ),
+        for (var index = 0; index < groups.length; index++) ...[
+          CrewGroupCard(
+            name: groups[index].name,
+            memberCount: groups[index].memberCount,
+            avatarCount: groups[index].memberCount < 3 ? groups[index].memberCount : 3,
+            overflowCount: groups[index].memberCount > 3
+                ? groups[index].memberCount - 3
+                : null,
+            onTap: () => onGroupTap(groups[index]),
+          ),
+          if (index != groups.length - 1) const SizedBox(height: 28),
+        ],
       ],
     );
   }
-}
-
-void _openGroup(BuildContext context, String name, int memberCount) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) =>
-          GroupDetailView(groupName: name, memberCount: memberCount),
-    ),
-  );
 }
 
 class _FriendsList extends StatelessWidget {
