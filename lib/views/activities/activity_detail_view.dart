@@ -7,22 +7,29 @@ import 'package:plansync/views/activities/create_edit_activity_view.dart';
 import 'package:provider/provider.dart';
 
 class ActivityDetailView extends StatelessWidget {
-  const ActivityDetailView({required this.activity, super.key});
+  const ActivityDetailView({
+    required this.activity,
+    this.showAddToPlan = true,
+    super.key,
+  });
 
   final Activity activity;
+  final bool showAddToPlan;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) =>
           ActivityDetailViewmodel(activity, context.read<User>().id),
-      child: const _ActivityDetailBody(),
+      child: _ActivityDetailBody(showAddToPlan: showAddToPlan),
     );
   }
 }
 
 class _ActivityDetailBody extends StatelessWidget {
-  const _ActivityDetailBody();
+  const _ActivityDetailBody({required this.showAddToPlan});
+
+  final bool showAddToPlan;
 
   @override
   Widget build(BuildContext context) {
@@ -65,13 +72,15 @@ class _ActivityDetailBody extends StatelessWidget {
         ],
       ),
       body: ActivityInfo(activity: vm.activity),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16),
-        child: FilledButton(
-          onPressed: () {},
-          child: const Text('Add to a plan'),
-        ),
-      ),
+      bottomNavigationBar: showAddToPlan
+          ? Padding(
+              padding: const EdgeInsets.all(16),
+              child: FilledButton(
+                onPressed: () {},
+                child: const Text('Add to a plan'),
+              ),
+            )
+          : null,
     );
   }
 }

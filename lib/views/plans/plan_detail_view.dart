@@ -4,6 +4,7 @@ import 'package:plansync/utils/avatar.dart';
 import 'package:plansync/utils/date_format.dart';
 import 'package:plansync/viewmodels/plans/plan_detail_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
+import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/plans/edit_plan_activities_view.dart';
 import 'package:provider/provider.dart';
 
@@ -95,7 +96,18 @@ class _PlanDetailBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 for (final activity in vm.activities)
-                  ActivityCard(activity: activity),
+                  ActivityCard(
+                    activity: activity,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ActivityDetailView(
+                          activity: activity,
+                          showAddToPlan: false,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
     );
