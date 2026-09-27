@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/activity.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
+import 'package:plansync/views/widgets/activity_photo.dart';
 
 class ActivityCard extends StatelessWidget {
   const ActivityCard({
@@ -38,18 +39,7 @@ class ActivityCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 64,
-                  height: 64,
-                  color: colors.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.image_outlined,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ),
+              ActivityPhoto(url: activity.photoUrl, width: 64, height: 64),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

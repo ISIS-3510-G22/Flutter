@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/services/storage_service.dart';
 
 class CreateEditActivityViewmodel extends ChangeNotifier {
   CreateEditActivityViewmodel(this._ownerId, [this._editingActivity]) {
@@ -22,6 +26,11 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   final addressController = TextEditingController();
   final notesController = TextEditingController();
   final expectedPriceController = TextEditingController();
+
+  final _picker = ImagePicker();
+  final _storageService = StorageService();
+  File? pickedPhoto;
+
   Set<ActivityCategory> categories = {};
   ActivityVisibility activityVisibility = ActivityVisibility.private;
 
@@ -67,8 +76,16 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final id = _editingActivity?.id ?? _repository.newId();
+      final photoUrl = pickedPhoto == null
+          ? _editingActivity?.photoUrl
+          : await _storageService.upload(
+              'activity_pictures/$id.jpg',
+              pickedPhoto!,
+            );
+
       final activity = Activity(
-        id: _editingActivity?.id ?? '',
+        id: id,
         name: nameController.text.trim(),
         address: addressController.text.trim(),
         expectedPrice: price,
@@ -77,6 +94,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
         visibility: activityVisibility,
         ownerId: _editingActivity?.ownerId ?? _ownerId,
         likedBy: _editingActivity?.likedBy ?? [],
+        photoUrl: photoUrl,
       );
 
       if (_editingActivity == null) {
@@ -93,6 +111,19 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  String? get currentPhotoUrl => _editingActivity?.photoUrl;
+
+  Future<void> pickPhoto(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 1080,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    pickedPhoto = File(picked.path);
+    notifyListeners();
   }
 
   @override

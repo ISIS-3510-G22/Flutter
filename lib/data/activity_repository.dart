@@ -4,6 +4,8 @@ import 'package:plansync/models/activity.dart';
 class ActivityRepository {
   final _activities = FirebaseFirestore.instance.collection("activities");
 
+  String newId() => _activities.doc().id;
+
   Activity _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     return Activity(
@@ -20,6 +22,7 @@ class ActivityRepository {
       ),
       ownerId: data['ownerId'] as String,
       likedBy: (data['likedBy'] as List).cast<String>(),
+      photoUrl: data['photoUrl'] as String?,
     );
   }
 
@@ -38,7 +41,7 @@ class ActivityRepository {
   }
 
   Future<void> create(Activity activity) {
-    return _activities.add({
+    return _activities.doc(activity.id).set({
       'name': activity.name,
       'address': activity.address,
       'expectedPrice': activity.expectedPrice,
@@ -47,6 +50,7 @@ class ActivityRepository {
       'visibility': activity.visibility.name,
       'ownerId': activity.ownerId,
       'likedBy': <String>[],
+      'photoUrl': activity.photoUrl,
     });
   }
 
@@ -62,6 +66,7 @@ class ActivityRepository {
       'notes': activity.notes,
       'categories': activity.categories.map((c) => c.name).toList(),
       'visibility': activity.visibility.name,
+      'photoUrl': activity.photoUrl,
     });
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/views/widgets/activity_photo.dart';
 
 class ActivityInfo extends StatelessWidget {
   const ActivityInfo({required this.activity, super.key});
@@ -17,19 +18,7 @@ class ActivityInfo extends StatelessWidget {
         children: [
           Stack(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  height: 220,
-                  width: double.infinity,
-                  color: colors.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.image_outlined,
-                    size: 48,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ),
+              ActivityPhoto(url: activity.photoUrl, height: 200),
               if (activity.categories.isNotEmpty)
                 Positioned(
                   left: 12,

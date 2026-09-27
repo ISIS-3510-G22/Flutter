@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:plansync/models/activity.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/activities/create_edit_activity_viewmodel.dart';
+import 'package:plansync/views/widgets/activity_photo.dart';
+import 'package:plansync/views/widgets/image_source_sheet.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:provider/provider.dart';
 
@@ -36,6 +38,28 @@ class _CreateEditActivityForm extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            GestureDetector(
+              onTap: () async {
+                final source = await showImageSourceSheet(context);
+                if (source != null) vm.pickPhoto(source);
+              },
+              child: vm.pickedPhoto != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.file(
+                        vm.pickedPhoto!,
+                        height: 180,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : ActivityPhoto(
+                      url: vm.currentPhotoUrl,
+                      height: 180,
+                      radius: 16,
+                    ),
+            ),
+            const SizedBox(height: 16),
             const Text('PLACE NAME'),
             TextField(
               controller: vm.nameController,

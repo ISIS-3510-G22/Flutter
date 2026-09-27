@@ -24,6 +24,7 @@ class Activity {
   final ActivityVisibility visibility;
   final String ownerId;
   final List<String> likedBy;
+  final String? photoUrl;
 
   const Activity({
     required this.id,
@@ -35,5 +36,6 @@ class Activity {
     required this.visibility,
     required this.ownerId,
     required this.likedBy,
+    required this.photoUrl,
   });
 }

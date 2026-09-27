@@ -23,8 +23,8 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final url = await _storageService.uploadProfilePicture(
-        user.id,
+      final url = await _storageService.upload(
+        "profile_pictures/${user.id}.jpg",
         File(picked.path),
       );
       await _userRepository.updatePhotoUrl(user.id, url);
