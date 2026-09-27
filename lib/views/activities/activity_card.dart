@@ -55,28 +55,29 @@ class ActivityCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (trailing != null) trailing!,
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.sell_outlined,
-                          size: 14,
-                          color: colors.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          [
-                            for (final category in shownCategories)
-                              category.label,
-                            if (hasMore) '...',
-                          ].join(', '),
-                          style: text.bodySmall?.copyWith(
+                    if (activity.categories.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.sell_outlined,
+                            size: 14,
                             color: colors.onSurfaceVariant,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
+                          const SizedBox(width: 4),
+                          Text(
+                            [
+                              for (final category in shownCategories)
+                                category.label,
+                              if (hasMore) '...',
+                            ].join(', '),
+                            style: text.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
                     Text(activity.name, style: text.titleMedium),
                     const SizedBox(height: 2),
                     Text(
