@@ -14,9 +14,7 @@ class ActivityRepository {
       address: data['address'] as String,
       expectedPrice: (data['expectedPrice'] as num).toDouble(),
       notes: data['notes'] as String,
-      categories: (data['categories'] as List)
-          .map((c) => ActivityCategory.values.byName(c as String))
-          .toList(),
+      tags: (data['tags'] as List? ?? []).cast<String>(),
       visibility: ActivityVisibility.values.byName(
         data['visibility'] as String,
       ),
@@ -46,7 +44,7 @@ class ActivityRepository {
       'address': activity.address,
       'expectedPrice': activity.expectedPrice,
       'notes': activity.notes,
-      'categories': activity.categories.map((c) => c.name).toList(),
+      'tags': activity.tags,
       'visibility': activity.visibility.name,
       'ownerId': activity.ownerId,
       'likedBy': <String>[],
@@ -64,7 +62,7 @@ class ActivityRepository {
       'address': activity.address,
       'expectedPrice': activity.expectedPrice,
       'notes': activity.notes,
-      'categories': activity.categories.map((c) => c.name).toList(),
+      'categories': activity.tags.toList(),
       'visibility': activity.visibility.name,
       'photoUrl': activity.photoUrl,
     });
