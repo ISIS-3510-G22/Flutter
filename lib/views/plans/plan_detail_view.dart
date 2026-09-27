@@ -4,7 +4,7 @@ import 'package:plansync/utils/avatar.dart';
 import 'package:plansync/utils/date_format.dart';
 import 'package:plansync/viewmodels/plans/plan_detail_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
-import 'package:plansync/views/plans/add_activity_to_plan_view.dart';
+import 'package:plansync/views/plans/edit_plan_activities_view.dart';
 import 'package:provider/provider.dart';
 
 class PlanDetailView extends StatelessWidget {
@@ -66,14 +66,14 @@ class _PlanDetailBody extends StatelessWidget {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => AddActivityToPlanView(
+                      builder: (_) => EditPlanActivitiesView(
                         planId: vm.plan.id,
                         existingActivityIds: vm.plan.activityIds,
                       ),
                     ),
                   ),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add Activity'),
+                  label: const Text('Edit Activities'),
                 ),
                 const Divider(height: 32),
                 Text(

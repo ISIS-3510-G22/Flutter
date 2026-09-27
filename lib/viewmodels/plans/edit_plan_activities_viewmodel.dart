@@ -6,8 +6,8 @@ import 'package:plansync/data/plan_repository.dart';
 import 'package:plansync/models/activity.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 
-class AddActivityToPlanViewModel extends ChangeNotifier {
-  AddActivityToPlanViewModel(this._planId, this._addedIds, String uid) {
+class EditPlanActivitiesViewModel extends ChangeNotifier {
+  EditPlanActivitiesViewModel(this._planId, this._addedIds, String uid) {
     _subOwned = _activityRepository.ownedActivities(uid).listen((activities) {
       ownedActivities = activities;
       notifyListeners();

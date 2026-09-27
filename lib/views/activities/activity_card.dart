@@ -79,6 +79,7 @@ class ActivityCard extends StatelessWidget {
                   ],
                 ),
               ),
+              ?trailing,
             ],
           ),
         ),
