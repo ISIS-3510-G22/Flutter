@@ -65,4 +65,8 @@ class PlanRepository {
           .toList(),
     });
   }
+
+  Future<void> updateTags(String planId, Set<String> tags) {
+    return _plans.doc(planId).update({'tags': tags.toList()});
+  }
 }
