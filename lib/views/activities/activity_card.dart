@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
 
@@ -19,8 +20,8 @@ class ActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
-    final shownCategories = activity.categories.take(2).toList();
-    final hasMore = activity.categories.length > 2;
+    final shownTags = activity.tags.take(2).map(capitalize).toList();
+    final hasMore = activity.tags.length > 2;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -45,7 +46,7 @@ class ActivityCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (activity.categories.isNotEmpty) ...[
+                    if (activity.tags.isNotEmpty) ...[
                       Row(
                         children: [
                           Icon(
@@ -56,8 +57,7 @@ class ActivityCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             [
-                              for (final category in shownCategories)
-                                category.label,
+                              for (final tag in shownTags) tag,
                               if (hasMore) '...',
                             ].join(', '),
                             style: text.bodySmall?.copyWith(

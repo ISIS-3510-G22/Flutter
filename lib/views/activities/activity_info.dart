@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
 
 class ActivityInfo extends StatelessWidget {
@@ -19,7 +20,7 @@ class ActivityInfo extends StatelessWidget {
           Stack(
             children: [
               ActivityPhoto(url: activity.photoUrl, height: 200),
-              if (activity.categories.isNotEmpty)
+              if (activity.tags.isNotEmpty)
                 Positioned(
                   left: 12,
                   bottom: 12,
@@ -33,7 +34,7 @@ class ActivityInfo extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      activity.categories.map((c) => c.label).join(', '),
+                      activity.tags.map(capitalize).join(', '),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/activity.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/viewmodels/activities/create_edit_activity_viewmodel.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
@@ -81,18 +82,34 @@ class _CreateEditActivityForm extends StatelessWidget {
               decoration: const InputDecoration(hintText: 'e.g. 120,000'),
             ),
             const SizedBox(height: 16),
-            const Text('CATEGORY'),
+            const Text('TAGS'),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: ActivityCategory.values.map((category) {
-                return FilterChip(
-                  label: Text(category.label),
-                  selected: vm.categories.contains(category),
-                  onSelected: (_) => vm.toggleCategory(category),
-                );
-              }).toList(),
+            if (vm.isLoadingTags)
+              const Center(child: CircularProgressIndicator())
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: vm.tagOptions.map((name) {
+                  return FilterChip(
+                    label: Text(capitalize(name)),
+                    selected: vm.tags.contains(name),
+                    onSelected: (_) => vm.toggleTag(name),
+                  );
+                }).toList(),
+              ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: vm.newTagController,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => vm.addNewTag(),
+              decoration: InputDecoration(
+                hintText: 'Add a new tag',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: vm.addNewTag,
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             const Text('NOTES'),

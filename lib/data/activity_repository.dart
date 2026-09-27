@@ -62,7 +62,7 @@ class ActivityRepository {
       'address': activity.address,
       'expectedPrice': activity.expectedPrice,
       'notes': activity.notes,
-      'categories': activity.tags.toList(),
+      'tags': activity.tags.toList(),
       'visibility': activity.visibility.name,
       'photoUrl': activity.photoUrl,
     });

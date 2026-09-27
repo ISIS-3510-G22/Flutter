@@ -31,7 +31,7 @@ class ActivityDetailViewmodel extends ChangeNotifier {
       address: activity.address,
       expectedPrice: activity.expectedPrice,
       notes: activity.notes,
-      categories: activity.categories,
+      tags: activity.tags,
       visibility: activity.visibility,
       ownerId: activity.ownerId,
       likedBy: likedBy,
