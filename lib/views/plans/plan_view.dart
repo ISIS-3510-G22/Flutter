@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
+import 'package:plansync/views/plans/create_plan_view.dart';
 import 'package:plansync/views/plans/plan_card.dart';
 import 'package:provider/provider.dart';
 
@@ -30,7 +31,15 @@ class _PlanScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('My Plans', style: text.headlineMedium),
-        actions: [IconButton(icon: const Icon(Icons.add), onPressed: () {})],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreatePlanView()),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [

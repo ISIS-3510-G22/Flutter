@@ -5,6 +5,8 @@ import 'package:plansync/models/plan.dart';
 class PlanRepository {
   final _plans = FirebaseFirestore.instance.collection('plans');
 
+  String newId() => _plans.doc().id;
+
   Plan _fromData(String id, Map<String, dynamic> data) {
     return Plan(
       id: id,
@@ -47,6 +49,20 @@ class PlanRepository {
   Future<void> removeActivity(String planId, String activityId) {
     return _plans.doc(planId).update({
       'activityIds': FieldValue.arrayRemove([activityId]),
+    });
+  }
+
+  Future<void> create(Plan plan) {
+    return _plans.doc(plan.id).set({
+      'name': plan.name,
+      'date': Timestamp.fromDate(plan.date),
+      'creatorId': plan.creatorId,
+      'tags': plan.tags,
+      'activityIds': plan.activityIds,
+      'participantsIds': [plan.creatorId],
+      'invitations': plan.invitations
+          .map((i) => {'userId': i.userId, 'rsvp': i.rsvp.name})
+          .toList(),
     });
   }
 }
