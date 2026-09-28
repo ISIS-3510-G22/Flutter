@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/theme/app_theme.dart';
 
-class CrewFriendsCard extends StatelessWidget{
+class CrewFriendsCard extends StatelessWidget {
   const CrewFriendsCard({
     super.key,
     required this.name,
@@ -18,6 +19,9 @@ class CrewFriendsCard extends StatelessWidget{
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(14),
@@ -27,11 +31,15 @@ class CrewFriendsCard extends StatelessWidget{
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colors.surface,
             border: Border.all(color: const Color(0xFFE0E0E0)),
             borderRadius: BorderRadius.circular(14),
             boxShadow: const [
-              BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 5)),
+              BoxShadow(
+                color: const Color(0x1F000000),
+                blurRadius: 8,
+                offset: Offset(0, 5),
+              ),
             ],
           ),
           child: Row(
@@ -41,7 +49,7 @@ class CrewFriendsCard extends StatelessWidget{
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.fromBorderSide(
-                    BorderSide(color: Color(0xFFFF6B4A), width: 1.5),
+                    BorderSide(color: AppTheme.coral, width: 1.5),
                   ),
                 ),
                 child: CircleAvatar(
@@ -49,10 +57,10 @@ class CrewFriendsCard extends StatelessWidget{
                   backgroundColor: avatarColors,
                   child: Text(
                     initials,
-                    style: const TextStyle(
+                    style: text.labelLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
-                      color: Colors.black87,
+                      color: colors.onSurface,
                     ),
                   ),
                 ),
@@ -64,7 +72,7 @@ class CrewFriendsCard extends StatelessWidget{
                   children: [
                     Text(
                       name,
-                      style: const TextStyle(
+                      style: text.bodyLarge?.copyWith(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                       ),
@@ -72,9 +80,9 @@ class CrewFriendsCard extends StatelessWidget{
                     const SizedBox(height: 2),
                     Text(
                       email,
-                      style: const TextStyle(
+                      style: text.bodyMedium?.copyWith(
                         fontSize: 14,
-                        color: Color(0xFF747987),
+                        color: colors.onSurfaceVariant,
                       ),
                     ),
                   ],

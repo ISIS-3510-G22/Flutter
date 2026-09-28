@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/crew_group.dart';
+import 'package:plansync/theme/app_theme.dart';
 
 class CreateGroupView extends StatefulWidget {
   const CreateGroupView({super.key});
@@ -33,6 +34,9 @@ class _CreateGroupViewState extends State<CreateGroupView> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
     return Material(
       color: const Color(0xFFFAFAFA),
       child: Column(
@@ -49,7 +53,6 @@ class _CreateGroupViewState extends State<CreateGroupView> {
                     const Text(
                       'Create Group',
                       style: TextStyle(
-                        color: Color(0xFF171D2B),
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
@@ -65,7 +68,7 @@ class _CreateGroupViewState extends State<CreateGroupView> {
               ),
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFE5E5E5)),
+          const Divider(height: 1, color: AppTheme.greyLight),
           Expanded(
             child: Form(
               key: _formKey,
@@ -97,7 +100,7 @@ class _CreateGroupViewState extends State<CreateGroupView> {
               ),
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFE5E5E5)),
+          const Divider(height: 1, color: AppTheme.greyLight),
           SafeArea(
             top: false,
             child: Padding(
@@ -106,12 +109,9 @@ class _CreateGroupViewState extends State<CreateGroupView> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
-                      style: TextStyle(
-                        color: Color(0xFF60636D),
-                        fontSize: 15,
-                      ),
+                      style: text.bodyMedium?.copyWith(color: colors.onSurface),
                     ),
                   ),
                   const Spacer(),
@@ -120,7 +120,7 @@ class _CreateGroupViewState extends State<CreateGroupView> {
                     child: FilledButton(
                       onPressed: _createGroup,
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6047),
+                        backgroundColor: colors.primary,
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(9),
@@ -138,25 +138,30 @@ class _CreateGroupViewState extends State<CreateGroupView> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(color: Color(0xFFA0A4AE), fontSize: 15),
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(7),
-      borderSide: const BorderSide(color: Color(0xFFE0E2E5)),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(7),
-      borderSide: const BorderSide(color: Color(0xFFE0E2E5)),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(7),
-      borderSide: const BorderSide(color: Color(0xFFFF6047)),
-    ),
-  );
+  InputDecoration _inputDecoration(String hint) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: text.bodyMedium?.copyWith(color: const Color(0xFFA0A4AE)),
+      filled: true,
+      fillColor: colors.surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(7),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(7),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(7),
+        borderSide: BorderSide(color: colors.primary),
+      ),
+    );
+  }
 }
 
 class _FieldLabel extends StatelessWidget {
@@ -166,12 +171,14 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+
     return Text(
       label,
-      style: const TextStyle(
-        color: Color(0xFF60636D),
+      style: text.labelLarge?.copyWith(
+        color: colors.onSurfaceVariant,
         fontSize: 13,
-        fontWeight: FontWeight.w600,
         letterSpacing: 0.4,
       ),
     );
@@ -194,7 +201,7 @@ class _BackButton extends StatelessWidget {
         child: const SizedBox(
           width: 40,
           height: 40,
-          child: Icon(Icons.arrow_back, size: 20, color: Color(0xFF171D2B)),
+          child: Icon(Icons.arrow_back, size: 20, color: AppTheme.black),
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/theme/app_theme.dart';
 
 class CrewGroupCard extends StatelessWidget {
   const CrewGroupCard({
@@ -22,6 +23,8 @@ class CrewGroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     const avatarColors = [
       Color(0xFFFFB5A6),
       Color(0xFFD8C5FF),
@@ -31,7 +34,7 @@ class CrewGroupCard extends StatelessWidget {
     final showActions = onAccept != null || onDeny != null;
 
     return Material(
-      color: Colors.white,
+      color: colors.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -39,107 +42,107 @@ class CrewGroupCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colors.surface,
             border: Border.all(color: const Color(0xFFE0E0E0)),
             borderRadius: BorderRadius.circular(18),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x1F000000),
+                color: const Color(0x1F000000),
                 blurRadius: 8,
                 offset: Offset(0, 5),
               ),
             ],
           ),
           child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            height: 38,
-            width: avatarTotal * 25.0 + 12,
-            child: Stack(
-              children: [
-                for (var index = 0; index < avatarCount; index++)
-                  Positioned(
-                    left: index * 25.0,
-                    child: _MemberAvatar(
-                      color: avatarColors[index % avatarColors.length],
-                    ),
-                  ),
-                if (overflowCount != null)
-                  Positioned(
-                    left: avatarCount * 25.0,
-                    child: _OverflowAvatar(count: overflowCount!),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            name,
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$memberCount ${memberCount == 1 ? 'Member' : 'Members'}',
-            style: const TextStyle(fontSize: 14, color: Color(0xFF60636D)),
-          ),
-          const SizedBox(height: 10),
-          if (showActions) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 42,
-                    child: OutlinedButton(
-                      onPressed: onDeny,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF60636D),
-                        side: const BorderSide(color: Color(0xFFE0E0E0)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 38,
+                width: avatarTotal * 25.0 + 12,
+                child: Stack(
+                  children: [
+                    for (var index = 0; index < avatarCount; index++)
+                      Positioned(
+                        left: index * 25.0,
+                        child: _MemberAvatar(
+                          color: avatarColors[index % avatarColors.length],
                         ),
                       ),
-                      child: const Text(
-                        'Deny',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    if (overflowCount != null)
+                      Positioned(
+                        left: avatarCount * 25.0,
+                        child: _OverflowAvatar(count: overflowCount!),
                       ),
-                    ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    height: 42,
-                    child: FilledButton(
-                      onPressed: onAccept,
-                      style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        'Accept',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                name,
+                style: text.titleLarge?.copyWith(
+                  color: colors.onSurface,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$memberCount ${memberCount == 1 ? 'Member' : 'Members'}',
+                style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 10),
+              if (showActions) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 42,
+                        child: OutlinedButton(
+                          onPressed: onDeny,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colors.onSurfaceVariant,
+                            side: const BorderSide(color: Color(0xFFE0E0E0)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'Deny',
+                            style: text.labelLarge?.copyWith(
+                              fontSize: 15,
+                              color: AppTheme.greyDark,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 42,
+                        child: FilledButton(
+                          onPressed: onAccept,
+                          style: FilledButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'Accept',
+                            style: text.labelLarge?.copyWith(
+                              fontSize: 15,
+                              color: AppTheme.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            ),
-          ],
-        ],
+            ],
           ),
         ),
       ),
@@ -154,15 +157,17 @@ class _MemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Container(
       width: 38,
       height: 38,
       decoration: BoxDecoration(
         color: color,
-        border: Border.all(color: const Color(0xFFFF6B4A)),
+        border: Border.all(color: AppTheme.coral),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Icon(Icons.person_outline, size: 20, color: Colors.black),
+      child: Icon(Icons.person_outline, size: 20, color: colors.onSurface),
     );
   }
 }
@@ -174,19 +179,18 @@ class _OverflowAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+
     return Container(
       width: 38,
       height: 38,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: const Color(0xFFFFF1ED),
-        border: Border.all(color: const Color(0xFFFF6B4A)),
+        border: Border.all(color: AppTheme.coral),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Text(
-        '+$count',
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-      ),
+      child: Text('+$count', style: text.labelLarge?.copyWith(fontSize: 17)),
     );
   }
 }

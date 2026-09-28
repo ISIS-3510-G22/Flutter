@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/crew_group.dart';
+import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/views/crew/create_group_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
@@ -19,6 +20,9 @@ class _MyCrewViewState extends State<MyCrewView> {
     const CrewGroup(name: 'Weekend Hikers', memberCount: 7),
     const CrewGroup(name: 'Dinner Club', memberCount: 3),
     const CrewGroup(name: 'College Reunion', memberCount: 13),
+  ];
+  final List<CrewGroup> _invitations = [
+    const CrewGroup(name: 'Old School Film', memberCount: 7),
   ];
 
   Future<void> _createGroup() async {
@@ -40,6 +44,46 @@ class _MyCrewViewState extends State<MyCrewView> {
     );
   }
 
+  Future<void> _openInvitations() async {
+    final group = await Navigator.of(context).push<CrewGroup>(
+      MaterialPageRoute<CrewGroup>(
+        builder: (_) => GroupInviteView(
+          invitations: List.of(_invitations),
+          onDeny: _denyInvitation,
+        ),
+      ),
+    );
+    if (group == null || !mounted) return;
+
+    setState(() {
+      _invitations.removeWhere((invite) => invite.name == group.name);
+      final existingIndex = _groups.indexWhere(
+        (existing) => existing.name == group.name,
+      );
+      if (existingIndex == -1) {
+        _groups.insert(0, group);
+      } else {
+        _groups[existingIndex] = group;
+      }
+    });
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GroupDetailView(
+          groupName: group.name,
+          description: group.description,
+          memberCount: group.memberCount,
+        ),
+      ),
+    );
+  }
+
+  void _denyInvitation(CrewGroup invitation) {
+    setState(() {
+      _invitations.removeWhere((invite) => invite.name == invitation.name);
+    });
+  }
+
   void _openGroup(CrewGroup group) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -59,14 +103,17 @@ class _MyCrewViewState extends State<MyCrewView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(34, 20, 20, 10),
             child: Text(
               'My Crew',
-              style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontSize: 36,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFE5E5E5)),
+          const Divider(height: 1, color: AppTheme.greyLight),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
             child: _CrewTabs(
@@ -89,22 +136,16 @@ class _MyCrewViewState extends State<MyCrewView> {
                         child: SizedBox(
                           height: 46,
                           child: FilledButton(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const GroupInviteView(),
-                              ),
-                            ),
+                            onPressed: _openInvitations,
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Invitations',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: Theme.of(context).textTheme.labelLarge!
+                                  .copyWith(color: AppTheme.white),
                             ),
                           ),
                         ),
@@ -120,12 +161,10 @@ class _MyCrewViewState extends State<MyCrewView> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Create Group',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: Theme.of(context).textTheme.labelLarge!
+                                  .copyWith(color: AppTheme.white),
                             ),
                           ),
                         ),
@@ -147,12 +186,10 @@ class _MyCrewViewState extends State<MyCrewView> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Requests',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: Theme.of(context).textTheme.labelLarge!
+                                  .copyWith(color: AppTheme.white),
                             ),
                           ),
                         ),
@@ -168,12 +205,10 @@ class _MyCrewViewState extends State<MyCrewView> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Add Friends',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: Theme.of(context).textTheme.labelLarge!
+                                  .copyWith(color: AppTheme.white),
                             ),
                           ),
                         ),
@@ -204,8 +239,8 @@ class _CrewTabs extends StatelessWidget {
       height: 48,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE5E5E5)),
+        color: AppTheme.white,
+        border: Border.all(color: AppTheme.greyLight),
         borderRadius: BorderRadius.circular(11),
       ),
       child: Row(
@@ -243,15 +278,16 @@ class _TabButton extends StatelessWidget {
       child: TextButton(
         onPressed: onPressed,
         style: TextButton.styleFrom(
-          foregroundColor: selected ? Colors.white : const Color(0xFF747987),
-          backgroundColor: selected
-              ? const Color(0xFFFF6B4A)
-              : Colors.transparent,
+          foregroundColor: selected ? AppTheme.white : const Color(0xFF747987),
+          backgroundColor: selected ? AppTheme.coral : Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            fontSize: 16,
+            color: selected ? AppTheme.white : AppTheme.greyDark,
+          ),
         ),
       ),
     );
@@ -273,7 +309,9 @@ class _GroupsList extends StatelessWidget {
           CrewGroupCard(
             name: groups[index].name,
             memberCount: groups[index].memberCount,
-            avatarCount: groups[index].memberCount < 3 ? groups[index].memberCount : 3,
+            avatarCount: groups[index].memberCount < 3
+                ? groups[index].memberCount
+                : 3,
             overflowCount: groups[index].memberCount > 3
                 ? groups[index].memberCount - 3
                 : null,
@@ -298,56 +336,56 @@ class _FriendsList extends StatelessWidget {
           name: 'Pedro Martinez',
           email: 'andres@example.com',
           initials: 'AM',
-          avatarColors: Color(0xFFFFB5A6),
+          avatarColors: const Color(0xFFFFB5A6),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Juan Diego Restrepo',
           email: 'juan@example.com',
           initials: 'JD',
-          avatarColors: Color(0xFFD8C5FF),
+          avatarColors: const Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Julian Ramirez',
           email: 'julian@example.com',
           initials: 'JR',
-          avatarColors: Color(0xFFAEC8E8),
+          avatarColors: const Color(0xFFAEC8E8),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Samuel Ochoa',
           email: 'samuel@example.com',
           initials: 'So',
-          avatarColors: Color(0xFFFFB5A6),
+          avatarColors: const Color(0xFFFFB5A6),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Carolina Lopez',
           email: 'carolina@example.com',
           initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
+          avatarColors: const Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Carolina Lopez',
           email: 'carolina@example.com',
           initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
+          avatarColors: const Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Carolina Lopez',
           email: 'carolina@example.com',
           initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
+          avatarColors: const Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Carolina Lopez',
           email: 'carolina@example.com',
           initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
+          avatarColors: const Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
       ],
