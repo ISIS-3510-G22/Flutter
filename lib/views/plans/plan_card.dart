@@ -3,6 +3,7 @@ import 'package:plansync/models/plan.dart';
 import 'package:plansync/utils/avatar.dart';
 import 'package:plansync/utils/date_format.dart';
 import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
+import 'package:plansync/views/plans/leave_review_view.dart';
 import 'package:plansync/views/plans/plan_detail_view.dart';
 
 class PlanCard extends StatelessWidget {
@@ -76,7 +77,12 @@ class PlanCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LeaveReviewView(plan: plan),
+                        ),
+                      ),
                       icon: const Icon(Icons.star_border, size: 18),
                       label: const Text('Leave a Review'),
                     ),
