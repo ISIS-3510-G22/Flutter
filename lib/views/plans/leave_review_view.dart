@@ -43,6 +43,17 @@ class _LeaveReviewBody extends StatelessWidget {
                     subtitle: Text(formatShortDate(plan.date)),
                   ),
                 ),
+                if (vm.hasExistingReview)
+                  Card(
+                    color: colors.primaryContainer,
+                    child: ListTile(
+                      leading: Icon(Icons.info_outline, color: colors.primary),
+                      title: const Text('You already reviewed this plan'),
+                      subtitle: const Text(
+                        'Submitting will replace your previous review.',
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 Text(
                   'How would you rate your experience?',
@@ -95,7 +106,7 @@ class _LeaveReviewBody extends StatelessWidget {
                     const SnackBar(content: Text('Thanks for your review!')),
                   );
                 },
-          child: const Text('Submit Review'),
+          child: Text(vm.hasExistingReview ? 'Update Review' : 'Submit Review'),
         ),
       ),
     );

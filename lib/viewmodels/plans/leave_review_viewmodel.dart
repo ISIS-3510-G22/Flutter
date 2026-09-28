@@ -4,7 +4,12 @@ import 'package:plansync/models/review.dart';
 import 'package:plansync/models/user.dart';
 
 class LeaveReviewViewModel extends ChangeNotifier {
-  LeaveReviewViewModel(this._planId, this._user);
+  LeaveReviewViewModel(this._planId, this._user) {
+    _loadExisting();
+  }
+
+  bool isLoading = true;
+  bool hasExistingReview = false;
 
   final String _planId;
   final User _user;
@@ -12,8 +17,22 @@ class LeaveReviewViewModel extends ChangeNotifier {
 
   final commentController = TextEditingController();
   int rating = 0;
-  bool isLoading = false;
   String? errorMessage;
+
+  Future<void> _loadExisting() async {
+    try {
+      final existing = await _repository.reviewBy(_planId, _user.id);
+      if (existing != null) {
+        hasExistingReview = true;
+        rating = existing.rating;
+        commentController.text = existing.comment;
+      }
+    } catch (_) {
+      errorMessage = "Couldn't load your previous review.";
+    }
+    isLoading = false;
+    notifyListeners();
+  }
 
   void setRating(int value) {
     if (value == rating) {
