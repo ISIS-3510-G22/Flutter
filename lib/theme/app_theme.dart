@@ -41,5 +41,20 @@ class AppTheme {
         );
       }),
     ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected) ? white : greyDark,
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      selectedColor: coral,
+      checkmarkColor: white,
+      side: const BorderSide(color: greyLight),
+      labelStyle: TextStyle(
+        color: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? white : black,
+        ),
+      ),
+    ),
   );
 }
