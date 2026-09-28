@@ -47,6 +47,8 @@ class PlanDetailViewModel extends ChangeNotifier {
     return _planRepository.addActivity(plan.id, activityId);
   }
 
+  int get isActive => plan.date.compareTo(DateTime.now());
+
   @override
   void dispose() {
     _sub.cancel();
