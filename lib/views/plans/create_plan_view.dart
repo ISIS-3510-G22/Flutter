@@ -6,12 +6,15 @@ import 'package:plansync/views/plans/plan_detail_view.dart';
 import 'package:provider/provider.dart';
 
 class CreatePlanView extends StatelessWidget {
-  const CreatePlanView({super.key});
+  const CreatePlanView({this.activityId, super.key});
+
+  final String? activityId;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => CreatePlanViewModel(context.read<User>().id),
+      create: (context) =>
+          CreatePlanViewModel(context.read<User>().id, activityId),
       child: const _CreatePlanForm(),
     );
   }

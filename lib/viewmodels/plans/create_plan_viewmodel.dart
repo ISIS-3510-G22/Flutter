@@ -4,9 +4,10 @@ import 'package:plansync/models/invitations.dart';
 import 'package:plansync/models/plan.dart';
 
 class CreatePlanViewModel extends ChangeNotifier {
-  CreatePlanViewModel(this._creatorId);
+  CreatePlanViewModel(this._creatorId, [this._activityId]);
 
   final String _creatorId;
+  final String? _activityId;
   final _repository = PlanRepository();
 
   final nameController = TextEditingController();
@@ -49,6 +50,7 @@ class CreatePlanViewModel extends ChangeNotifier {
         creatorId: _creatorId,
         invitations: [Invitation(userId: _creatorId, rsvp: RsvpStatus.going)],
         isPublic: isPublic,
+        activityIds: [?_activityId],
       );
       await _repository.create(plan);
       return plan;
