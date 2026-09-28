@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/models/activity.dart';
 
-enum ActivitiesTab { liked, private }
+enum ActivitiesTab { liked, private, recommended }
 
 class MyActivitiesViewmodel extends ChangeNotifier {
   final _repository = ActivityRepository();
@@ -14,6 +14,7 @@ class MyActivitiesViewmodel extends ChangeNotifier {
 
   late final StreamSubscription<List<Activity>> _likedSub;
   List<Activity> _liked = [];
+  List<Activity> _recommended = [];
 
   MyActivitiesViewmodel(String uid) {
     _ownedSub = _repository.ownedActivities(uid).listen((activities) {
@@ -25,6 +26,11 @@ class MyActivitiesViewmodel extends ChangeNotifier {
       _liked = activities;
       notifyListeners();
     });
+
+    _repository.recommended(uid).then((activities) {
+      _recommended = activities;
+      notifyListeners();
+    }, onError: (_) {});
   }
 
   void selectTab(ActivitiesTab tab) {
@@ -32,8 +38,11 @@ class MyActivitiesViewmodel extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<Activity> get activities =>
-      currentTab == ActivitiesTab.liked ? _liked : _owned;
+  List<Activity> get activities => switch (currentTab) {
+    ActivitiesTab.liked => _liked,
+    ActivitiesTab.private => _owned,
+    ActivitiesTab.recommended => _recommended,
+  };
 
   @override
   void dispose() {

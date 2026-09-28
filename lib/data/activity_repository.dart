@@ -4,6 +4,11 @@ import 'package:plansync/models/activity.dart';
 class ActivityRepository {
   final _activities = FirebaseFirestore.instance.collection("activities");
 
+  final _recommendationRuns = FirebaseFirestore.instance
+      .collection('transferConfigs')
+      .doc('6ad7a48c-0000-2678-8aba-fc4116908b71')
+      .collection('runs');
+
   String newId() => _activities.doc().id;
 
   Activity _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
@@ -22,6 +27,26 @@ class ActivityRepository {
       likedBy: (data['likedBy'] as List).cast<String>(),
       photoUrl: data['photoUrl'] as String?,
     );
+  }
+
+  Future<List<Activity>> recommended(String uid) async {
+    final latest = await _recommendationRuns.doc('latest').get();
+    final runId = latest.data()?['latestRunId'] as String?;
+    if (runId == null) return [];
+
+    final output = await _recommendationRuns
+        .doc(runId)
+        .collection('output')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get();
+    if (output.docs.isEmpty) return [];
+
+    final map = output.docs.first['activity_ids'] as Map<String, dynamic>;
+    final ids = List.generate(map.length, (i) => map['$i'] as String);
+    final activities = await getByIds(ids);
+    return activities
+      ..sort((a, b) => ids.indexOf(a.id).compareTo(ids.indexOf(b.id)));
   }
 
   Stream<List<Activity>> ownedActivities(String uid) {
