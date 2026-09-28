@@ -1,27 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/crew_group.dart';
+import 'package:plansync/models/group.dart';
+import 'package:plansync/models/group_invitation.dart';
 import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
+import 'package:provider/provider.dart';
 
-class GroupInviteView extends StatefulWidget {
-  const GroupInviteView({
-    super.key,
-    required this.invitations,
-    required this.onDeny,
-  });
+class GroupInviteView extends StatelessWidget {
+  const GroupInviteView({super.key});
 
-  final List<CrewGroup> invitations;
-  final ValueChanged<CrewGroup> onDeny;
+  Future<void> _accept(
+    BuildContext context,
+    CrewViewmodel vm,
+    GroupInvitation invitation,
+    Group group,
+  ) async {
+    vm.clearError();
+    await vm.acceptInvitation(invitation);
+    if (!context.mounted) return;
+    if (vm.error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(vm.error!)));
+      return;
+    }
+    Navigator.of(context).pop(group);
+  }
 
-  @override
-  State<GroupInviteView> createState() => _GroupInviteViewState();
-}
-
-class _GroupInviteViewState extends State<GroupInviteView> {
-  late final List<CrewGroup> _invitations = List.of(widget.invitations);
+  Future<void> _deny(
+    BuildContext context,
+    CrewViewmodel vm,
+    GroupInvitation invitation,
+  ) async {
+    vm.clearError();
+    await vm.denyInvitation(invitation);
+    if (!context.mounted || vm.error == null) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(vm.error!)));
+  }
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<CrewViewmodel>();
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -60,55 +81,52 @@ class _GroupInviteViewState extends State<GroupInviteView> {
           ),
           const Divider(height: 1, color: AppTheme.greyLight),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(34, 18, 34, 12),
-              children: _invitations.isEmpty
-                  ? [
-                      Padding(
-                        padding: EdgeInsets.only(top: 48),
-                        child: Center(
-                          child: Text(
-                            'No group invitations',
-                            style: text.bodyMedium?.copyWith(
-                              color: colors.onSurfaceVariant,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
+            child: vm.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : vm.error != null
+                ? Center(child: Text(vm.error!))
+                : vm.invitations.isEmpty
+                ? Center(
+                    child: Text(
+                      'No group invitations',
+                      style: text.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 16,
                       ),
-                    ]
-                  : [
-                      for (var index = 0; index < _invitations.length; index++)
-                        Padding(
-                          padding: EdgeInsets.only(
-                            bottom: index == _invitations.length - 1 ? 0 : 28,
-                          ),
-                          child: CrewGroupCard(
-                            name: _invitations[index].name,
-                            memberCount: _invitations[index].memberCount,
-                            avatarCount: 3,
-                            overflowCount: _invitations[index].memberCount > 3
-                                ? _invitations[index].memberCount - 3
-                                : null,
-                            onAccept: () {
-                              final invitation = _invitations[index];
-                              Navigator.of(context).pop(
-                                CrewGroup(
-                                  name: invitation.name,
-                                  description: invitation.description,
-                                  memberCount: invitation.memberCount + 1,
-                                ),
-                              );
-                            },
-                            onDeny: () {
-                              final invitation = _invitations[index];
-                              widget.onDeny(invitation);
-                              setState(() => _invitations.removeAt(index));
-                            },
-                          ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(34, 18, 34, 12),
+                    itemCount: vm.invitations.length,
+                    itemBuilder: (context, index) {
+                      final invitation = vm.invitations[index];
+                      final group = vm.groupForInvitation(invitation);
+                      if (group == null) {
+                        return const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+
+                      final memberCount = vm.memberCountFor(group.id);
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index == vm.invitations.length - 1 ? 0 : 28,
                         ),
-                    ],
-            ),
+                        child: CrewGroupCard(
+                          name: group.name,
+                          memberCount: memberCount,
+                          avatarCount: memberCount.clamp(0, 3),
+                          overflowCount: memberCount > 3
+                              ? memberCount - 3
+                              : null,
+                          onAccept: () =>
+                              _accept(context, vm, invitation, group),
+                          onDeny: () => _deny(context, vm, invitation),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -1,96 +1,85 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/crew_group.dart';
+import 'package:plansync/models/user.dart';
+import 'package:plansync/models/group.dart';
 import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/views/crew/create_group_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
+import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
+import 'package:provider/provider.dart';
 
-class MyCrewView extends StatefulWidget {
+class MyCrewView extends StatelessWidget {
   const MyCrewView({super.key});
 
   @override
-  State<MyCrewView> createState() => _MyCrewViewState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => CrewViewmodel(context.read<User>().id),
+      child: const _MyCrewContent(),
+    );
+  }
 }
 
-class _MyCrewViewState extends State<MyCrewView> {
+class _MyCrewContent extends StatefulWidget {
+  const _MyCrewContent();
+
+  @override
+  State<_MyCrewContent> createState() => _MyCrewContentState();
+}
+
+class _MyCrewContentState extends State<_MyCrewContent> {
   bool _showGroups = true;
-  final List<CrewGroup> _groups = [
-    const CrewGroup(name: 'Weekend Hikers', memberCount: 7),
-    const CrewGroup(name: 'Dinner Club', memberCount: 3),
-    const CrewGroup(name: 'College Reunion', memberCount: 13),
-  ];
-  final List<CrewGroup> _invitations = [
-    const CrewGroup(name: 'Old School Film', memberCount: 7),
-  ];
 
-  Future<void> _createGroup() async {
-    final group = await Navigator.of(context).push<CrewGroup>(
-      MaterialPageRoute<CrewGroup>(builder: (_) => const CreateGroupView()),
-    );
-    if (group == null || !mounted) return;
-
-    setState(() => _groups.insert(0, group));
-    if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => GroupDetailView(
-          groupName: group.name,
-          description: group.description,
-          memberCount: group.memberCount,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openInvitations() async {
-    final group = await Navigator.of(context).push<CrewGroup>(
-      MaterialPageRoute<CrewGroup>(
-        builder: (_) => GroupInviteView(
-          invitations: List.of(_invitations),
-          onDeny: _denyInvitation,
+  Future<void> _createGroup(CrewViewmodel vm) async {
+    final group = await Navigator.of(context).push<Group>(
+      MaterialPageRoute<Group>(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: vm,
+          child: const CreateGroupView(),
         ),
       ),
     );
     if (group == null || !mounted) return;
 
-    setState(() {
-      _invitations.removeWhere((invite) => invite.name == group.name);
-      final existingIndex = _groups.indexWhere(
-        (existing) => existing.name == group.name,
-      );
-      if (existingIndex == -1) {
-        _groups.insert(0, group);
-      } else {
-        _groups[existingIndex] = group;
-      }
-    });
-
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => GroupDetailView(
-          groupName: group.name,
-          description: group.description,
-          memberCount: group.memberCount,
+        builder: (_) => ChangeNotifierProvider.value(
+          value: vm,
+          child: GroupDetailView(group: group),
         ),
       ),
     );
   }
 
-  void _denyInvitation(CrewGroup invitation) {
-    setState(() {
-      _invitations.removeWhere((invite) => invite.name == invitation.name);
-    });
+  Future<void> _openInvitations(CrewViewmodel vm) async {
+    final group = await Navigator.of(context).push<Group>(
+      MaterialPageRoute<Group>(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: vm,
+          child: const GroupInviteView(),
+        ),
+      ),
+    );
+    if (group == null || !mounted) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: vm,
+          child: GroupDetailView(group: group),
+        ),
+      ),
+    );
   }
 
-  void _openGroup(CrewGroup group) {
+  void _openGroup(CrewViewmodel vm, Group group) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => GroupDetailView(
-          groupName: group.name,
-          description: group.description,
-          memberCount: group.memberCount,
+        builder: (_) => ChangeNotifierProvider.value(
+          value: vm,
+          child: GroupDetailView(group: group),
         ),
       ),
     );
@@ -98,6 +87,8 @@ class _MyCrewViewState extends State<MyCrewView> {
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<CrewViewmodel>();
+
     return ColoredBox(
       color: const Color(0xFFFAFAFA),
       child: Column(
@@ -124,7 +115,15 @@ class _MyCrewViewState extends State<MyCrewView> {
           ),
           Expanded(
             child: _showGroups
-                ? _GroupsList(groups: _groups, onGroupTap: _openGroup)
+                ? vm.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : vm.error != null
+                      ? Center(child: Text(vm.error!))
+                      : _GroupsList(
+                          groups: vm.groups,
+                          memberCountFor: vm.memberCountFor,
+                          onGroupTap: (group) => _openGroup(vm, group),
+                        )
                 : const _FriendsList(),
           ),
           _showGroups
@@ -136,14 +135,14 @@ class _MyCrewViewState extends State<MyCrewView> {
                         child: SizedBox(
                           height: 46,
                           child: FilledButton(
-                            onPressed: _openInvitations,
+                            onPressed: () => _openInvitations(vm),
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
                             child: Text(
-                              'Invitations',
+                              'Invitations (${vm.invitations.length})',
                               style: Theme.of(context).textTheme.labelLarge!
                                   .copyWith(color: AppTheme.white),
                             ),
@@ -155,7 +154,7 @@ class _MyCrewViewState extends State<MyCrewView> {
                         child: SizedBox(
                           height: 46,
                           child: FilledButton(
-                            onPressed: _createGroup,
+                            onPressed: () => _createGroup(vm),
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -295,31 +294,43 @@ class _TabButton extends StatelessWidget {
 }
 
 class _GroupsList extends StatelessWidget {
-  const _GroupsList({required this.groups, required this.onGroupTap});
+  const _GroupsList({
+    required this.groups,
+    required this.memberCountFor,
+    required this.onGroupTap,
+  });
 
-  final List<CrewGroup> groups;
-  final ValueChanged<CrewGroup> onGroupTap;
+  final List<Group> groups;
+  final int Function(String groupId) memberCountFor;
+  final ValueChanged<Group> onGroupTap;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(34, 2, 34, 12),
-      children: [
-        for (var index = 0; index < groups.length; index++) ...[
-          CrewGroupCard(
-            name: groups[index].name,
-            memberCount: groups[index].memberCount,
-            avatarCount: groups[index].memberCount < 3
-                ? groups[index].memberCount
-                : 3,
-            overflowCount: groups[index].memberCount > 3
-                ? groups[index].memberCount - 3
-                : null,
-            onTap: () => onGroupTap(groups[index]),
-          ),
-          if (index != groups.length - 1) const SizedBox(height: 28),
-        ],
-      ],
+      children: groups.isEmpty
+          ? const [
+              Padding(
+                padding: EdgeInsets.only(top: 48),
+                child: Center(child: Text('You have no groups yet')),
+              ),
+            ]
+          : [
+              for (var index = 0; index < groups.length; index++) ...[
+                CrewGroupCard(
+                  name: groups[index].name,
+                  memberCount: memberCountFor(groups[index].id),
+                  avatarCount: memberCountFor(groups[index].id) < 3
+                      ? memberCountFor(groups[index].id)
+                      : 3,
+                  overflowCount: memberCountFor(groups[index].id) > 3
+                      ? memberCountFor(groups[index].id) - 3
+                      : null,
+                  onTap: () => onGroupTap(groups[index]),
+                ),
+                if (index != groups.length - 1) const SizedBox(height: 28),
+              ],
+            ],
     );
   }
 }
@@ -336,56 +347,56 @@ class _FriendsList extends StatelessWidget {
           name: 'Pedro Martinez',
           email: 'andres@example.com',
           initials: 'AM',
-          avatarColors: const Color(0xFFFFB5A6),
+          avatarColors: Color(0xFFFFB5A6),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Juan Diego Restrepo',
           email: 'juan@example.com',
           initials: 'JD',
-          avatarColors: const Color(0xFFD8C5FF),
+          avatarColors: Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Julian Ramirez',
           email: 'julian@example.com',
           initials: 'JR',
-          avatarColors: const Color(0xFFAEC8E8),
+          avatarColors: Color(0xFFAEC8E8),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Samuel Ochoa',
           email: 'samuel@example.com',
           initials: 'So',
-          avatarColors: const Color(0xFFFFB5A6),
+          avatarColors: Color(0xFFFFB5A6),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Carolina Lopez',
           email: 'carolina@example.com',
           initials: 'CL',
-          avatarColors: const Color(0xFFD8C5FF),
+          avatarColors: Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Carolina Lopez',
           email: 'carolina@example.com',
           initials: 'CL',
-          avatarColors: const Color(0xFFD8C5FF),
+          avatarColors: Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Carolina Lopez',
           email: 'carolina@example.com',
           initials: 'CL',
-          avatarColors: const Color(0xFFD8C5FF),
+          avatarColors: Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
         CrewFriendsCard(
           name: 'Carolina Lopez',
           email: 'carolina@example.com',
           initials: 'CL',
-          avatarColors: const Color(0xFFD8C5FF),
+          avatarColors: Color(0xFFD8C5FF),
         ),
         SizedBox(height: 14),
       ],

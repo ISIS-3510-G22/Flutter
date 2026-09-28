@@ -1,28 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/models/group.dart';
+import 'package:plansync/models/user.dart';
 import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:provider/provider.dart';
 
-class GroupDetailView extends StatelessWidget {
-  const GroupDetailView({
-    super.key,
-    required this.groupName,
-    this.description = '',
-    this.memberCount = 8,
-    this.members = const ['Alex', 'Sam', 'Jordan'],
-  });
+class GroupDetailView extends StatefulWidget {
+  const GroupDetailView({super.key, required this.group});
 
-  final String groupName;
-  final String description;
-  final int memberCount;
-  final List<String> members;
+  final Group group;
 
-  static const _memberColors = [
-    AppTheme.coral,
-    Color(0xFFFF9467),
-    Color(0xFFFFD7AE),
-  ];
+  @override
+  State<GroupDetailView> createState() => _GroupDetailViewState();
+}
+
+class _GroupDetailViewState extends State<GroupDetailView> {
+  Future<List<User>>? _membersFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _membersFuture ??= context.read<CrewViewmodel>().membersForGroup(
+      widget.group.id,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<CrewViewmodel>();
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -65,7 +70,7 @@ class GroupDetailView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(28, 32, 28, 32),
               children: [
                 Text(
-                  groupName,
+                  widget.group.name,
                   style: text.headlineLarge?.copyWith(
                     color: colors.onSurface,
                     fontSize: 42,
@@ -74,33 +79,58 @@ class GroupDetailView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Active group · $memberCount members',
-                  style: text.bodyLarge?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
+                FutureBuilder<List<User>>(
+                  future: _membersFuture,
+                  builder: (context, snapshot) {
+                    final count = snapshot.hasData
+                        ? snapshot.data!.length
+                        : vm.memberCountFor(widget.group.id);
+                    final summary = count == 0
+                        ? 'Active group'
+                        : 'Active group · $count members';
+                    return Text(
+                      summary,
+                      style: text.bodyLarge?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    );
+                  },
                 ),
-                if (description.isNotEmpty) ...[
+                if (widget.group.description.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(
-                    description,
+                    widget.group.description,
                     style: text.bodyMedium?.copyWith(
                       color: colors.onSurfaceVariant,
                     ),
                   ),
                 ],
                 const SizedBox(height: 24),
-                Wrap(
-                  spacing: 14,
-                  runSpacing: 16,
-                  children: [
-                    for (var index = 0; index < members.length; index++)
-                      _MemberTile(
-                        name: members[index],
-                        color: _memberColors[index % _memberColors.length],
-                      ),
-                    const _InviteTile(),
-                  ],
+                FutureBuilder<List<User>>(
+                  future: _membersFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Text(
+                        'Could not load group members: ${snapshot.error}',
+                      );
+                    }
+                    final members = snapshot.data ?? const <User>[];
+                    return Wrap(
+                      spacing: 14,
+                      runSpacing: 16,
+                      children: [
+                        for (var index = 0; index < members.length; index++)
+                          _MemberTile(
+                            user: members[index],
+                            color: _memberColor(index),
+                          ),
+                        const _InviteTile(),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -109,19 +139,34 @@ class GroupDetailView extends StatelessWidget {
       ),
     );
   }
+
+  Color _memberColor(int index) => switch (index % 3) {
+    0 => AppTheme.coral,
+    1 => const Color(0xFFFF9467),
+    _ => const Color(0xFFFFD7AE),
+  };
 }
 
 class _MemberTile extends StatelessWidget {
-  const _MemberTile({required this.name, required this.color});
+  const _MemberTile({required this.user, required this.color});
 
-  final String name;
+  final User user;
   final Color color;
+
+  String _initials() {
+    final words = '${user.name} ${user.lastName}'
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+    return words.take(2).map((word) => word[0].toUpperCase()).join();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final initials = name.isEmpty ? '' : name[0].toUpperCase();
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final name = '${user.name} ${user.lastName}'.trim();
 
     return SizedBox(
       width: 70,
@@ -136,7 +181,7 @@ class _MemberTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
-              initials,
+              _initials(),
               style: text.titleMedium?.copyWith(color: colors.onPrimary),
             ),
           ),

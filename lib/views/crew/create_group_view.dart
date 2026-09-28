@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/crew_group.dart';
 import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:provider/provider.dart';
 
 class CreateGroupView extends StatefulWidget {
   const CreateGroupView({super.key});
@@ -13,6 +14,8 @@ class _CreateGroupViewState extends State<CreateGroupView> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  bool _isSaving = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -21,15 +24,24 @@ class _CreateGroupViewState extends State<CreateGroupView> {
     super.dispose();
   }
 
-  void _createGroup() {
+  Future<void> _createGroup() async {
     if (!_formKey.currentState!.validate()) return;
 
-    Navigator.of(context).pop(
-      CrewGroup(
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+    try {
+      final group = await context.read<CrewViewmodel>().createGroup(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
-      ),
-    );
+      );
+      if (mounted) Navigator.of(context).pop(group);
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Could not create the group.');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -96,6 +108,10 @@ class _CreateGroupViewState extends State<CreateGroupView> {
                     maxLines: 4,
                     decoration: _inputDecoration('e.g., ...'),
                   ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!, style: TextStyle(color: colors.error)),
+                  ],
                 ],
               ),
             ),
@@ -118,7 +134,7 @@ class _CreateGroupViewState extends State<CreateGroupView> {
                   SizedBox(
                     height: 46,
                     child: FilledButton(
-                      onPressed: _createGroup,
+                      onPressed: _isSaving ? null : _createGroup,
                       style: FilledButton.styleFrom(
                         backgroundColor: colors.primary,
                         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -126,7 +142,13 @@ class _CreateGroupViewState extends State<CreateGroupView> {
                           borderRadius: BorderRadius.circular(9),
                         ),
                       ),
-                      child: const Text('Create Group'),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Create Group'),
                     ),
                   ),
                 ],
