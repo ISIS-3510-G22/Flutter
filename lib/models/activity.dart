@@ -1,17 +1,3 @@
-enum ActivityCategory {
-  food,
-  outdoors,
-  culture,
-  shopping;
-
-  String get label => switch (this) {
-    ActivityCategory.food => 'Food',
-    ActivityCategory.outdoors => 'Outdoors',
-    ActivityCategory.culture => 'Culture',
-    ActivityCategory.shopping => 'Shopping',
-  };
-}
-
 enum ActivityVisibility { private, public }
 
 class Activity {
@@ -20,10 +6,11 @@ class Activity {
   final String address;
   final double expectedPrice;
   final String notes;
-  final List<ActivityCategory> categories;
+  final List<String> tags;
   final ActivityVisibility visibility;
   final String ownerId;
   final List<String> likedBy;
+  final String? photoUrl;
 
   const Activity({
     required this.id,
@@ -31,9 +18,10 @@ class Activity {
     required this.address,
     required this.expectedPrice,
     required this.notes,
-    required this.categories,
+    required this.tags,
     required this.visibility,
     required this.ownerId,
     required this.likedBy,
+    required this.photoUrl,
   });
 }

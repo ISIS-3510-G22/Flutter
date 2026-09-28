@@ -1,6 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:plansync/data/activity_repository.dart';
+import 'package:plansync/data/tag_repository.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/models/tag.dart';
+import 'package:plansync/services/storage_service.dart';
 
 class CreateEditActivityViewmodel extends ChangeNotifier {
   CreateEditActivityViewmodel(this._ownerId, [this._editingActivity]) {
@@ -9,20 +15,30 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
       addressController.text = activity.address;
       notesController.text = activity.notes;
       expectedPriceController.text = activity.expectedPrice.toString();
-      categories = activity.categories.toSet();
+      tags = activity.tags.toSet();
       activityVisibility = activity.visibility;
     }
+
+    _loadTags();
   }
 
   final String _ownerId;
   final _repository = ActivityRepository();
+  final _tagRepository = TagRepository();
   final Activity? _editingActivity;
 
   final nameController = TextEditingController();
   final addressController = TextEditingController();
   final notesController = TextEditingController();
   final expectedPriceController = TextEditingController();
-  Set<ActivityCategory> categories = {};
+  final newTagController = TextEditingController();
+
+  final _picker = ImagePicker();
+  final _storageService = StorageService();
+  File? pickedPhoto;
+
+  Set<String> tags = {};
+  List<Tag> allTags = [];
   ActivityVisibility activityVisibility = ActivityVisibility.private;
 
   bool get isEditing => _editingActivity != null;
@@ -30,14 +46,33 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  void toggleCategory(ActivityCategory category) {
-    if (categories.contains(category)) {
-      categories.remove(category);
+  bool isLoadingTags = true;
+
+  Future<void> _loadTags() async {
+    allTags = await _tagRepository.allTags();
+    isLoadingTags = false;
+    notifyListeners();
+  }
+
+  void toggleTag(String name) {
+    if (tags.contains(name)) {
+      tags.remove(name);
     } else {
-      categories.add(category);
+      tags.add(name);
     }
     notifyListeners();
   }
+
+  void addNewTag() {
+    final name = newTagController.text.trim().toLowerCase();
+    if (name.isEmpty) return;
+    tags.add(name);
+    newTagController.clear();
+    notifyListeners();
+  }
+
+  List<String> get tagOptions =>
+      {...allTags.map((t) => t.name), ...tags}.toList();
 
   void selectVisibility(ActivityVisibility visibility) {
     activityVisibility = visibility;
@@ -67,16 +102,25 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final id = _editingActivity?.id ?? _repository.newId();
+      final photoUrl = pickedPhoto == null
+          ? _editingActivity?.photoUrl
+          : await _storageService.upload(
+              'activity_pictures/$id.jpg',
+              pickedPhoto!,
+            );
+
       final activity = Activity(
-        id: _editingActivity?.id ?? '',
+        id: id,
         name: nameController.text.trim(),
         address: addressController.text.trim(),
         expectedPrice: price,
         notes: notesController.text.trim(),
-        categories: categories.toList(),
+        tags: tags.toList(),
         visibility: activityVisibility,
         ownerId: _editingActivity?.ownerId ?? _ownerId,
         likedBy: _editingActivity?.likedBy ?? [],
+        photoUrl: photoUrl,
       );
 
       if (_editingActivity == null) {
@@ -84,6 +128,12 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
       } else {
         await _repository.update(activity);
       }
+
+      final before = _editingActivity?.tags.toSet() ?? <String>{};
+      await _tagRepository.updateCounts(
+        tags.difference(before).toList(),
+        before.difference(tags).toList(),
+      );
 
       return activity;
     } catch (_) {
@@ -95,12 +145,26 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
     }
   }
 
+  String? get currentPhotoUrl => _editingActivity?.photoUrl;
+
+  Future<void> pickPhoto(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 1080,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    pickedPhoto = File(picked.path);
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     nameController.dispose();
     addressController.dispose();
     expectedPriceController.dispose();
     notesController.dispose();
+    newTagController.dispose();
     super.dispose();
   }
 }

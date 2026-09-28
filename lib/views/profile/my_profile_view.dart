@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
 import 'package:plansync/views/profile/edit_profile_view.dart';
+import 'package:plansync/views/widgets/image_source_sheet.dart';
 import 'package:provider/provider.dart';
 
 class MyProfileView extends StatelessWidget {
@@ -45,7 +45,10 @@ class _MyProfileBody extends StatelessWidget {
             GestureDetector(
               onTap: vm.isUploadingPhoto
                   ? null
-                  : () => _showPhotoSourceSheet(context, vm),
+                  : () async {
+                      final source = await showImageSourceSheet(context);
+                      if (source != null) vm.pickAndUploadPhoto(source);
+                    },
               child: Container(
                 width: 96,
                 height: 96,
@@ -93,34 +96,6 @@ class _MyProfileBody extends StatelessWidget {
               ),
             ),
             const Spacer(flex: 2),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPhotoSourceSheet(BuildContext context, ProfileViewModel vm) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Take photo'),
-              onTap: () {
-                Navigator.pop(context);
-                vm.pickAndUploadPhoto(ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                vm.pickAndUploadPhoto(ImageSource.gallery);
-              },
-            ),
           ],
         ),
       ),

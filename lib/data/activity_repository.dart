@@ -4,6 +4,8 @@ import 'package:plansync/models/activity.dart';
 class ActivityRepository {
   final _activities = FirebaseFirestore.instance.collection("activities");
 
+  String newId() => _activities.doc().id;
+
   Activity _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     return Activity(
@@ -12,14 +14,13 @@ class ActivityRepository {
       address: data['address'] as String,
       expectedPrice: (data['expectedPrice'] as num).toDouble(),
       notes: data['notes'] as String,
-      categories: (data['categories'] as List)
-          .map((c) => ActivityCategory.values.byName(c as String))
-          .toList(),
+      tags: (data['tags'] as List? ?? []).cast<String>(),
       visibility: ActivityVisibility.values.byName(
         data['visibility'] as String,
       ),
       ownerId: data['ownerId'] as String,
       likedBy: (data['likedBy'] as List).cast<String>(),
+      photoUrl: data['photoUrl'] as String?,
     );
   }
 
@@ -38,15 +39,16 @@ class ActivityRepository {
   }
 
   Future<void> create(Activity activity) {
-    return _activities.add({
+    return _activities.doc(activity.id).set({
       'name': activity.name,
       'address': activity.address,
       'expectedPrice': activity.expectedPrice,
       'notes': activity.notes,
-      'categories': activity.categories.map((c) => c.name).toList(),
+      'tags': activity.tags,
       'visibility': activity.visibility.name,
       'ownerId': activity.ownerId,
       'likedBy': <String>[],
+      'photoUrl': activity.photoUrl,
     });
   }
 
@@ -60,8 +62,9 @@ class ActivityRepository {
       'address': activity.address,
       'expectedPrice': activity.expectedPrice,
       'notes': activity.notes,
-      'categories': activity.categories.map((c) => c.name).toList(),
+      'tags': activity.tags.toList(),
       'visibility': activity.visibility.name,
+      'photoUrl': activity.photoUrl,
     });
   }
 

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/data/plan_repository.dart';
 import 'package:plansync/data/user_repository.dart';
@@ -27,10 +27,15 @@ class PlanDetailViewModel extends ChangeNotifier {
     plan = updated;
     final userIds = updated.invitations.map((i) => i.userId).toList();
     activities = await _activityRepository.getByIds(updated.activityIds);
+    if (!setEquals(tags, updated.tags.toSet())) {
+      _planRepository.updateTags(updated.id, tags);
+    }
     participants = await _userRepository.getUsers(userIds);
     isLoading = false;
     notifyListeners();
   }
+
+  Set<String> get tags => activities.expand((a) => a.tags).toSet();
 
   double get estimatedCostPerPerson {
     if (activities.isEmpty || participants.isEmpty) return 0;
@@ -41,6 +46,8 @@ class PlanDetailViewModel extends ChangeNotifier {
   Future<void> addActivity(String activityId) {
     return _planRepository.addActivity(plan.id, activityId);
   }
+
+  int get isActive => plan.date.compareTo(DateTime.now());
 
   @override
   void dispose() {

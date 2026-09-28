@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
-import 'package:plansync/viewmodels/plans/add_activity_to_plan_viewmodel.dart';
+import 'package:plansync/viewmodels/plans/edit_plan_activities_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:provider/provider.dart';
 
-class AddActivityToPlanView extends StatelessWidget {
-  const AddActivityToPlanView({
+class EditPlanActivitiesView extends StatelessWidget {
+  const EditPlanActivitiesView({
     required this.planId,
     required this.existingActivityIds,
     super.key,
@@ -19,22 +19,22 @@ class AddActivityToPlanView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => AddActivityToPlanViewModel(
+      create: (context) => EditPlanActivitiesViewModel(
         planId,
         List.of(existingActivityIds),
         context.read<User>().id,
       ),
-      child: const _AddActivityToPlanBody(),
+      child: const _EditPlanActivitiesBody(),
     );
   }
 }
 
-class _AddActivityToPlanBody extends StatelessWidget {
-  const _AddActivityToPlanBody();
+class _EditPlanActivitiesBody extends StatelessWidget {
+  const _EditPlanActivitiesBody();
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<AddActivityToPlanViewModel>();
+    final vm = context.watch<EditPlanActivitiesViewModel>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Add Activity')),

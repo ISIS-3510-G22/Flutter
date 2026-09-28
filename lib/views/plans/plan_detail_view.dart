@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/utils/avatar.dart';
 import 'package:plansync/utils/date_format.dart';
+import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/viewmodels/plans/plan_detail_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
-import 'package:plansync/views/plans/add_activity_to_plan_view.dart';
+import 'package:plansync/views/activities/activity_detail_view.dart';
+import 'package:plansync/views/plans/edit_plan_activities_view.dart';
 import 'package:provider/provider.dart';
 
 class PlanDetailView extends StatelessWidget {
@@ -59,22 +61,36 @@ class _PlanDetailBody extends StatelessWidget {
                     const Icon(Icons.list_alt_outlined, size: 16),
                     const SizedBox(width: 4),
                     Text('${vm.activities.length} Activities'),
+                    if (vm.tags.isNotEmpty) ...[
+                      const SizedBox(width: 16),
+                      const Icon(Icons.sell_outlined, size: 16),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          vm.tags.map(capitalize).join(', '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AddActivityToPlanView(
-                        planId: vm.plan.id,
-                        existingActivityIds: vm.plan.activityIds,
+                if (vm.isActive > 0) ...[
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EditPlanActivitiesView(
+                          planId: vm.plan.id,
+                          existingActivityIds: vm.plan.activityIds,
+                        ),
                       ),
                     ),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Edit Activities'),
                   ),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Activity'),
-                ),
+                ],
                 const Divider(height: 32),
                 Text(
                   'Participants (${vm.participants.length})',
@@ -95,7 +111,18 @@ class _PlanDetailBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 for (final activity in vm.activities)
-                  ActivityCard(activity: activity),
+                  ActivityCard(
+                    activity: activity,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ActivityDetailView(
+                          activity: activity,
+                          showAddToPlan: false,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
     );
