@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/plan.dart';
+import 'package:plansync/models/user.dart';
 import 'package:plansync/utils/avatar.dart';
 import 'package:plansync/utils/date_format.dart';
 import 'package:plansync/utils/text_format.dart';
@@ -122,6 +123,13 @@ class _PlanDetailBody extends StatelessWidget {
                         ),
                       ),
                     ),
+                  ),
+                if (vm.plan.creatorId == context.read<User>().id)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Public plan'),
+                    value: vm.plan.isPublic,
+                    onChanged: vm.setPublic,
                   ),
               ],
             ),

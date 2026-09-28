@@ -5,7 +5,6 @@ import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/viewmodels/activities/create_edit_activity_viewmodel.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
-import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:provider/provider.dart';
 
 class CreateEditActivityView extends StatelessWidget {
@@ -122,30 +121,16 @@ class _CreateEditActivityForm extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('VISIBILITY'),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TabButton(
-                    label: 'Private',
-                    selected:
-                        vm.activityVisibility == ActivityVisibility.private,
-                    onPressed: () =>
-                        vm.selectVisibility(ActivityVisibility.private),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TabButton(
-                    label: 'Public',
-                    selected:
-                        vm.activityVisibility == ActivityVisibility.public,
-                    onPressed: () =>
-                        vm.selectVisibility(ActivityVisibility.public),
-                  ),
-                ),
-              ],
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Public activity'),
+              subtitle: const Text('Anyone can find it in Explore'),
+              value: vm.activityVisibility == ActivityVisibility.public,
+              onChanged: (isPublic) => vm.selectVisibility(
+                isPublic
+                    ? ActivityVisibility.public
+                    : ActivityVisibility.private,
+              ),
             ),
             if (vm.errorMessage != null) ...[
               const SizedBox(height: 16),

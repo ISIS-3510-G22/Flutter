@@ -23,6 +23,7 @@ class PlanRepository {
             ),
           )
           .toList(),
+      isPublic: data['isPublic'] as bool? ?? false,
     );
   }
 
@@ -63,10 +64,20 @@ class PlanRepository {
       'invitations': plan.invitations
           .map((i) => {'userId': i.userId, 'rsvp': i.rsvp.name})
           .toList(),
+      'isPublic': plan.isPublic,
     });
   }
 
   Future<void> updateTags(String planId, Set<String> tags) {
     return _plans.doc(planId).update({'tags': tags.toList()});
+  }
+
+  Future<void> setPublic(String planId, bool isPublic) {
+    return _plans.doc(planId).update({'isPublic': isPublic});
+  }
+
+  Future<List<Plan>> publicPlans() async {
+    final snapshot = await _plans.where('isPublic', isEqualTo: true).get();
+    return snapshot.docs.map((d) => _fromData(d.id, d.data())).toList();
   }
 }

@@ -14,6 +14,12 @@ class CreatePlanViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
+  bool isPublic = false;
+  void setPublic(bool value) {
+    isPublic = value;
+    notifyListeners();
+  }
+
   void setDate(DateTime value) {
     date = value;
     notifyListeners();
@@ -42,6 +48,7 @@ class CreatePlanViewModel extends ChangeNotifier {
         date: date!,
         creatorId: _creatorId,
         invitations: [Invitation(userId: _creatorId, rsvp: RsvpStatus.going)],
+        isPublic: isPublic,
       );
       await _repository.create(plan);
       return plan;

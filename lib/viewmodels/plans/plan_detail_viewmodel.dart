@@ -23,6 +23,9 @@ class PlanDetailViewModel extends ChangeNotifier {
   List<User> participants = [];
   bool isLoading = true;
 
+  Future<void> setPublic(bool value) =>
+      _planRepository.setPublic(plan.id, value);
+
   Future<void> _onPlanUpdate(Plan updated) async {
     plan = updated;
     final userIds = updated.invitations.map((i) => i.userId).toList();
