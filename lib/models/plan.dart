@@ -8,6 +8,7 @@ class Plan {
   final String creatorId;
   final List<String> activityIds;
   final List<Invitation> invitations;
+  final bool isPublic;
 
   const Plan({
     required this.id,
@@ -17,5 +18,6 @@ class Plan {
     this.tags = const [],
     this.activityIds = const [],
     this.invitations = const [],
+    this.isPublic = false,
   });
 }

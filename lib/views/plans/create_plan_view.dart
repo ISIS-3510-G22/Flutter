@@ -68,6 +68,13 @@ class _CreatePlanForm extends StatelessWidget {
               vm.errorMessage!,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Public plan'),
+            subtitle: const Text('Anyone can get inspiration from your plan'),
+            value: vm.isPublic,
+            onChanged: vm.setPublic,
+          ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: vm.isLoading
