@@ -53,6 +53,14 @@ class _MyActivitiesBody extends StatelessWidget {
             children: [
               Expanded(
                 child: TabButton(
+                  label: 'For you',
+                  selected: vm.currentTab == ActivitiesTab.recommended,
+                  onPressed: () => vm.selectTab(ActivitiesTab.recommended),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TabButton(
                   label: 'Liked',
                   selected: vm.currentTab == ActivitiesTab.liked,
                   onPressed: () => vm.selectTab(ActivitiesTab.liked),
@@ -66,6 +74,7 @@ class _MyActivitiesBody extends StatelessWidget {
                   onPressed: () => vm.selectTab(ActivitiesTab.private),
                 ),
               ),
+              const SizedBox(width: 12),
             ],
           ),
         ),
