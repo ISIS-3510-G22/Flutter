@@ -58,6 +58,14 @@ class FriendRepository {
         .map((s) => s.docs.map((d) => _fromData(d.id, d.data())).toList());
   }
 
+  Stream<List<FriendRequest>> outgoingPendingRequestsForUser(String uid) {
+    return _requests
+        .where('fromUserId', isEqualTo: uid)
+        .where('status', isEqualTo: FriendRequestStatus.pending.name)
+        .snapshots()
+        .map((s) => s.docs.map((d) => _fromData(d.id, d.data())).toList());
+  }
+
   Future<void> acceptRequest(String requestId) {
     return _requests.doc(requestId).update({
       'status': FriendRequestStatus.accepted.name,

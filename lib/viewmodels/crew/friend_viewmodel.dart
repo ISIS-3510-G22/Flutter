@@ -46,6 +46,23 @@ class FriendsViewModel extends ChangeNotifier {
             _notify();
           },
         );
+
+    _outgoingRequestsSub = _repository
+        .outgoingPendingRequestsForUser(_uid)
+        .listen(
+          (requests) {
+            _outgoingRequestUserIds = requests
+                .map((request) => request.toUserId)
+                .toSet();
+            _outgoingLoaded = true;
+            _notify();
+          },
+          onError: (Object error) {
+            this.error = 'Could not load sent friend requests: $error';
+            _outgoingLoaded = true;
+            _notify();
+          },
+        );
   }
 
   final String _uid;
@@ -54,25 +71,73 @@ class FriendsViewModel extends ChangeNotifier {
 
   late final StreamSubscription<List<User>> _friendsSub;
   late final StreamSubscription<List<FriendRequest>> _requestsSub;
+  late final StreamSubscription<List<FriendRequest>> _outgoingRequestsSub;
 
   List<User> _friends = [];
   List<FriendRequest> _requests = [];
   Map<String, User> _requesters = {};
+  List<User> _searchResults = [];
+  Set<String> _outgoingRequestUserIds = {};
   final Set<String> _busyIds = {};
 
   bool _friendsLoaded = false;
   bool _requestsLoaded = false;
+  bool _outgoingLoaded = false;
+  bool _searching = false;
+  int _searchGeneration = 0;
   bool _disposed = false;
   String? error;
 
   List<User> get friends => _friends;
+  List<User> get searchResults => _searchResults;
   List<FriendRequest> get pendingRequests => _requests;
-  bool get isLoading => !_friendsLoaded || !_requestsLoaded;
+  bool get isLoading => !_friendsLoaded || !_requestsLoaded || !_outgoingLoaded;
+  bool get isSearching => _searching;
 
   User? requesterFor(FriendRequest request) => _requesters[request.fromUserId];
   bool isBusy(String id) => _busyIds.contains(id);
+  bool hasSentRequestTo(String userId) =>
+      _outgoingRequestUserIds.contains(userId);
+  bool isFriend(String userId) => _friends.any((user) => user.id == userId);
+
+  Future<void> searchUsers(String query) async {
+    final generation = ++_searchGeneration;
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      _searchResults = [];
+      _searching = false;
+      error = null;
+      _notify();
+      return;
+    }
+
+    _searching = true;
+    error = null;
+    _notify();
+    try {
+      final users = await _userRepository.searchUsers(
+        trimmed.startsWith('@') ? trimmed.substring(1) : trimmed,
+        excludingId: _uid,
+      );
+      if (generation != _searchGeneration) return;
+      _searchResults = users;
+    } catch (error) {
+      if (generation != _searchGeneration) return;
+      this.error = 'Could not search users: $error';
+      _searchResults = [];
+    } finally {
+      if (generation != _searchGeneration) return;
+      _searching = false;
+      _notify();
+    }
+  }
 
   Future<void> sendFriendRequest(String targetUserId) {
+    if (targetUserId == _uid ||
+        isFriend(targetUserId) ||
+        hasSentRequestTo(targetUserId)) {
+      return Future.value();
+    }
     return _run(
       targetUserId,
       () => _repository.sendRequest(_uid, targetUserId),
@@ -124,6 +189,7 @@ class FriendsViewModel extends ChangeNotifier {
     _disposed = true;
     _friendsSub.cancel();
     _requestsSub.cancel();
+    _outgoingRequestsSub.cancel();
     super.dispose();
   }
 }

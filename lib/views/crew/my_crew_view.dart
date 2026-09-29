@@ -4,6 +4,7 @@ import 'package:plansync/models/user.dart';
 import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/views/crew/add_friend_view.dart';
 import 'package:plansync/views/crew/create_group_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
@@ -37,6 +38,18 @@ class _MyCrewContent extends StatefulWidget {
 
 class _MyCrewContentState extends State<_MyCrewContent> {
   bool _showGroups = true;
+
+  void _openAddFriend() {
+    final friendsVm = context.read<FriendsViewModel>();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: friendsVm,
+          child: const AddFriendView(),
+        ),
+      ),
+    );
+  }
 
   Future<void> _createGroup(CrewViewmodel vm) async {
     final group = await Navigator.of(context).push<Group>(
@@ -205,7 +218,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
                         child: SizedBox(
                           height: 46,
                           child: FilledButton(
-                            onPressed: () {},
+                            onPressed: _openAddFriend,
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),

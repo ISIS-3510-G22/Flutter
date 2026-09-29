@@ -9,6 +9,7 @@ class CrewFriendsCard extends StatelessWidget {
     required this.initials,
     required this.avatarColors,
     this.onTap,
+    this.trailing,
   });
 
   final String name;
@@ -16,6 +17,7 @@ class CrewFriendsCard extends StatelessWidget {
   final String initials;
   final Color avatarColors;
   final VoidCallback? onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +90,10 @@ class CrewFriendsCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (trailing != null) ...[
+                const SizedBox(width: 10),
+                trailing!,
+              ],
             ],
           ),
         ),
