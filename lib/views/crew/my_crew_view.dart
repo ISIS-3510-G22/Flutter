@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/user.dart';
 import 'package:plansync/models/group.dart';
+import 'package:plansync/models/user.dart';
 import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
+import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/crew/create_group_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
-import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
 import 'package:provider/provider.dart';
@@ -15,8 +16,13 @@ class MyCrewView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CrewViewmodel(context.read<User>().id),
+    final uid = context.read<User>().id;
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => CrewViewmodel(uid)),
+        ChangeNotifierProvider(create: (_) => FriendsViewModel(uid)),
+      ],
       child: const _MyCrewContent(),
     );
   }
@@ -345,66 +351,30 @@ class _FriendsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(34, 2, 34, 12),
-      children: const [
-        CrewFriendsCard(
-          name: 'Pedro Martinez',
-          email: 'andres@example.com',
-          initials: 'AM',
-          avatarColors: Color(0xFFFFB5A6),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Juan Diego Restrepo',
-          email: 'juan@example.com',
-          initials: 'JD',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Julian Ramirez',
-          email: 'julian@example.com',
-          initials: 'JR',
-          avatarColors: Color(0xFFAEC8E8),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Samuel Ochoa',
-          email: 'samuel@example.com',
-          initials: 'So',
-          avatarColors: Color(0xFFFFB5A6),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Carolina Lopez',
-          email: 'carolina@example.com',
-          initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Carolina Lopez',
-          email: 'carolina@example.com',
-          initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Carolina Lopez',
-          email: 'carolina@example.com',
-          initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Carolina Lopez',
-          email: 'carolina@example.com',
-          initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-      ],
+    final vm = context.watch<FriendsViewModel>();
+
+    if (vm.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (vm.error != null) {
+      return Center(child: Text(vm.error!));
+    }
+
+    return ListView.builder(
+      itemCount: vm.friends.length,
+      itemBuilder: (context, index) {
+        final friend = vm.friends[index];
+
+        return CrewFriendsCard(
+          name: '${friend.name} ${friend.lastName}'.trim(),
+          email: friend.email,
+          initials:
+              '${friend.name.isNotEmpty ? friend.name[0] : ''}'
+              '${friend.lastName.isNotEmpty ? friend.lastName[0] : ''}',
+          avatarColors: const Color(0xFFFFB5A6),
+        );
+      },
     );
   }
 }
