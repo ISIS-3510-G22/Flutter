@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/data/activity_repository.dart';
+import 'package:plansync/data/place_repository.dart';
 import 'package:plansync/data/tag_repository.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/models/place.dart';
 import 'package:plansync/models/tag.dart';
 import 'package:plansync/services/storage_service.dart';
 
@@ -17,6 +19,13 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
       expectedPriceController.text = activity.expectedPrice.toString();
       tags = activity.tags.toSet();
       activityVisibility = activity.visibility;
+      if (activity.lat != null) {
+        _place = (
+          address: activity.address,
+          lat: activity.lat!,
+          lng: activity.lng!,
+        );
+      }
     }
 
     _loadTags();
@@ -25,6 +34,8 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   final String _ownerId;
   final _repository = ActivityRepository();
   final _tagRepository = TagRepository();
+  final _placeRepository = PlaceRepository();
+  final addressFocus = FocusNode();
   final Activity? _editingActivity;
 
   final nameController = TextEditingController();
@@ -40,6 +51,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   Set<String> tags = {};
   List<Tag> allTags = [];
   ActivityVisibility activityVisibility = ActivityVisibility.private;
+  Place? _place;
 
   bool get isEditing => _editingActivity != null;
 
@@ -79,8 +91,23 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<List<Place>> searchPlaces(String query) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (query != addressController.text || query.trim().length < 3) return [];
+    try {
+      return await _placeRepository.search(query);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  void pickPlace(Place place) => _place = place;
+
   Future<Activity?> save() async {
     final price = double.tryParse(expectedPriceController.text.trim());
+    final place = _place?.address == addressController.text.trim()
+        ? _place
+        : null;
     if (nameController.text.trim().isEmpty) {
       errorMessage = 'Place name is required.';
       notifyListeners();
@@ -121,6 +148,8 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
         ownerId: _editingActivity?.ownerId ?? _ownerId,
         likedBy: _editingActivity?.likedBy ?? [],
         photoUrl: photoUrl,
+        lat: place?.lat,
+        lng: place?.lng,
       );
 
       if (_editingActivity == null) {
@@ -165,6 +194,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
     expectedPriceController.dispose();
     notesController.dispose();
     newTagController.dispose();
+    addressFocus.dispose();
     super.dispose();
   }
 }

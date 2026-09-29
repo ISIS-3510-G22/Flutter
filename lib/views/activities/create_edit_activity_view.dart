@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/models/place.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/viewmodels/activities/create_edit_activity_viewmodel.dart';
@@ -67,11 +68,21 @@ class _CreateEditActivityForm extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text('ADDRESS'),
-            TextField(
-              controller: vm.addressController,
-              decoration: const InputDecoration(
-                hintText: 'Address or location',
-              ),
+            Autocomplete<Place>(
+              textEditingController: vm.addressController,
+              focusNode: vm.addressFocus,
+              displayStringForOption: (place) => place.address,
+              optionsBuilder: (value) => vm.searchPlaces(value.text),
+              onSelected: vm.pickPlace,
+              fieldViewBuilder: (context, controller, focusNode, onSubmitted) =>
+                  TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    onSubmitted: (_) => onSubmitted(),
+                    decoration: const InputDecoration(
+                      hintText: 'Search a place or address',
+                    ),
+                  ),
             ),
             const SizedBox(height: 16),
             const Text('EXPECTED PRICE'),
