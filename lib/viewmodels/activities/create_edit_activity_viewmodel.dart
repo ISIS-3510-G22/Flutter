@@ -20,7 +20,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
       tags = activity.tags.toSet();
       activityVisibility = activity.visibility;
       if (activity.lat != null) {
-        _place = (
+        _place = Place(
           address: activity.address,
           lat: activity.lat!,
           lng: activity.lng!,
