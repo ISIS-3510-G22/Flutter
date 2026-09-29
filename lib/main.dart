@@ -11,10 +11,11 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final savedTheme = await ThemeService.loadSaved();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(
     ChangeNotifierProvider(
-      create: (_) => ThemeService(),
+      create: (_) => ThemeService()..setPreference(savedTheme),
       child: const AuthGate(),
     ),
   );

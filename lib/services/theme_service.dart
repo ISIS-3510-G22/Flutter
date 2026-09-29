@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:light/light.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum ThemePreference { system, light, dark, auto }
 
@@ -9,6 +10,7 @@ class ThemeService extends ChangeNotifier {
   ThemePreference _preference = ThemePreference.system;
   ThemeMode _autoMode = ThemeMode.light;
   StreamSubscription<int>? _luxSubscription;
+  static const _prefsKey = 'themePreference';
 
   ThemePreference get preference => _preference;
   Timer? _pendingSwitch;
@@ -23,6 +25,11 @@ class ThemeService extends ChangeNotifier {
     ThemePreference.dark => ThemeMode.dark,
     ThemePreference.auto => _autoMode,
   };
+
+  static Future<ThemePreference> loadSaved() async {
+    final saved = await SharedPreferencesAsync().getString(_prefsKey);
+    return ThemePreference.values.asNameMap()[saved] ?? ThemePreference.system;
+  }
 
   late final AppLifecycleListener _lifecycle;
 
@@ -58,6 +65,7 @@ class ThemeService extends ChangeNotifier {
   void setPreference(ThemePreference preference) {
     _preference = preference;
     _syncSensor();
+    SharedPreferencesAsync().setString(_prefsKey, preference.name);
     notifyListeners();
   }
 

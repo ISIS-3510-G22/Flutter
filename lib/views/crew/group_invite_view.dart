@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/group.dart';
 import 'package:plansync/models/group_invitation.dart';
-import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
 import 'package:provider/provider.dart';
@@ -47,7 +46,7 @@ class GroupInviteView extends StatelessWidget {
     final text = Theme.of(context).textTheme;
 
     return ColoredBox(
-      color: const Color(0xFFFAFAFA),
+      color: colors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -79,7 +78,7 @@ class GroupInviteView extends StatelessWidget {
               ),
             ),
           ),
-          const Divider(height: 1, color: AppTheme.greyLight),
+          Divider(height: 1, color: colors.outline),
           Expanded(
             child: vm.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -141,15 +140,21 @@ class _BackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Material(
-      color: const Color(0xFFFFF0EC),
+      color: colors.secondaryContainer,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onPressed,
-        child: const Padding(
-          padding: EdgeInsets.all(10),
-          child: Icon(Icons.arrow_back, size: 20, color: AppTheme.black),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Icon(
+            Icons.arrow_back,
+            size: 20,
+            color: colors.onSecondaryContainer,
+          ),
         ),
       ),
     );
