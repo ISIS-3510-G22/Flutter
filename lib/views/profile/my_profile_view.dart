@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
+import 'package:plansync/services/theme_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
 import 'package:plansync/views/profile/edit_profile_view.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
@@ -24,6 +25,7 @@ class _MyProfileBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ProfileViewModel>();
+    final themeService = context.watch<ThemeService>();
 
     return Scaffold(
       appBar: AppBar(
@@ -80,6 +82,24 @@ class _MyProfileBody extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            SegmentedButton<ThemePreference>(
+              segments: const [
+                ButtonSegment(
+                  value: ThemePreference.system,
+                  label: Text('System'),
+                ),
+                ButtonSegment(
+                  value: ThemePreference.light,
+                  label: Text('Light'),
+                ),
+                ButtonSegment(value: ThemePreference.dark, label: Text('Dark')),
+                ButtonSegment(value: ThemePreference.auto, label: Text('Auto')),
+              ],
+              selected: {themeService.preference},
+              onSelectionChanged: (selection) =>
+                  themeService.setPreference(selection.first),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               height: 52,

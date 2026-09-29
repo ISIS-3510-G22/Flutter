@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:provider/provider.dart';
 
@@ -50,7 +49,7 @@ class _CreateGroupViewState extends State<CreateGroupView> {
     final text = Theme.of(context).textTheme;
 
     return Material(
-      color: const Color(0xFFFAFAFA),
+      color: colors.surface,
       child: Column(
         children: [
           SafeArea(
@@ -80,7 +79,7 @@ class _CreateGroupViewState extends State<CreateGroupView> {
               ),
             ),
           ),
-          const Divider(height: 1, color: AppTheme.greyLight),
+          Divider(height: 1, color: colors.outline),
           Expanded(
             child: Form(
               key: _formKey,
@@ -116,7 +115,7 @@ class _CreateGroupViewState extends State<CreateGroupView> {
               ),
             ),
           ),
-          const Divider(height: 1, color: AppTheme.greyLight),
+          Divider(height: 1, color: colors.outline),
           SafeArea(
             top: false,
             child: Padding(
@@ -172,11 +171,11 @@ class _CreateGroupViewState extends State<CreateGroupView> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(7),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        borderSide: BorderSide(color: colors.outline),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(7),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        borderSide: BorderSide(color: colors.outline),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(7),
@@ -214,16 +213,22 @@ class _BackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Material(
-      color: const Color(0xFFFFF0EC),
+      color: colors.secondaryContainer,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onPressed,
-        child: const SizedBox(
+        child: SizedBox(
           width: 40,
           height: 40,
-          child: Icon(Icons.arrow_back, size: 20, color: AppTheme.black),
+          child: Icon(
+            Icons.arrow_back,
+            size: 20,
+            color: colors.onSecondaryContainer,
+          ),
         ),
       ),
     );

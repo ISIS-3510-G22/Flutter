@@ -34,7 +34,7 @@ class CrewGroupCard extends StatelessWidget {
     final showActions = onAccept != null || onDeny != null;
 
     return Material(
-      color: colors.surface,
+      color: colors.surfaceContainerLow,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -42,8 +42,8 @@ class CrewGroupCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: colors.surface,
-            border: Border.all(color: const Color(0xFFE0E0E0)),
+            color: colors.surfaceContainerLow,
+            border: Border.all(color: colors.outline),
             borderRadius: BorderRadius.circular(18),
             boxShadow: const [
               BoxShadow(
@@ -103,7 +103,7 @@ class CrewGroupCard extends StatelessWidget {
                           onPressed: onDeny,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: colors.onSurfaceVariant,
-                            side: const BorderSide(color: Color(0xFFE0E0E0)),
+                            side: BorderSide(color: colors.outline),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -112,7 +112,7 @@ class CrewGroupCard extends StatelessWidget {
                             'Deny',
                             style: text.labelLarge?.copyWith(
                               fontSize: 15,
-                              color: AppTheme.greyDark,
+                              color: colors.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -157,8 +157,6 @@ class _MemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
     return Container(
       width: 38,
       height: 38,
@@ -167,7 +165,7 @@ class _MemberAvatar extends StatelessWidget {
         border: Border.all(color: AppTheme.coral),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(Icons.person_outline, size: 20, color: colors.onSurface),
+      child: const Icon(Icons.person_outline, size: 20, color: AppTheme.black),
     );
   }
 }
@@ -179,6 +177,7 @@ class _OverflowAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
     return Container(
@@ -186,7 +185,7 @@ class _OverflowAvatar extends StatelessWidget {
       height: 38,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1ED),
+        color: colors.secondaryContainer,
         border: Border.all(color: AppTheme.coral),
         borderRadius: BorderRadius.circular(14),
       ),

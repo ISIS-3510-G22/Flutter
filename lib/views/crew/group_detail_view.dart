@@ -32,7 +32,7 @@ class _GroupDetailViewState extends State<GroupDetailView> {
     final text = Theme.of(context).textTheme;
 
     return ColoredBox(
-      color: const Color(0xFFF7F7F8),
+      color: colors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -45,10 +45,10 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Your Groups',
                       style: TextStyle(
-                        color: AppTheme.black,
+                        color: colors.onSurface,
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                       ),
@@ -64,7 +64,7 @@ class _GroupDetailViewState extends State<GroupDetailView> {
               ),
             ),
           ),
-          const Divider(height: 1, color: AppTheme.greyLight),
+          Divider(height: 1, color: colors.outline),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(28, 32, 28, 32),
@@ -215,7 +215,7 @@ class _InviteTile extends StatelessWidget {
             height: 52,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F1F3),
+              color: colors.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(Icons.person_add_alt_1, color: colors.onSurfaceVariant),
@@ -238,16 +238,18 @@ class _BackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Material(
-      color: const Color(0xFFF7F7F8),
+      color: colors.surface,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onPressed,
-        child: const SizedBox(
+        child: SizedBox(
           width: 40,
           height: 40,
-          child: Icon(Icons.arrow_back, size: 20, color: AppTheme.black),
+          child: Icon(Icons.arrow_back, size: 20, color: colors.onSurface),
         ),
       ),
     );

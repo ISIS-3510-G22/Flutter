@@ -31,8 +31,8 @@ class CrewFriendsCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: colors.surface,
-            border: Border.all(color: const Color(0xFFE0E0E0)),
+            color: colors.surfaceContainerLow,
+            border: Border.all(color: colors.outline),
             borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
@@ -60,7 +60,7 @@ class CrewFriendsCard extends StatelessWidget {
                     style: text.labelLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
-                      color: colors.onSurface,
+                      color: AppTheme.black,
                     ),
                   ),
                 ),

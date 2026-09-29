@@ -88,9 +88,10 @@ class _MyCrewContentState extends State<_MyCrewContent> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CrewViewmodel>();
+    final colors = Theme.of(context).colorScheme;
 
     return ColoredBox(
-      color: const Color(0xFFFAFAFA),
+      color: colors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -104,7 +105,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
               ),
             ),
           ),
-          const Divider(height: 1, color: AppTheme.greyLight),
+          Divider(height: 1, color: colors.outline),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
             child: _CrewTabs(
@@ -234,12 +235,14 @@ class _CrewTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Container(
       height: 48,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppTheme.white,
-        border: Border.all(color: AppTheme.greyLight),
+        color: colors.surfaceContainerLow,
+        border: Border.all(color: colors.outline),
         borderRadius: BorderRadius.circular(11),
       ),
       child: Row(
@@ -273,11 +276,13 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Expanded(
       child: TextButton(
         onPressed: onPressed,
         style: TextButton.styleFrom(
-          foregroundColor: selected ? AppTheme.white : const Color(0xFF747987),
+          foregroundColor: selected ? AppTheme.white : colors.onSurfaceVariant,
           backgroundColor: selected ? AppTheme.coral : Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
         ),
@@ -285,7 +290,7 @@ class _TabButton extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
             fontSize: 16,
-            color: selected ? AppTheme.white : AppTheme.greyDark,
+            color: selected ? AppTheme.white : colors.onSurfaceVariant,
           ),
         ),
       ),

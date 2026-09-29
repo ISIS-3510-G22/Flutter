@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/viewmodels/sign_up_viewmodel.dart';
 
 class SignUpView extends StatelessWidget {
@@ -48,9 +47,9 @@ class _SignUpFormState extends State<_SignUpForm> {
           child: IconButton(
             tooltip: 'Back to log in',
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back, color: AppTheme.black),
+            icon: Icon(Icons.arrow_back, color: colors.onSecondaryContainer),
             style: IconButton.styleFrom(
-              backgroundColor: const Color(0xFFFFF1ED),
+              backgroundColor: colors.secondaryContainer,
               shape: const CircleBorder(),
             ),
           ),
@@ -113,7 +112,7 @@ class _SignUpFormState extends State<_SignUpForm> {
                   children: [
                     TextButton(
                       onPressed: vm.isLoading ? null : () => Navigator.of(context).pop(),
-                      child: const Text('Cancel', style: TextStyle(fontSize: 20, color: Color(0xFF62636D))),
+                      child: Text('Cancel', style: TextStyle(fontSize: 20, color: colors.onSurfaceVariant)),
                     ),
                     SizedBox(
                       height: 52,
@@ -156,12 +155,14 @@ class _ProfileField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF62636D))),
+          Text(label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: colors.onSurfaceVariant)),
           const SizedBox(height: 12),
           TextFormField(
             controller: controller,
@@ -175,7 +176,7 @@ class _ProfileField extends StatelessWidget {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: AppTheme.greyLight),
+                borderSide: BorderSide(color: colors.outline),
               ),
             ),
           ),
