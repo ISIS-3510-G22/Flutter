@@ -5,6 +5,7 @@ import 'package:plansync/viewmodels/activities/activity_detail_viewmodel.dart';
 import 'package:plansync/views/activities/activity_info.dart';
 import 'package:plansync/views/activities/add_to_plan_view.dart';
 import 'package:plansync/views/activities/create_edit_activity_view.dart';
+import 'package:plansync/views/widgets/circle_back_button.dart';
 import 'package:provider/provider.dart';
 
 class ActivityDetailView extends StatelessWidget {
@@ -38,6 +39,10 @@ class _ActivityDetailBody extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 8),
+          child: CircleBackButton(),
+        ),
         actions: [
           IconButton(
             icon: Icon(vm.isLiked ? Icons.star : Icons.star_border),
