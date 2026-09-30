@@ -8,13 +8,12 @@ class SettlementRepository {
           .doc(planId)
           .collection('settlements');
 
-  String _docId(String fromId, String toId) => '${fromId}_$toId';
-
   Stream<List<Settlement>> settlementsForPlan(String planId) {
     return _settlements(planId).snapshots().map(
       (snapshot) => snapshot.docs.map((d) {
         final data = d.data();
         return Settlement(
+          id: d.id,
           fromId: data['fromId'] as String,
           toId: data['toId'] as String,
           amount: (data['amount'] as num).toDouble(),
@@ -24,16 +23,14 @@ class SettlementRepository {
   }
 
   Future<void> settle(String planId, Settlement settlement) {
-    return _settlements(
-      planId,
-    ).doc(_docId(settlement.fromId, settlement.toId)).set({
+    return _settlements(planId).add({
       'fromId': settlement.fromId,
       'toId': settlement.toId,
       'amount': settlement.amount,
     });
   }
 
-  Future<void> unsettle(String planId, String fromId, String toId) {
-    return _settlements(planId).doc(_docId(fromId, toId)).delete();
+  Future<void> unsettle(String planId, String settlementId) {
+    return _settlements(planId).doc(settlementId).delete();
   }
 }

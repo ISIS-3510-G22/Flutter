@@ -6,20 +6,20 @@ import 'package:plansync/data/settlement_repository.dart';
 import 'package:plansync/models/expense.dart';
 import 'package:plansync/models/settlement.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/utils/debt_simplifier.dart';
 
-class SplitBalance {
-  final User user;
-  final double total;
-  final double paid;
+class SplitRow {
+  final String userId;
+  final String name;
+  final double amount;
+  final String? settlementId;
 
-  const SplitBalance({
-    required this.user,
-    required this.total,
-    required this.paid,
+  const SplitRow({
+    required this.userId,
+    required this.name,
+    required this.amount,
+    this.settlementId,
   });
-
-  double get remaining => total - paid > 0.005 ? total - paid : 0;
-  bool get isSettled => remaining == 0;
 }
 
 class ManageSplitsViewModel extends ChangeNotifier {
@@ -51,10 +51,18 @@ class ManageSplitsViewModel extends ChangeNotifier {
   bool _expensesLoaded = false;
   bool _settlementsLoaded = false;
 
-  List<SplitBalance> youOwe = [];
-  List<SplitBalance> owedToYou = [];
+  List<SplitRow> youOwe = [];
+  List<SplitRow> owedToYou = [];
+  List<SplitRow> paidByYou = [];
+  List<SplitRow> paidToYou = [];
   bool isLoading = true;
   String? errorMessage;
+
+  bool get isEmpty =>
+      youOwe.isEmpty &&
+      owedToYou.isEmpty &&
+      paidByYou.isEmpty &&
+      paidToYou.isEmpty;
 
   List<String> _splitIds(Expense expense) {
     if (expense.splitAmongIds.isEmpty) {
@@ -63,97 +71,112 @@ class ManageSplitsViewModel extends ChangeNotifier {
     return expense.splitAmongIds;
   }
 
-  Map<String, Map<String, double>> _owes() {
-    final owes = <String, Map<String, double>>{};
-    if (_participants.isEmpty) return owes;
+  String _nameOf(String userId) {
+    for (final p in _participants) {
+      if (p.id == userId) return '${p.name} ${p.lastName}';
+    }
+    return 'Unknown';
+  }
+
+  // Positive = must receive money, negative = must pay.
+  Map<String, int> _balancesCents() {
+    final balances = <String, int>{};
+    void add(String id, int cents) {
+      final current = balances[id];
+      if (current == null) {
+        balances[id] = cents;
+      } else {
+        balances[id] = current + cents;
+      }
+    }
+
     for (final expense in _expenses) {
       final splitIds = _splitIds(expense);
       if (splitIds.isEmpty) continue;
-      final share = expense.value / splitIds.length;
-      for (final id in splitIds) {
-        if (id == expense.paidById) continue;
-        final row = owes.putIfAbsent(id, () => {});
-        final current = row[expense.paidById];
-        if (current == null) {
-          row[expense.paidById] = share;
-        } else {
-          row[expense.paidById] = current + share;
-        }
+      final totalCents = (expense.value * 100).round();
+      final shares = splitCents(totalCents, splitIds.length);
+      add(expense.paidById, totalCents);
+      for (var i = 0; i < splitIds.length; i++) {
+        add(splitIds[i], -shares[i]);
       }
     }
-    return owes;
-  }
-
-  double _owedBetween(
-    Map<String, Map<String, double>> owes,
-    String fromId,
-    String toId,
-  ) {
-    final row = owes[fromId];
-    if (row == null) return 0;
-    final amount = row[toId];
-    if (amount == null) return 0;
-    return amount;
-  }
-
-  double _paid(String fromId, String toId) {
     for (final s in _settlements) {
-      if (s.fromId == fromId && s.toId == toId) return s.amount;
+      final cents = (s.amount * 100).round();
+      add(s.fromId, cents);
+      add(s.toId, -cents);
     }
-    return 0;
+    return balances;
   }
 
   void _recalculate() {
     if (!_expensesLoaded || !_settlementsLoaded) return;
-    final owes = _owes();
+
     youOwe = [];
     owedToYou = [];
-    for (final other in _participants) {
-      if (other.id == _currentUserId) continue;
-      final net =
-          _owedBetween(owes, _currentUserId, other.id) -
-          _owedBetween(owes, other.id, _currentUserId);
-      if (net > 0.005) {
+    for (final t in simplifyDebts(_balancesCents())) {
+      if (t.fromId == _currentUserId) {
         youOwe.add(
-          SplitBalance(
-            user: other,
-            total: net,
-            paid: _paid(_currentUserId, other.id),
+          SplitRow(userId: t.toId, name: _nameOf(t.toId), amount: t.amount),
+        );
+      } else if (t.toId == _currentUserId) {
+        owedToYou.add(
+          SplitRow(userId: t.fromId, name: _nameOf(t.fromId), amount: t.amount),
+        );
+      }
+    }
+
+    paidByYou = [];
+    paidToYou = [];
+    for (final s in _settlements) {
+      if (s.fromId == _currentUserId) {
+        paidByYou.add(
+          SplitRow(
+            userId: s.toId,
+            name: _nameOf(s.toId),
+            amount: s.amount,
+            settlementId: s.id,
           ),
         );
-      } else if (net < -0.005) {
-        owedToYou.add(
-          SplitBalance(
-            user: other,
-            total: -net,
-            paid: _paid(other.id, _currentUserId),
+      } else if (s.toId == _currentUserId) {
+        paidToYou.add(
+          SplitRow(
+            userId: s.fromId,
+            name: _nameOf(s.fromId),
+            amount: s.amount,
+            settlementId: s.id,
           ),
         );
       }
     }
+
     isLoading = false;
     notifyListeners();
   }
 
-  Future<void> togglePaid(SplitBalance balance, bool paid) async {
+  Future<void> markPaid(SplitRow row) async {
     errorMessage = null;
     try {
-      if (paid) {
-        await _settlementRepository.settle(
-          _planId,
-          Settlement(
-            fromId: _currentUserId,
-            toId: balance.user.id,
-            amount: balance.total,
-          ),
-        );
-      } else {
-        await _settlementRepository.unsettle(
-          _planId,
-          _currentUserId,
-          balance.user.id,
-        );
-      }
+      await _settlementRepository.settle(
+        _planId,
+        Settlement(
+          id: '',
+          fromId: _currentUserId,
+          toId: row.userId,
+          amount: row.amount,
+        ),
+      );
+    } catch (_) {
+      errorMessage = 'Something went wrong. Try again.';
+      notifyListeners();
+    }
+  }
+
+  Future<void> undoPaid(SplitRow row) async {
+    final settlementId = row.settlementId;
+    if (settlementId == null) return;
+    errorMessage = null;
+    try {
+      await _settlementRepository.unsettle(_planId, settlementId);
     } catch (_) {
       errorMessage = 'Something went wrong. Try again.';
       notifyListeners();
