@@ -169,6 +169,7 @@ class _SearchResultCard extends StatelessWidget {
       email: '@${user.username}',
       initials: initials.isEmpty ? '?' : initials.toUpperCase(),
       avatarColors: const Color(0xFFFFB5A6),
+      photoUrl: user.photoUrl,
       trailing: FilledButton(
         onPressed: isBusy || sent || friend
             ? null

@@ -8,6 +8,7 @@ class CrewFriendsCard extends StatelessWidget {
     required this.email,
     required this.initials,
     required this.avatarColors,
+    this.photoUrl,
     this.onTap,
     this.trailing,
   });
@@ -16,6 +17,7 @@ class CrewFriendsCard extends StatelessWidget {
   final String email;
   final String initials;
   final Color avatarColors;
+  final String? photoUrl;
   final VoidCallback? onTap;
   final Widget? trailing;
 
@@ -57,14 +59,32 @@ class CrewFriendsCard extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 22,
                   backgroundColor: avatarColors,
-                  child: Text(
-                    initials,
-                    style: text.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                      color: AppTheme.black,
-                    ),
-                  ),
+                  child: photoUrl != null && photoUrl!.trim().isNotEmpty
+                      ? ClipOval(
+                          child: Image.network(
+                            photoUrl!,
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                _InitialsAvatar(
+                                  initials: initials,
+                                  textStyle: text.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    color: AppTheme.black,
+                                  ),
+                                ),
+                          ),
+                        )
+                      : _InitialsAvatar(
+                          initials: initials,
+                          textStyle: text.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            color: AppTheme.black,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -90,14 +110,22 @@ class CrewFriendsCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null) ...[
-                const SizedBox(width: 10),
-                trailing!,
-              ],
+              if (trailing != null) ...[const SizedBox(width: 10), trailing!],
             ],
           ),
         ),
       ),
     );
   }
+}
+
+class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.initials, required this.textStyle});
+
+  final String initials;
+  final TextStyle? textStyle;
+
+  @override
+  Widget build(BuildContext context) =>
+      Center(child: Text(initials, style: textStyle));
 }

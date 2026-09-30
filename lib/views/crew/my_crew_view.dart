@@ -5,9 +5,9 @@ import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/crew/add_friend_view.dart';
-import 'package:plansync/views/crew/friend_request_view.dart';
-import 'package:plansync/views/crew/friend_detail_view.dart';
 import 'package:plansync/views/crew/create_group_view.dart';
+import 'package:plansync/views/crew/friend_detail_view.dart';
+import 'package:plansync/views/crew/friend_request_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
@@ -388,8 +388,10 @@ class _FriendsList extends StatelessWidget {
       return Center(child: Text(vm.error!));
     }
 
-    return ListView.builder(
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
       itemCount: vm.friends.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 14),
       itemBuilder: (context, index) {
         final friend = vm.friends[index];
 
@@ -400,6 +402,7 @@ class _FriendsList extends StatelessWidget {
               '${friend.name.isNotEmpty ? friend.name[0] : ''}'
               '${friend.lastName.isNotEmpty ? friend.lastName[0] : ''}',
           avatarColors: const Color(0xFFFFB5A6),
+          photoUrl: friend.photoUrl,
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute<void>(

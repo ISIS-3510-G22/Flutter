@@ -88,17 +88,17 @@ class FriendDetailView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            'Send payments to ${friend.name} using any of these methods.',
-            style: text.bodyLarge?.copyWith(color: AppTheme.greyDark),
-          ),
-          const SizedBox(height: 28),
           if (friend.reimbursementMethods.isEmpty) ...[
             Text(
               'No reimbursement methods available.',
               style: text.bodyLarge?.copyWith(color: AppTheme.greyDark),
             ),
           ] else ...[
+            Text(
+              'Send payments to ${friend.name} using any of these methods.',
+              style: text.bodyLarge?.copyWith(color: AppTheme.greyDark),
+            ),
+            const SizedBox(height: 12),
             for (
               var index = 0;
               index < friend.reimbursementMethods.length;
