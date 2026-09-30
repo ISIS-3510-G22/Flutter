@@ -36,7 +36,7 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   Future<void> _onPlanUpdate(Plan updated) async {
     plan = updated;
-    final userIds = updated.invitations.map((i) => i.userId).toList();
+    final userIds = updated.goingIds;
     activities = await _activityRepository.getByIds(updated.activityIds);
     if (!setEquals(tags, updated.tags.toSet())) {
       _planRepository.updateTags(updated.id, tags);

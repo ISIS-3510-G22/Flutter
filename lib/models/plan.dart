@@ -27,4 +27,9 @@ class Plan {
     }
     return null;
   }
+
+  List<String> get goingIds => [
+    for (final i in invitations)
+      if (i.rsvp == RsvpStatus.going) i.userId,
+  ];
 }

@@ -22,7 +22,7 @@ class PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final count = plan.invitations.length;
+    final count = plan.goingIds.length;
     final peopleLabel = count == 1 ? 'Solo Trip' : '$count People';
     final subtitle = tab == PlanTab.upcoming
         ? '${formatShortDate(plan.date)} • $peopleLabel'
