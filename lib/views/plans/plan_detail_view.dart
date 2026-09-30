@@ -8,6 +8,7 @@ import 'package:plansync/viewmodels/plans/plan_detail_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/plans/edit_plan_activities_view.dart';
+import 'package:plansync/views/plans/plan_expenses_view.dart';
 import 'package:provider/provider.dart';
 
 class PlanDetailView extends StatelessWidget {
@@ -92,6 +93,20 @@ class _PlanDetailBody extends StatelessWidget {
                     label: const Text('Edit Activities'),
                   ),
                 ],
+                SizedBox(height: vm.isActive > 0 ? 8 : 16),
+                FilledButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PlanExpensesView(
+                        planId: vm.plan.id,
+                        participants: vm.participants,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: const Text('Expenses'),
+                ),
                 const Divider(height: 32),
                 Text(
                   'Participants (${vm.participants.length})',
