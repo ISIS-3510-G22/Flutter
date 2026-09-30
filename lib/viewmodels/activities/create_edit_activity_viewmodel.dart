@@ -92,7 +92,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   }
 
   Future<List<Place>> searchPlaces(String query) async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 250));
     if (query != addressController.text || query.trim().length < 3) return [];
     try {
       return await _placeRepository.search(query);
