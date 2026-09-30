@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:plansync/data/expense_repository.dart';
+import 'package:plansync/data/payment_info_repository.dart';
 import 'package:plansync/data/settlement_repository.dart';
 import 'package:plansync/models/expense.dart';
+import 'package:plansync/models/payment_info.dart';
 import 'package:plansync/models/settlement.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/utils/debt_simplifier.dart';
@@ -36,6 +38,9 @@ class ManageSplitsViewModel extends ChangeNotifier {
       _settlementsLoaded = true;
       _recalculate();
     });
+    _paymentInfoSub = _paymentInfoRepository
+        .paymentInfoForPlan(_planId)
+        .listen(_onPaymentInfo);
   }
 
   final String _planId;
@@ -43,13 +48,16 @@ class ManageSplitsViewModel extends ChangeNotifier {
   final String _currentUserId;
   final _expenseRepository = ExpenseRepository();
   final _settlementRepository = SettlementRepository();
+  final _paymentInfoRepository = PaymentInfoRepository();
   late final StreamSubscription<List<Expense>> _expensesSub;
   late final StreamSubscription<List<Settlement>> _settlementsSub;
+  late final StreamSubscription<List<PaymentInfo>> _paymentInfoSub;
 
   List<Expense> _expenses = [];
   List<Settlement> _settlements = [];
   bool _expensesLoaded = false;
   bool _settlementsLoaded = false;
+  Map<String, String> _paymentDetails = {};
 
   List<SplitRow> youOwe = [];
   List<SplitRow> owedToYou = [];
@@ -63,6 +71,13 @@ class ManageSplitsViewModel extends ChangeNotifier {
       owedToYou.isEmpty &&
       paidByYou.isEmpty &&
       paidToYou.isEmpty;
+
+  void _onPaymentInfo(List<PaymentInfo> infos) {
+    _paymentDetails = {for (final i in infos) i.userId: i.details};
+    notifyListeners();
+  }
+
+  String? paymentDetailsOf(String userId) => _paymentDetails[userId];
 
   List<String> _splitIds(Expense expense) {
     if (expense.splitAmongIds.isEmpty) {
@@ -187,6 +202,7 @@ class ManageSplitsViewModel extends ChangeNotifier {
   void dispose() {
     _expensesSub.cancel();
     _settlementsSub.cancel();
+    _paymentInfoSub.cancel();
     super.dispose();
   }
 }

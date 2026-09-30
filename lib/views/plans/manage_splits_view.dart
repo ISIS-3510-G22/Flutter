@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/plans/manage_splits_viewmodel.dart';
 import 'package:provider/provider.dart';
@@ -63,6 +64,10 @@ class _ManageSplitsBody extends StatelessWidget {
                   for (final row in vm.youOwe)
                     _SplitCard(
                       row: row,
+                      subtitle: _paymentSubtitle(
+                        vm.paymentDetailsOf(row.userId),
+                      ),
+                      copyText: vm.paymentDetailsOf(row.userId),
                       paid: false,
                       onToggle: (_) => vm.markPaid(row),
                     ),
@@ -94,28 +99,47 @@ class _ManageSplitsBody extends StatelessWidget {
   }
 }
 
+String _paymentSubtitle(String? details) {
+  if (details == null) return 'No Bre-B or account added yet';
+  return details;
+}
+
 class _SplitCard extends StatelessWidget {
   const _SplitCard({
     required this.row,
     this.subtitle,
+    this.copyText,
     this.paid,
     this.onToggle,
   });
 
   final SplitRow row;
   final String? subtitle;
+  final String? copyText;
   final bool? paid;
   final ValueChanged<bool>? onToggle;
 
   @override
   Widget build(BuildContext context) {
-    final bold = Theme.of(
-      context,
-    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold);
+    final bold = Theme.of(context).textTheme.titleMedium
+        ?.copyWith(fontWeight: FontWeight.bold);
     final title = Text(row.name, style: bold);
     final amount = Text('\$${row.amount.toStringAsFixed(2)}', style: bold);
     Widget? subtitleWidget;
     if (subtitle != null) subtitleWidget = Text(subtitle!);
+    if (copyText != null) {
+      subtitleWidget = Row(
+        children: [
+          Flexible(child: SelectableText(copyText!)),
+          IconButton(
+            icon: const Icon(Icons.copy, size: 18),
+            tooltip: 'Copy',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => _copy(context, copyText!),
+          ),
+        ],
+      );
+    }
 
     if (paid != null && onToggle != null) {
       return Card(
@@ -130,6 +154,14 @@ class _SplitCard extends StatelessWidget {
     }
     return Card(
       child: ListTile(title: title, subtitle: subtitleWidget, trailing: amount),
+    );
+  }
+
+  Future<void> _copy(BuildContext context, String value) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await Clipboard.setData(ClipboardData(text: value));
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Bre-B or account copied')),
     );
   }
 }

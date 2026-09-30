@@ -3,6 +3,7 @@ import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/plans/plan_expenses_viewmodel.dart';
 import 'package:plansync/views/plans/create_edit_expense_view.dart';
 import 'package:plansync/views/plans/manage_splits_view.dart';
+import 'package:plansync/views/plans/payment_info_view.dart';
 import 'package:provider/provider.dart';
 
 class PlanExpensesView extends StatelessWidget {
@@ -51,12 +52,26 @@ class _PlanExpensesBody extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: vm.expenses.isEmpty
-          ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: FilledButton.icon(
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PaymentInfoView(planId: vm.planId),
+                  ),
+                ),
+                icon: const Icon(Icons.account_balance_outlined),
+                label: const Text('Add Bre-B or account'),
+              ),
+              if (vm.expenses.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                FilledButton.icon(
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -69,8 +84,11 @@ class _PlanExpensesBody extends StatelessWidget {
                   icon: const Icon(Icons.account_balance_wallet_outlined),
                   label: const Text('Manage Splits'),
                 ),
-              ),
-            ),
+              ],
+            ],
+          ),
+        ),
+      ),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : vm.expenses.isEmpty
