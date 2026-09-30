@@ -77,6 +77,8 @@ class FriendsViewModel extends ChangeNotifier {
   List<FriendRequest> _requests = [];
   Map<String, User> _requesters = {};
   List<User> _searchResults = [];
+  List<User>? _searchableUsers;
+  Future<List<User>>? _searchableUsersFuture;
   Set<String> _outgoingRequestUserIds = {};
   final Set<String> _busyIds = {};
 
@@ -108,8 +110,11 @@ class FriendsViewModel extends ChangeNotifier {
 
   Future<void> searchUsers(String query) async {
     final generation = ++_searchGeneration;
-    final trimmed = query.trim();
-    if (trimmed.isEmpty) {
+    final normalized = query
+        .trim()
+        .replaceFirst(RegExp(r'^@'), '')
+        .toLowerCase();
+    if (normalized.isEmpty) {
       _searchResults = [];
       _searching = false;
       error = null;
@@ -121,14 +126,19 @@ class FriendsViewModel extends ChangeNotifier {
     error = null;
     _notify();
     try {
-      final users = await _userRepository.searchUsers(
-        trimmed.startsWith('@') ? trimmed.substring(1) : trimmed,
-        excludingId: _uid,
-      );
+      final users = _searchableUsers ??= await (_searchableUsersFuture ??=
+          _userRepository.getUsersForSearch(excludingId: _uid));
       if (generation != _searchGeneration) return;
-      _searchResults = users;
+      _searchResults = users.where((user) {
+        final fullName = '${user.name} ${user.lastName}'.trim().toLowerCase();
+        return user.name.toLowerCase().contains(normalized) ||
+            user.lastName.toLowerCase().contains(normalized) ||
+            fullName.contains(normalized) ||
+            user.username.toLowerCase().contains(normalized);
+      }).toList();
     } catch (error) {
       if (generation != _searchGeneration) return;
+      if (_searchableUsers == null) _searchableUsersFuture = null;
       this.error = 'Could not search users: $error';
       _searchResults = [];
     } finally {

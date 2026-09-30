@@ -111,7 +111,7 @@ class _AddFriendViewState extends State<AddFriendView> {
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'Search for someone by username.',
+                        'Search for someone by name or username.',
                         style: text.bodyMedium?.copyWith(
                           color: colors.onSurfaceVariant,
                         ),
