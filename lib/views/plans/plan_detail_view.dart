@@ -115,19 +115,20 @@ class _PlanDetailBody extends StatelessWidget {
                 ),
                 if (vm.isActive > 0) ...[
                   const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EditPlanActivitiesView(
-                          planId: vm.plan.id,
-                          existingActivityIds: vm.plan.activityIds,
+                  if (vm.myRsvp == RsvpStatus.going)
+                    FilledButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EditPlanActivitiesView(
+                            planId: vm.plan.id,
+                            existingActivityIds: vm.plan.activityIds,
+                          ),
                         ),
                       ),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Edit Activities'),
                     ),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Edit Activities'),
-                  ),
                   if (vm.isCreator) ...[
                     const SizedBox(height: 8),
                     FilledButton.icon(

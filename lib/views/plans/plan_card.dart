@@ -7,10 +7,16 @@ import 'package:plansync/views/plans/leave_review_view.dart';
 import 'package:plansync/views/plans/plan_detail_view.dart';
 
 class PlanCard extends StatelessWidget {
-  const PlanCard({super.key, required this.plan, required this.tab});
+  const PlanCard({
+    super.key,
+    required this.plan,
+    required this.tab,
+    required this.going,
+  });
 
   final Plan plan;
   final PlanTab tab;
+  final bool going;
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +50,11 @@ class PlanCard extends StatelessWidget {
                       children: [
                         if (tab == PlanTab.upcoming)
                           Text(
-                            'Confirmed',
+                            going ? 'Confirmed' : 'Not going',
                             style: text.labelMedium?.copyWith(
-                              color: colors.primary,
+                              color: going
+                                  ? colors.primary
+                                  : colors.onSurfaceVariant,
                             ),
                           ),
                         Text(plan.name, style: text.titleLarge),

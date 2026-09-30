@@ -24,6 +24,8 @@ class MyPlansViewModel extends ChangeNotifier {
   PlanTab selectedTab = PlanTab.upcoming;
   List<Plan> _plans = [];
 
+  bool isGoing(Plan plan) => plan.rsvpFor(_userId) == RsvpStatus.going;
+
   @override
   void dispose() {
     _sub.cancel();
