@@ -24,6 +24,8 @@ class MyPlansViewModel extends ChangeNotifier {
   PlanTab selectedTab = PlanTab.upcoming;
   List<Plan> _plans = [];
 
+  bool isGoing(Plan plan) => plan.rsvpFor(_userId) == RsvpStatus.going;
+
   @override
   void dispose() {
     _sub.cancel();
@@ -38,18 +40,12 @@ class MyPlansViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  RsvpStatus rsvpFor(Plan plan) {
-    return plan.invitations
-        .firstWhere(
-          (i) => i.userId == _userId,
-          orElse: () => Invitation(userId: _userId, rsvp: RsvpStatus.going),
-        )
-        .rsvp;
-  }
-
-  PlanTab _tabFor(Plan plan) {
-    if (plan.date.isBefore(DateTime.now())) return PlanTab.past;
-    return rsvpFor(plan) == RsvpStatus.invited
+  PlanTab? _tabFor(Plan plan) {
+    final rsvp = plan.rsvpFor(_userId);
+    if (plan.date.isBefore(DateTime.now())) {
+      return rsvp == RsvpStatus.going ? PlanTab.past : null;
+    }
+    return rsvp == RsvpStatus.invited
         ? PlanTab.pendingInvite
         : PlanTab.upcoming;
   }

@@ -7,7 +7,11 @@ import 'package:plansync/models/plan.dart';
 class AddToPlanViewModel extends ChangeNotifier {
   AddToPlanViewModel(this.activityId, String uid) {
     _sub = _planRepository.plansForUser(uid).listen((all) {
-      plans = all.where((p) => p.date.isAfter(DateTime.now())).toList();
+      plans = all
+          .where(
+            (p) => p.date.isAfter(DateTime.now()) && p.goingIds.contains(uid),
+          )
+          .toList();
       isLoading = false;
       notifyListeners();
     });

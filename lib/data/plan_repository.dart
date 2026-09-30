@@ -20,6 +20,7 @@ class PlanRepository {
             (i) => Invitation(
               userId: i['userId'] as String,
               rsvp: RsvpStatus.values.byName(i['rsvp'] as String),
+              invitedAt: (i['invitedAt'] as Timestamp?)?.toDate(),
             ),
           )
           .toList(),
@@ -79,5 +80,34 @@ class PlanRepository {
   Future<List<Plan>> publicPlans() async {
     final snapshot = await _plans.where('isPublic', isEqualTo: true).get();
     return snapshot.docs.map((d) => _fromData(d.id, d.data())).toList();
+  }
+
+  Future<void> invite(String planId, List<String> userIds) {
+    final invitedAt = Timestamp.now();
+    return _plans.doc(planId).update({
+      'participantsIds': FieldValue.arrayUnion(userIds),
+      'invitations': FieldValue.arrayUnion([
+        for (final id in userIds)
+          {
+            'userId': id,
+            'rsvp': RsvpStatus.invited.name,
+            'invitedAt': invitedAt,
+          },
+      ]),
+    });
+  }
+
+  Future<void> setRsvp(String planId, String userId, RsvpStatus rsvp) {
+    final ref = _plans.doc(planId);
+    return _plans.firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(ref);
+      final invitations = snapshot.data()!['invitations'] as List;
+      tx.update(ref, {
+        'invitations': [
+          for (final i in invitations)
+            i['userId'] == userId ? {...i, 'rsvp': rsvp.name} : i,
+        ],
+      });
+    });
   }
 }

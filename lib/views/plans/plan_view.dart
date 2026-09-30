@@ -83,7 +83,11 @@ class _PlanScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     children: vm.visiblePlans
                         .map(
-                          (plan) => PlanCard(plan: plan, tab: vm.selectedTab),
+                          (plan) => PlanCard(
+                            plan: plan,
+                            tab: vm.selectedTab,
+                            going: vm.isGoing(plan),
+                          ),
                         )
                         .toList(),
                   ),

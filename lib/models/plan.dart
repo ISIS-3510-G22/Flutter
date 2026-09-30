@@ -20,4 +20,16 @@ class Plan {
     this.invitations = const [],
     this.isPublic = false,
   });
+
+  RsvpStatus? rsvpFor(String userId) {
+    for (final i in invitations) {
+      if (i.userId == userId) return i.rsvp;
+    }
+    return null;
+  }
+
+  List<String> get goingIds => [
+    for (final i in invitations)
+      if (i.rsvp == RsvpStatus.going) i.userId,
+  ];
 }
