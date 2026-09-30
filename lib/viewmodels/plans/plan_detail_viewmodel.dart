@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:plansync/data/activity_repository.dart';
+import 'package:plansync/data/friend_repository.dart';
 import 'package:plansync/data/plan_repository.dart';
 import 'package:plansync/data/user_repository.dart';
 import 'package:plansync/models/activity.dart';
@@ -16,6 +17,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   final _planRepository = PlanRepository();
   final _activityRepository = ActivityRepository();
   final _userRepository = UserRepository();
+  final _friendRepository = FriendRepository();
   late final StreamSubscription<Plan> _sub;
 
   Plan plan;
@@ -51,6 +53,15 @@ class PlanDetailViewModel extends ChangeNotifier {
   }
 
   int get isActive => plan.date.compareTo(DateTime.now());
+
+  Future<List<User>> invitableFriends(String uid) async {
+    final invited = plan.invitations.map((i) => i.userId).toSet();
+    final friends = await _friendRepository.friendsForUser(uid).first;
+    return friends.where((f) => !invited.contains(f.id)).toList();
+  }
+
+  Future<void> invite(List<String> userIds) =>
+      _planRepository.invite(plan.id, userIds);
 
   @override
   void dispose() {

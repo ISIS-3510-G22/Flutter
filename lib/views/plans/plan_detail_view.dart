@@ -27,6 +27,19 @@ class PlanDetailView extends StatelessWidget {
 class _PlanDetailBody extends StatelessWidget {
   const _PlanDetailBody();
 
+  Future<void> _inviteFriends(
+    BuildContext context,
+    PlanDetailViewModel vm,
+  ) async {
+    final friends = await vm.invitableFriends(context.read<User>().id);
+    if (!context.mounted) return;
+    final selected = await showModalBottomSheet<Set<String>>(
+      context: context,
+      builder: (_) => _FriendPicker(friends: friends),
+    );
+    if (selected != null) await vm.invite(selected.toList());
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<PlanDetailViewModel>();
@@ -91,6 +104,14 @@ class _PlanDetailBody extends StatelessWidget {
                     icon: const Icon(Icons.add),
                     label: const Text('Edit Activities'),
                   ),
+                  if (vm.plan.creatorId == context.read<User>().id) ...[
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: () => _inviteFriends(context, vm),
+                      icon: const Icon(Icons.person_add_alt),
+                      label: const Text('Invite Friends'),
+                    ),
+                  ],
                 ],
                 const Divider(height: 32),
                 Text(
@@ -133,6 +154,48 @@ class _PlanDetailBody extends StatelessWidget {
                   ),
               ],
             ),
+    );
+  }
+}
+
+class _FriendPicker extends StatefulWidget {
+  const _FriendPicker({required this.friends});
+
+  final List<User> friends;
+
+  @override
+  State<_FriendPicker> createState() => _FriendPickerState();
+}
+
+class _FriendPickerState extends State<_FriendPicker> {
+  final _selected = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (widget.friends.isEmpty) const Text('No friends left to invite.'),
+        for (final friend in widget.friends)
+          CheckboxListTile(
+            value: _selected.contains(friend.id),
+            title: Text('${friend.name} ${friend.lastName}'),
+            subtitle: Text('@${friend.username}'),
+            onChanged: (checked) => setState(() {
+              if (checked!) {
+                _selected.add(friend.id);
+              } else {
+                _selected.remove(friend.id);
+              }
+            }),
+          ),
+        FilledButton(
+          onPressed: _selected.isEmpty
+              ? null
+              : () => Navigator.pop(context, _selected),
+          child: const Text('Invite'),
+        ),
+      ],
     );
   }
 }
