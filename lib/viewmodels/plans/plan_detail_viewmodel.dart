@@ -24,24 +24,27 @@ class PlanDetailViewModel extends ChangeNotifier {
   final String _uid;
   Plan plan;
   List<Activity> activities = [];
-  List<User> participants = [];
+  List<User> invitees = [];
   bool isLoading = true;
 
   bool get isCreator => plan.creatorId == _uid;
 
   RsvpStatus? get myRsvp => plan.rsvpFor(_uid);
 
+  List<User> get participants =>
+      invitees.where((u) => plan.rsvpFor(u.id) == RsvpStatus.going).toList();
+
   Future<void> setPublic(bool value) =>
       _planRepository.setPublic(plan.id, value);
 
   Future<void> _onPlanUpdate(Plan updated) async {
     plan = updated;
-    final userIds = updated.goingIds;
+    final userIds = updated.invitations.map((i) => i.userId).toList();
     activities = await _activityRepository.getByIds(updated.activityIds);
     if (!setEquals(tags, updated.tags.toSet())) {
       _planRepository.updateTags(updated.id, tags);
     }
-    participants = await _userRepository.getUsers(userIds);
+    invitees = await _userRepository.getUsers(userIds);
     isLoading = false;
     notifyListeners();
   }

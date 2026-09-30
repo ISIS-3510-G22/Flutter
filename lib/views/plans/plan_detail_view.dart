@@ -151,17 +151,21 @@ class _PlanDetailBody extends StatelessWidget {
                 ],
                 const Divider(height: 32),
                 Text(
-                  'Participants (${vm.participants.length})',
+                  'Participants (${vm.participants.length}/${vm.invitees.length} going)',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final p in vm.participants)
-                      InitialsAvatar(name: '${p.name} ${p.lastName}'),
-                  ],
-                ),
+                for (final p in vm.invitees)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: InitialsAvatar(name: '${p.name} ${p.lastName}'),
+                    title: Text('${p.name} ${p.lastName}'),
+                    trailing: Text(switch (vm.plan.rsvpFor(p.id)) {
+                      RsvpStatus.going => 'Going',
+                      RsvpStatus.notGoing => 'Not going',
+                      _ => 'Pending',
+                    }),
+                  ),
                 const Divider(height: 32),
                 Text(
                   'Activities',
