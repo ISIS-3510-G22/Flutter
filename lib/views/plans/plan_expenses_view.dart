@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/plans/plan_expenses_viewmodel.dart';
+import 'package:plansync/views/plans/create_edit_expense_view.dart';
 import 'package:provider/provider.dart';
 
 class PlanExpensesView extends StatelessWidget {
@@ -32,7 +33,23 @@ class _PlanExpensesBody extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Plan Expenses')),
+      appBar: AppBar(
+        title: const Text('Plan Expenses'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CreateEditExpenseView(
+                  planId: vm.planId,
+                  participants: vm.participants,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : vm.expenses.isEmpty
