@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/models/expense.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/plans/create_edit_expense_viewmodel.dart';
 import 'package:provider/provider.dart';
@@ -7,11 +8,13 @@ class CreateEditExpenseView extends StatelessWidget {
   const CreateEditExpenseView({
     required this.planId,
     required this.participants,
+    this.expense,
     super.key,
   });
 
   final String planId;
   final List<User> participants;
+  final Expense? expense;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +22,8 @@ class CreateEditExpenseView extends StatelessWidget {
       create: (context) => CreateEditExpenseViewModel(
         planId,
         participants,
-        context.read<User>().id,
+        expense?.paidById ?? context.read<User>().id,
+        expense,
       ),
       child: const _CreateEditExpenseForm(),
     );
@@ -34,7 +38,9 @@ class _CreateEditExpenseForm extends StatelessWidget {
     final vm = context.watch<CreateEditExpenseViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('New Expense')),
+      appBar: AppBar(
+        title: Text(vm.isEditing ? 'Edit Expense' : 'New Expense'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -67,6 +73,29 @@ class _CreateEditExpenseForm extends StatelessWidget {
               ],
               onChanged: vm.selectPayer,
             ),
+            if (vm.isEditing) ...[
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    foregroundColor: Theme.of(context).colorScheme.onError,
+                  ),
+                  onPressed: vm.isLoading
+                      ? null
+                      : () async {
+                          final confirmed = await _confirmDelete(context);
+                          if (!confirmed) return;
+                          final deleted = await vm.delete();
+                          if (deleted && context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
+                  child: const Text('Delete Expense'),
+                ),
+              ),
+            ],
             if (vm.errorMessage != null) ...[
               const SizedBox(height: 16),
               Text(
@@ -100,7 +129,7 @@ class _CreateEditExpenseForm extends StatelessWidget {
                             height: 24,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Create'),
+                        : Text(vm.isEditing ? 'Save' : 'Create'),
                   ),
                 ),
               ],
@@ -109,5 +138,26 @@ class _CreateEditExpenseForm extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<bool> _confirmDelete(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete expense?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 }

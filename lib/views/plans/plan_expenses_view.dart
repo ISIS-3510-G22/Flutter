@@ -74,6 +74,16 @@ class _PlanExpensesBody extends StatelessWidget {
                       ),
                     ),
                     subtitle: Text(vm.payerName(expense)),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CreateEditExpenseView(
+                          planId: vm.planId,
+                          participants: vm.participants,
+                          expense: expense,
+                        ),
+                      ),
+                    ),
                   ),
                 );
               },
