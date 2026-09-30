@@ -31,6 +31,19 @@ class PlanExpensesViewModel extends ChangeNotifier {
     return 'Unknown';
   }
 
+  String splitLabel(Expense expense) {
+    final ids = expense.splitAmongIds;
+    if (ids.isEmpty || participants.every((p) => ids.contains(p.id))) {
+      return 'For everyone';
+    }
+    if (ids.length == 1) {
+      for (final p in participants) {
+        if (p.id == ids.first) return 'For ${p.name}';
+      }
+    }
+    return 'For ${ids.length} people';
+  }
+
   @override
   void dispose() {
     _sub.cancel();

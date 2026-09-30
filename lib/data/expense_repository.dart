@@ -10,12 +10,17 @@ class ExpenseRepository {
 
   Expense _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
     final data = d.data()!;
+    var splitAmongIds = <String>[];
+    if (data['splitAmongIds'] is List) {
+      splitAmongIds = (data['splitAmongIds'] as List).cast<String>();
+    }
     return Expense(
       id: d.id,
       name: data['name'] as String,
       value: (data['value'] as num).toDouble(),
       paidById: data['paidById'] as String,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      splitAmongIds: splitAmongIds,
     );
   }
 
@@ -24,6 +29,7 @@ class ExpenseRepository {
     'value': expense.value,
     'paidById': expense.paidById,
     'createdAt': Timestamp.fromDate(expense.createdAt),
+    'splitAmongIds': expense.splitAmongIds,
   };
 
   Stream<List<Expense>> expensesForPlan(String planId) {

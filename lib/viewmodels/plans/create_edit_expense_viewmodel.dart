@@ -12,11 +12,15 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
   ]) : paidById = participants.any((p) => p.id == payerId)
            ? payerId
            : participants.first.id {
+    splitAmongIds = participants.map((p) => p.id).toSet();
     if (_editingExpense case final expense?) {
       nameController.text = expense.name;
       valueController.text = expense.value % 1 == 0
           ? expense.value.toStringAsFixed(0)
           : expense.value.toString();
+      if (expense.splitAmongIds.isNotEmpty) {
+        splitAmongIds = expense.splitAmongIds.toSet();
+      }
     }
   }
 
@@ -31,13 +35,35 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
   final valueController = TextEditingController();
 
   String paidById;
+  Set<String> splitAmongIds = {};
 
   bool isLoading = false;
   String? errorMessage;
 
+  bool get isForEveryone =>
+      participants.every((p) => splitAmongIds.contains(p.id));
+
   void selectPayer(String? userId) {
     if (userId == null) return;
     paidById = userId;
+    notifyListeners();
+  }
+
+  void toggleEveryone(bool everyone) {
+    if (everyone) {
+      splitAmongIds = participants.map((p) => p.id).toSet();
+    } else {
+      splitAmongIds = {};
+    }
+    notifyListeners();
+  }
+
+  void toggleParticipant(String userId) {
+    if (splitAmongIds.contains(userId)) {
+      splitAmongIds.remove(userId);
+    } else {
+      splitAmongIds.add(userId);
+    }
     notifyListeners();
   }
 
@@ -53,18 +79,30 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    if (splitAmongIds.isEmpty) {
+      errorMessage = 'Select at least one person.';
+      notifyListeners();
+      return false;
+    }
 
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
+      var id = '';
+      var createdAt = DateTime.now();
+      if (_editingExpense case final editing?) {
+        id = editing.id;
+        createdAt = editing.createdAt;
+      }
       final expense = Expense(
-        id: _editingExpense?.id ?? '',
+        id: id,
         name: nameController.text.trim(),
         value: value,
         paidById: paidById,
-        createdAt: _editingExpense?.createdAt ?? DateTime.now(),
+        createdAt: createdAt,
+        splitAmongIds: splitAmongIds.toList(),
       );
       if (_editingExpense == null) {
         await _repository.create(_planId, expense);

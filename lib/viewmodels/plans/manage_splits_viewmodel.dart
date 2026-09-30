@@ -56,14 +56,23 @@ class ManageSplitsViewModel extends ChangeNotifier {
   bool isLoading = true;
   String? errorMessage;
 
+  List<String> _splitIds(Expense expense) {
+    if (expense.splitAmongIds.isEmpty) {
+      return _participants.map((p) => p.id).toList();
+    }
+    return expense.splitAmongIds;
+  }
+
   Map<String, Map<String, double>> _owes() {
     final owes = <String, Map<String, double>>{};
     if (_participants.isEmpty) return owes;
     for (final expense in _expenses) {
-      final share = expense.value / _participants.length;
-      for (final p in _participants) {
-        if (p.id == expense.paidById) continue;
-        final row = owes.putIfAbsent(p.id, () => {});
+      final splitIds = _splitIds(expense);
+      if (splitIds.isEmpty) continue;
+      final share = expense.value / splitIds.length;
+      for (final id in splitIds) {
+        if (id == expense.paidById) continue;
+        final row = owes.putIfAbsent(id, () => {});
         final current = row[expense.paidById];
         if (current == null) {
           row[expense.paidById] = share;

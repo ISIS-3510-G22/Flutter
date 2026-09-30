@@ -73,6 +73,27 @@ class _CreateEditExpenseForm extends StatelessWidget {
               ],
               onChanged: vm.selectPayer,
             ),
+            const SizedBox(height: 16),
+            const Text('FOR WHOM'),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Everyone'),
+              subtitle: const Text('Split between all participants'),
+              value: vm.isForEveryone,
+              onChanged: vm.toggleEveryone,
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final p in vm.participants)
+                  FilterChip(
+                    label: Text('${p.name} ${p.lastName}'),
+                    selected: vm.splitAmongIds.contains(p.id),
+                    onSelected: (_) => vm.toggleParticipant(p.id),
+                  ),
+              ],
+            ),
             if (vm.isEditing) ...[
               const SizedBox(height: 24),
               SizedBox(

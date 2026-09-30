@@ -94,7 +94,9 @@ class _PlanExpensesBody extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    subtitle: Text(vm.payerName(expense)),
+                    subtitle: Text(
+                      '${vm.payerName(expense)} · ${vm.splitLabel(expense)}',
+                    ),
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
