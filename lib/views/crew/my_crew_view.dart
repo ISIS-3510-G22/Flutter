@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/user.dart';
 import 'package:plansync/models/group.dart';
+import 'package:plansync/models/user.dart';
 import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
+import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/views/crew/add_friend_view.dart';
 import 'package:plansync/views/crew/create_group_view.dart';
+import 'package:plansync/views/crew/friend_detail_view.dart';
+import 'package:plansync/views/crew/friend_request_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
-import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
 import 'package:provider/provider.dart';
@@ -15,8 +19,13 @@ class MyCrewView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CrewViewmodel(context.read<User>().id),
+    final uid = context.read<User>().id;
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => CrewViewmodel(uid)),
+        ChangeNotifierProvider(create: (_) => FriendsViewModel(uid)),
+      ],
       child: const _MyCrewContent(),
     );
   }
@@ -31,6 +40,30 @@ class _MyCrewContent extends StatefulWidget {
 
 class _MyCrewContentState extends State<_MyCrewContent> {
   bool _showGroups = true;
+
+  void _openAddFriend() {
+    final friendsVm = context.read<FriendsViewModel>();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: friendsVm,
+          child: const AddFriendView(),
+        ),
+      ),
+    );
+  }
+
+  void _openFriendRequests() {
+    final friendsVm = context.read<FriendsViewModel>();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: friendsVm,
+          child: const FriendRequestView(),
+        ),
+      ),
+    );
+  }
 
   Future<void> _createGroup(CrewViewmodel vm) async {
     final group = await Navigator.of(context).push<Group>(
@@ -180,7 +213,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
                         child: SizedBox(
                           height: 46,
                           child: FilledButton(
-                            onPressed: () {},
+                            onPressed: _openFriendRequests,
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -199,7 +232,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
                         child: SizedBox(
                           height: 46,
                           child: FilledButton(
-                            onPressed: () {},
+                            onPressed: _openAddFriend,
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -345,66 +378,40 @@ class _FriendsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(34, 2, 34, 12),
-      children: const [
-        CrewFriendsCard(
-          name: 'Pedro Martinez',
-          email: 'andres@example.com',
-          initials: 'AM',
-          avatarColors: Color(0xFFFFB5A6),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Juan Diego Restrepo',
-          email: 'juan@example.com',
-          initials: 'JD',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Julian Ramirez',
-          email: 'julian@example.com',
-          initials: 'JR',
-          avatarColors: Color(0xFFAEC8E8),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Samuel Ochoa',
-          email: 'samuel@example.com',
-          initials: 'So',
-          avatarColors: Color(0xFFFFB5A6),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Carolina Lopez',
-          email: 'carolina@example.com',
-          initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Carolina Lopez',
-          email: 'carolina@example.com',
-          initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Carolina Lopez',
-          email: 'carolina@example.com',
-          initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-        CrewFriendsCard(
-          name: 'Carolina Lopez',
-          email: 'carolina@example.com',
-          initials: 'CL',
-          avatarColors: Color(0xFFD8C5FF),
-        ),
-        SizedBox(height: 14),
-      ],
+    final vm = context.watch<FriendsViewModel>();
+
+    if (vm.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (vm.error != null) {
+      return Center(child: Text(vm.error!));
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+      itemCount: vm.friends.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 14),
+      itemBuilder: (context, index) {
+        final friend = vm.friends[index];
+
+        return CrewFriendsCard(
+          name: '${friend.name} ${friend.lastName}'.trim(),
+          email: friend.email,
+          initials:
+              '${friend.name.isNotEmpty ? friend.name[0] : ''}'
+              '${friend.lastName.isNotEmpty ? friend.lastName[0] : ''}',
+          avatarColors: const Color(0xFFFFB5A6),
+          photoUrl: friend.photoUrl,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => FriendDetailView(friend: friend),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
