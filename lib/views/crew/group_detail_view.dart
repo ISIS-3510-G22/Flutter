@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:plansync/models/group.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/views/crew/invite_friends_view.dart';
 import 'package:provider/provider.dart';
 
 class GroupDetailView extends StatefulWidget {
@@ -16,6 +18,22 @@ class GroupDetailView extends StatefulWidget {
 
 class _GroupDetailViewState extends State<GroupDetailView> {
   Future<List<User>>? _membersFuture;
+
+  void _openInviteFriends() {
+    final groupVm = context.read<CrewViewmodel>();
+    final friendsVm = context.read<FriendsViewModel>();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: groupVm),
+            ChangeNotifierProvider.value(value: friendsVm),
+          ],
+          child: InviteFriendsView(group: widget.group),
+        ),
+      ),
+    );
+  }
 
   @override
   void didChangeDependencies() {
@@ -127,7 +145,7 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                             user: members[index],
                             color: _memberColor(index),
                           ),
-                        const _InviteTile(),
+                        _InviteTile(onTap: _openInviteFriends),
                       ],
                     );
                   },
@@ -199,7 +217,9 @@ class _MemberTile extends StatelessWidget {
 }
 
 class _InviteTile extends StatelessWidget {
-  const _InviteTile();
+  const _InviteTile({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -208,24 +228,35 @@ class _InviteTile extends StatelessWidget {
 
     return SizedBox(
       width: 70,
-      child: Column(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: colors.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(Icons.person_add_alt_1, color: colors.onSurfaceVariant),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.person_add_alt_1,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Invite',
+                style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Invite',
-            style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-          ),
-        ],
+        ),
       ),
     );
   }

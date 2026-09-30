@@ -62,13 +62,43 @@ class GroupRepository {
   }
 
   Future<void> inviteUser(String groupId, String userId) {
-    final invitation = GroupInvitation(
-      id: '',
-      groupId: groupId,
-      userId: userId,
-      sentOn: DateTime.now(),
-    );
-    return _invitations.add(invitation.toMap());
+    return _members.doc(_memberId(groupId, userId)).get().then((
+      membership,
+    ) async {
+      if (membership.exists) {
+        throw StateError('This friend is already a group member.');
+      }
+
+      final groupInvitations = await _invitations
+          .where('groupId', isEqualTo: groupId)
+          .get();
+      final hasPendingInvitation = groupInvitations.docs.any((doc) {
+        final data = doc.data();
+        return data['userId'] == userId &&
+            data['status'] == InvitationStatus.pending.name;
+      });
+      if (hasPendingInvitation) {
+        throw StateError('This friend already has a pending invitation.');
+      }
+
+      final invitation = GroupInvitation(
+        id: '',
+        groupId: groupId,
+        userId: userId,
+        sentOn: DateTime.now(),
+      );
+      await _invitations.add(invitation.toMap());
+    });
+  }
+
+  Future<Set<String>> pendingInviteeIdsForGroup(String groupId) async {
+    final snapshot = await _invitations
+        .where('groupId', isEqualTo: groupId)
+        .get();
+    return snapshot.docs
+        .where((doc) => doc.data()['status'] == InvitationStatus.pending.name)
+        .map((doc) => doc.data()['userId'] as String)
+        .toSet();
   }
 
   Stream<List<GroupInvitation>> pendingInvitationsForUser(String uid) {
