@@ -6,6 +6,7 @@ import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/crew/add_friend_view.dart';
 import 'package:plansync/views/crew/friend_request_view.dart';
+import 'package:plansync/views/crew/friend_detail_view.dart';
 import 'package:plansync/views/crew/create_group_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
@@ -399,6 +400,13 @@ class _FriendsList extends StatelessWidget {
               '${friend.name.isNotEmpty ? friend.name[0] : ''}'
               '${friend.lastName.isNotEmpty ? friend.lastName[0] : ''}',
           avatarColors: const Color(0xFFFFB5A6),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => FriendDetailView(friend: friend),
+              ),
+            );
+          },
         );
       },
     );

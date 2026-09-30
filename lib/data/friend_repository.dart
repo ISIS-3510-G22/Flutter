@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/models/friend_request.dart';
+import 'package:plansync/models/reimbursement_method.dart';
 import 'package:plansync/models/user.dart';
 
 class FriendRepository {
@@ -29,6 +30,8 @@ class FriendRepository {
   };
 
   User _userFromData(String id, Map<String, dynamic> data) {
+    final methods = data['reimbursementMethods'] as List<dynamic>? ?? [];
+
     return User(
       id: id,
       name: data['name'] as String,
@@ -37,6 +40,14 @@ class FriendRepository {
       email: data['email'] as String,
       phone: data['phone'] as String,
       photoUrl: data['photoUrl'] as String?,
+      reimbursementMethods: methods.map((item) {
+        final method = Map<String, dynamic>.from(item as Map);
+        return ReimbursementMethod(
+          id: method['id'] as String? ?? '',
+          type: method['type'] as String? ?? '',
+          account: method['account'] as String? ?? '',
+        );
+      }).toList(),
     );
   }
 

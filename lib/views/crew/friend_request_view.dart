@@ -28,7 +28,7 @@ class FriendRequestView extends StatelessWidget {
             shape: const CircleBorder(),
           ),
         ),
-        title: const Text('Friend Invites'),
+        title: const Text('Friend Requests'),
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
