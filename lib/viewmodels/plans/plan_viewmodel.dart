@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:plansync/data/plan_repository.dart';
+import 'package:plansync/models/app_notification.dart';
 import 'package:plansync/models/invitations.dart';
 import 'package:plansync/models/plan.dart';
 
@@ -26,6 +27,8 @@ class MyPlansViewModel extends ChangeNotifier {
 
   bool isGoing(Plan plan) => plan.rsvpFor(_userId) == RsvpStatus.going;
 
+  static const _lateAfter = Duration(days: 2);
+
   @override
   void dispose() {
     _sub.cancel();
@@ -48,5 +51,15 @@ class MyPlansViewModel extends ChangeNotifier {
     return rsvp == RsvpStatus.invited
         ? PlanTab.pendingInvite
         : PlanTab.upcoming;
+  }
+
+  AppNotification? notificationFor(Plan plan) {
+    final invitation = plan.invitationFor(_userId);
+    final invitedAt = invitation?.invitedAt;
+    if (invitation?.rsvp != RsvpStatus.invited || invitedAt == null) {
+      return null;
+    }
+    if (DateTime.now().difference(invitedAt) < _lateAfter) return null;
+    return AppNotification.rsvpReminder(invitedAt);
   }
 }
