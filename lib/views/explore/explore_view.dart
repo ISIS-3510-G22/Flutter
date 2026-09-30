@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/viewmodels/explore_viewmodel.dart';
+import 'package:plansync/views/explore/nearby_map_view.dart';
 import 'package:provider/provider.dart';
 
 class ExploreView extends StatelessWidget {
@@ -29,7 +30,34 @@ class _ExploreBody extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Text('Explore', style: text.headlineMedium),
+          child: Row(
+            children: [
+              Expanded(child: Text('Explore', style: text.headlineMedium)),
+              SegmentedButton<bool>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                    value: false,
+                    icon: Icon(Icons.view_list_outlined),
+                    label: Text('List'),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    icon: Icon(Icons.map_outlined),
+                    label: Text('Map'),
+                  ),
+                ],
+                selected: const {false},
+                onSelectionChanged: (selection) {
+                  if (!selection.first) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NearbyMapView()),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
