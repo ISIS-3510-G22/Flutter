@@ -45,6 +45,22 @@ class CrewViewmodel extends ChangeNotifier {
         .toList();
   }
 
+  Future<Set<String>> pendingInviteeIdsForGroup(String groupId) =>
+      _repository.pendingInviteeIdsForGroup(groupId);
+
+  Future<bool> inviteFriend(String groupId, String userId) async {
+    error = null;
+    _notify();
+    try {
+      await _repository.inviteUser(groupId, userId);
+      return true;
+    } catch (e) {
+      error = 'Could not invite this friend: $e';
+      _notify();
+      return false;
+    }
+  }
+
   CrewViewmodel(String uid) : _uid = uid {
     _groupsSub = _repository
         .groupsForUser(uid)

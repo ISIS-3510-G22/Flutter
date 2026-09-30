@@ -66,6 +66,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
   }
 
   Future<void> _createGroup(CrewViewmodel vm) async {
+    final friendsVm = context.read<FriendsViewModel>();
     final group = await Navigator.of(context).push<Group>(
       MaterialPageRoute<Group>(
         builder: (_) => ChangeNotifierProvider.value(
@@ -78,8 +79,11 @@ class _MyCrewContentState extends State<_MyCrewContent> {
 
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ChangeNotifierProvider.value(
-          value: vm,
+        builder: (_) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: vm),
+            ChangeNotifierProvider.value(value: friendsVm),
+          ],
           child: GroupDetailView(group: group),
         ),
       ),
@@ -87,6 +91,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
   }
 
   Future<void> _openInvitations(CrewViewmodel vm) async {
+    final friendsVm = context.read<FriendsViewModel>();
     final group = await Navigator.of(context).push<Group>(
       MaterialPageRoute<Group>(
         builder: (_) => ChangeNotifierProvider.value(
@@ -99,8 +104,11 @@ class _MyCrewContentState extends State<_MyCrewContent> {
 
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ChangeNotifierProvider.value(
-          value: vm,
+        builder: (_) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: vm),
+            ChangeNotifierProvider.value(value: friendsVm),
+          ],
           child: GroupDetailView(group: group),
         ),
       ),
@@ -108,10 +116,14 @@ class _MyCrewContentState extends State<_MyCrewContent> {
   }
 
   void _openGroup(CrewViewmodel vm, Group group) {
+    final friendsVm = context.read<FriendsViewModel>();
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ChangeNotifierProvider.value(
-          value: vm,
+        builder: (_) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: vm),
+            ChangeNotifierProvider.value(value: friendsVm),
+          ],
           child: GroupDetailView(group: group),
         ),
       ),
