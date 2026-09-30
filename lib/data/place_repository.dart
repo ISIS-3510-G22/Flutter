@@ -4,29 +4,28 @@ import 'dart:io';
 import 'package:plansync/models/place.dart';
 
 class PlaceRepository {
-  final _client = HttpClient()..userAgent = 'PlanSync';
+  final _client = HttpClient();
+  static const _apiKey = String.fromEnvironment('GEOAPIFY_KEY');
 
   Future<List<Place>> search(String query) async {
-    final uri = Uri.https('photon.komoot.io', '/api/', {
-      'q': query,
+    final uri = Uri.https('api.geoapify.com', '/v1/geocode/autocomplete', {
+      'text': query,
+      'format': 'json',
       'limit': '5',
-      'lat': '4.65',
-      'lon':
-          '-74.06', // cuando el sensor de localizacion funcione se puede conectar aca para que se sugieran lugares cercanos al usuario, por ahora esta centrado en bogota.
+      'lang': 'es',
+      'filter': 'countrycode:co',
+      'bias': 'proximity:-74.06,4.65', // lon,lat — Bogotá for now
+      'apiKey': _apiKey,
     });
     final response = await (await _client.getUrl(uri)).close();
     final json = jsonDecode(await response.transform(utf8.decoder).join());
 
     return [
-      for (final f in json['features'] as List)
+      for (final r in json['results'] as List)
         Place(
-          address: [
-            f['properties']['name'],
-            f['properties']['street'],
-            f['properties']['city'],
-          ].whereType<String>().join(', '),
-          lat: (f['geometry']['coordinates'][1] as num).toDouble(),
-          lng: (f['geometry']['coordinates'][0] as num).toDouble(),
+          address: r['formatted'] as String,
+          lat: (r['lat'] as num).toDouble(),
+          lng: (r['lon'] as num).toDouble(),
         ),
     ];
   }
