@@ -1,0 +1,200 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:plansync/data/activity_repository.dart';
+import 'package:plansync/data/place_repository.dart';
+import 'package:plansync/data/tag_repository.dart';
+import 'package:plansync/models/activity.dart';
+import 'package:plansync/models/place.dart';
+import 'package:plansync/models/tag.dart';
+import 'package:plansync/services/storage_service.dart';
+
+class CreateEditActivityViewmodel extends ChangeNotifier {
+  CreateEditActivityViewmodel(this._ownerId, [this._editingActivity]) {
+    if (_editingActivity case final activity?) {
+      nameController.text = activity.name;
+      addressController.text = activity.address;
+      notesController.text = activity.notes;
+      expectedPriceController.text = activity.expectedPrice.toString();
+      tags = activity.tags.toSet();
+      activityVisibility = activity.visibility;
+      if (activity.lat != null) {
+        _place = Place(
+          address: activity.address,
+          lat: activity.lat!,
+          lng: activity.lng!,
+        );
+      }
+    }
+
+    _loadTags();
+  }
+
+  final String _ownerId;
+  final _repository = ActivityRepository();
+  final _tagRepository = TagRepository();
+  final _placeRepository = PlaceRepository();
+  final addressFocus = FocusNode();
+  final Activity? _editingActivity;
+
+  final nameController = TextEditingController();
+  final addressController = TextEditingController();
+  final notesController = TextEditingController();
+  final expectedPriceController = TextEditingController();
+  final newTagController = TextEditingController();
+
+  final _picker = ImagePicker();
+  final _storageService = StorageService();
+  File? pickedPhoto;
+
+  Set<String> tags = {};
+  List<Tag> allTags = [];
+  ActivityVisibility activityVisibility = ActivityVisibility.private;
+  Place? _place;
+
+  bool get isEditing => _editingActivity != null;
+
+  bool isLoading = false;
+  String? errorMessage;
+
+  bool isLoadingTags = true;
+
+  Future<void> _loadTags() async {
+    allTags = await _tagRepository.allTags();
+    isLoadingTags = false;
+    notifyListeners();
+  }
+
+  void toggleTag(String name) {
+    if (tags.contains(name)) {
+      tags.remove(name);
+    } else {
+      tags.add(name);
+    }
+    notifyListeners();
+  }
+
+  void addNewTag() {
+    final name = newTagController.text.trim().toLowerCase();
+    if (name.isEmpty) return;
+    tags.add(name);
+    newTagController.clear();
+    notifyListeners();
+  }
+
+  List<String> get tagOptions =>
+      {...allTags.map((t) => t.name), ...tags}.toList();
+
+  void selectVisibility(ActivityVisibility visibility) {
+    activityVisibility = visibility;
+    notifyListeners();
+  }
+
+  Future<List<Place>> searchPlaces(String query) async {
+    await Future.delayed(const Duration(milliseconds: 250));
+    if (query != addressController.text || query.trim().length < 3) return [];
+    try {
+      return await _placeRepository.search(query);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  void pickPlace(Place place) => _place = place;
+
+  Future<Activity?> save() async {
+    final price = double.tryParse(expectedPriceController.text.trim());
+    final place = _place?.address == addressController.text.trim()
+        ? _place
+        : null;
+    if (nameController.text.trim().isEmpty) {
+      errorMessage = 'Place name is required.';
+      notifyListeners();
+      return null;
+    }
+    if (addressController.text.trim().isEmpty) {
+      errorMessage = 'Address is required';
+      notifyListeners();
+      return null;
+    }
+    if (price == null) {
+      errorMessage = 'Enter a valid price.';
+      notifyListeners();
+      return null;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final id = _editingActivity?.id ?? _repository.newId();
+      final photoUrl = pickedPhoto == null
+          ? _editingActivity?.photoUrl
+          : await _storageService.upload(
+              'activity_pictures/$id.jpg',
+              pickedPhoto!,
+            );
+
+      final activity = Activity(
+        id: id,
+        name: nameController.text.trim(),
+        address: addressController.text.trim(),
+        expectedPrice: price,
+        notes: notesController.text.trim(),
+        tags: tags.toList(),
+        visibility: activityVisibility,
+        ownerId: _editingActivity?.ownerId ?? _ownerId,
+        likedBy: _editingActivity?.likedBy ?? [],
+        photoUrl: photoUrl,
+        lat: place?.lat,
+        lng: place?.lng,
+      );
+
+      if (_editingActivity == null) {
+        await _repository.create(activity);
+      } else {
+        await _repository.update(activity);
+      }
+
+      final before = _editingActivity?.tags.toSet() ?? <String>{};
+      await _tagRepository.updateCounts(
+        tags.difference(before).toList(),
+        before.difference(tags).toList(),
+      );
+
+      return activity;
+    } catch (_) {
+      errorMessage = 'Something went wrong. Try again.';
+      return null;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  String? get currentPhotoUrl => _editingActivity?.photoUrl;
+
+  Future<void> pickPhoto(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 1080,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    pickedPhoto = File(picked.path);
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    addressController.dispose();
+    expectedPriceController.dispose();
+    notesController.dispose();
+    newTagController.dispose();
+    addressFocus.dispose();
+    super.dispose();
+  }
+}
