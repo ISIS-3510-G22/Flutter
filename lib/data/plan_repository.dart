@@ -96,4 +96,18 @@ class PlanRepository {
       ]),
     });
   }
+
+  Future<void> setRsvp(String planId, String userId, RsvpStatus rsvp) {
+    final ref = _plans.doc(planId);
+    return _plans.firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(ref);
+      final invitations = snapshot.data()!['invitations'] as List;
+      tx.update(ref, {
+        'invitations': [
+          for (final i in invitations)
+            i['userId'] == userId ? {...i, 'rsvp': rsvp.name} : i,
+        ],
+      });
+    });
+  }
 }

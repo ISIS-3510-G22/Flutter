@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/models/invitations.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/utils/avatar.dart';
@@ -8,6 +9,7 @@ import 'package:plansync/viewmodels/plans/plan_detail_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/plans/edit_plan_activities_view.dart';
+import 'package:plansync/views/widgets/decision_dialog.dart';
 import 'package:provider/provider.dart';
 
 class PlanDetailView extends StatelessWidget {
@@ -18,7 +20,7 @@ class PlanDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => PlanDetailViewModel(plan),
+      create: (context) => PlanDetailViewModel(plan, context.read<User>().id),
       child: const _PlanDetailBody(),
     );
   }
@@ -31,13 +33,35 @@ class _PlanDetailBody extends StatelessWidget {
     BuildContext context,
     PlanDetailViewModel vm,
   ) async {
-    final friends = await vm.invitableFriends(context.read<User>().id);
+    final friends = await vm.invitableFriends();
     if (!context.mounted) return;
     final selected = await showModalBottomSheet<Set<String>>(
       context: context,
       builder: (_) => _FriendPicker(friends: friends),
     );
     if (selected != null) await vm.invite(selected.toList());
+  }
+
+  Future<void> _rsvp(BuildContext context, PlanDetailViewModel vm) async {
+    final plan = vm.plan;
+    final going = await showDecisionDialog(
+      context,
+      icon: Icons.event_available,
+      title: plan.name,
+      subtitle:
+          '${formatShortDate(plan.date)} · ${formatTime(TimeOfDay.fromDateTime(plan.date))} · ${plan.invitations.length} people invited',
+      message: 'Are you going?',
+      acceptLabel: "I'm going",
+      declineLabel: "Can't make it",
+      cancelLabel: 'Maybe later',
+    );
+    if (going == null) return;
+    final saved = await vm.respondRsvp(going);
+    if (!saved && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save your RSVP. Try again.')),
+      );
+    }
   }
 
   @override
@@ -104,12 +128,23 @@ class _PlanDetailBody extends StatelessWidget {
                     icon: const Icon(Icons.add),
                     label: const Text('Edit Activities'),
                   ),
-                  if (vm.plan.creatorId == context.read<User>().id) ...[
+                  if (vm.isCreator) ...[
                     const SizedBox(height: 8),
                     FilledButton.icon(
                       onPressed: () => _inviteFriends(context, vm),
                       icon: const Icon(Icons.person_add_alt),
                       label: const Text('Invite Friends'),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: () => _rsvp(context, vm),
+                      icon: const Icon(Icons.event_available),
+                      label: Text(switch (vm.myRsvp) {
+                        RsvpStatus.going => "You're going · Change",
+                        RsvpStatus.notGoing => 'Not going · Change',
+                        _ => 'RSVP',
+                      }),
                     ),
                   ],
                 ],
@@ -145,7 +180,7 @@ class _PlanDetailBody extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (vm.plan.creatorId == context.read<User>().id)
+                if (vm.isCreator)
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Public plan'),

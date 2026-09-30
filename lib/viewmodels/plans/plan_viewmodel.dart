@@ -38,18 +38,9 @@ class MyPlansViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  RsvpStatus rsvpFor(Plan plan) {
-    return plan.invitations
-        .firstWhere(
-          (i) => i.userId == _userId,
-          orElse: () => Invitation(userId: _userId, rsvp: RsvpStatus.going),
-        )
-        .rsvp;
-  }
-
   PlanTab _tabFor(Plan plan) {
     if (plan.date.isBefore(DateTime.now())) return PlanTab.past;
-    return rsvpFor(plan) == RsvpStatus.invited
+    return plan.rsvpFor(_userId) == RsvpStatus.invited
         ? PlanTab.pendingInvite
         : PlanTab.upcoming;
   }
