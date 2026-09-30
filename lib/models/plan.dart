@@ -21,12 +21,14 @@ class Plan {
     this.isPublic = false,
   });
 
-  RsvpStatus? rsvpFor(String userId) {
+  Invitation? invitationFor(String userId) {
     for (final i in invitations) {
-      if (i.userId == userId) return i.rsvp;
+      if (i.userId == userId) return i;
     }
     return null;
   }
+
+  RsvpStatus? rsvpFor(String userId) => invitationFor(userId)?.rsvp;
 
   List<String> get goingIds => [
     for (final i in invitations)
