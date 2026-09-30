@@ -92,6 +92,12 @@ class FriendsViewModel extends ChangeNotifier {
   List<User> get searchResults => _searchResults;
   List<FriendRequest> get pendingRequests => _requests;
   bool get isLoading => !_friendsLoaded || !_requestsLoaded || !_outgoingLoaded;
+  bool get areRequestsLoading => !_requestsLoaded;
+  String? get requestError =>
+      error?.startsWith('Could not load friend request') == true ||
+          error?.startsWith('Could not load requesters') == true
+      ? error
+      : null;
   bool get isSearching => _searching;
 
   User? requesterFor(FriendRequest request) => _requesters[request.fromUserId];
