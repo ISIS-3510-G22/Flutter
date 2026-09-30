@@ -99,8 +99,8 @@ class FriendRepository {
         .where('status', isEqualTo: FriendRequestStatus.accepted.name)
         .snapshots();
 
-    late List<QueryDocumentSnapshot<Map<String, dynamic>>> sentDocs;
-    late List<QueryDocumentSnapshot<Map<String, dynamic>>> receivedDocs;
+    var sentDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    var receivedDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
 
     final controller = StreamController<List<User>>();
 
