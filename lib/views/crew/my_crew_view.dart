@@ -12,6 +12,7 @@ import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
+import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:provider/provider.dart';
 
 class MyCrewView extends StatelessWidget {
@@ -153,10 +154,19 @@ class _MyCrewContentState extends State<_MyCrewContent> {
           Divider(height: 1, color: colors.outline),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
-            child: _CrewTabs(
-              showGroups: _showGroups,
-              onGroupsPressed: () => setState(() => _showGroups = true),
-              onFriendsPressed: () => setState(() => _showGroups = false),
+            child: TabTrack(
+              children: [
+                TabButton(
+                  label: 'My Groups',
+                  selected: _showGroups,
+                  onPressed: () => setState(() => _showGroups = true),
+                ),
+                TabButton(
+                  label: 'My Friends',
+                  selected: !_showGroups,
+                  onPressed: () => setState(() => _showGroups = false),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -262,82 +272,6 @@ class _MyCrewContentState extends State<_MyCrewContent> {
                   ),
                 ),
         ],
-      ),
-    );
-  }
-}
-
-class _CrewTabs extends StatelessWidget {
-  const _CrewTabs({
-    required this.showGroups,
-    required this.onGroupsPressed,
-    required this.onFriendsPressed,
-  });
-
-  final bool showGroups;
-  final VoidCallback onGroupsPressed;
-  final VoidCallback onFriendsPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        border: Border.all(color: colors.outline),
-        borderRadius: BorderRadius.circular(11),
-      ),
-      child: Row(
-        children: [
-          _TabButton(
-            label: 'My Groups',
-            selected: showGroups,
-            onPressed: onGroupsPressed,
-          ),
-          _TabButton(
-            label: 'My Friends',
-            selected: !showGroups,
-            onPressed: onFriendsPressed,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.label,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Expanded(
-      child: TextButton(
-        onPressed: onPressed,
-        style: TextButton.styleFrom(
-          foregroundColor: selected ? AppTheme.white : colors.onSurfaceVariant,
-          backgroundColor: selected ? AppTheme.coral : Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontSize: 16,
-            color: selected ? AppTheme.white : colors.onSurfaceVariant,
-          ),
-        ),
       ),
     );
   }

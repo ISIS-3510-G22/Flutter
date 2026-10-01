@@ -48,33 +48,24 @@ class _MyActivitiesBody extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: TabTrack(
             children: [
-              Expanded(
-                child: TabButton(
-                  label: 'For you',
-                  selected: vm.currentTab == ActivitiesTab.recommended,
-                  onPressed: () => vm.selectTab(ActivitiesTab.recommended),
-                ),
+              TabButton(
+                label: 'For you',
+                selected: vm.currentTab == ActivitiesTab.recommended,
+                onPressed: () => vm.selectTab(ActivitiesTab.recommended),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TabButton(
-                  label: 'Liked',
-                  selected: vm.currentTab == ActivitiesTab.liked,
-                  onPressed: () => vm.selectTab(ActivitiesTab.liked),
-                ),
+              TabButton(
+                label: 'Liked',
+                selected: vm.currentTab == ActivitiesTab.liked,
+                onPressed: () => vm.selectTab(ActivitiesTab.liked),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TabButton(
-                  label: 'Private',
-                  selected: vm.currentTab == ActivitiesTab.private,
-                  onPressed: () => vm.selectTab(ActivitiesTab.private),
-                ),
+              TabButton(
+                label: 'Private',
+                selected: vm.currentTab == ActivitiesTab.private,
+                onPressed: () => vm.selectTab(ActivitiesTab.private),
               ),
-              const SizedBox(width: 12),
             ],
           ),
         ),
