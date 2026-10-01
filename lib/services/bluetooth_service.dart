@@ -77,11 +77,14 @@ class BluetoothFriendService {
   final Map<String, Peripheral> _found = {};
   final Map<String, _IncomingMessage> _incomingMessages = {};
   StreamSubscription<DiscoveredEventArgs>? _discoverySub;
+  StreamSubscription<GATTCharacteristicReadRequestedEventArgs>? _readSub;
   StreamSubscription<GATTCharacteristicWriteRequestedEventArgs>? _writeSub;
   StreamSubscription<PeripheralConnectionStateChangedEventArgs>? _connSub;
   bool _serviceAdded = false;
   bool _advertising = false;
   bool _scanning = false;
+  bool _shouldScan = false;
+  bool _disposed = false;
 
   Future<bool> ensureReady() async {
     try {
@@ -111,8 +114,14 @@ class BluetoothFriendService {
       if (!_serviceAdded) {
         final characteristic = GATTCharacteristic.mutable(
           uuid: _characteristicUuid,
-          properties: [GATTCharacteristicProperty.write],
-          permissions: [GATTCharacteristicPermission.write],
+          properties: [
+            GATTCharacteristicProperty.read,
+            GATTCharacteristicProperty.write,
+          ],
+          permissions: [
+            GATTCharacteristicPermission.read,
+            GATTCharacteristicPermission.write,
+          ],
           descriptors: [],
         );
         await _peripheral.addService(
@@ -129,6 +138,9 @@ class BluetoothFriendService {
       _writeSub ??= _peripheral.characteristicWriteRequested.listen(
         _handleWriteRequest,
       );
+      _readSub ??= _peripheral.characteristicReadRequested.listen(
+        _handleReadRequest,
+      );
 
       await _peripheral.startAdvertising(
         Advertisement(serviceUUIDs: [_serviceUuid]),
@@ -139,6 +151,31 @@ class BluetoothFriendService {
       _emitError('Could not start advertising: $e');
       return false;
     }
+  }
+
+  Future<void> _handleReadRequest(
+    GATTCharacteristicReadRequestedEventArgs args,
+  ) async {
+    if (args.characteristic.uuid != _characteristicUuid) {
+      await _peripheral.respondReadRequestWithError(
+        args.request,
+        error: GATTError.requestNotSupported,
+      );
+      return;
+    }
+
+    final bytes = Uint8List.fromList(utf8.encode(localUserId));
+    if (args.request.offset > bytes.length) {
+      await _peripheral.respondReadRequestWithError(
+        args.request,
+        error: GATTError.requestNotSupported,
+      );
+      return;
+    }
+    await _peripheral.respondReadRequestWithValue(
+      args.request,
+      value: Uint8List.sublistView(bytes, args.request.offset),
+    );
   }
 
   Future<void> _handleWriteRequest(
@@ -229,10 +266,55 @@ class BluetoothFriendService {
 
       await _central.startDiscovery(serviceUUIDs: [_serviceUuid]);
       _scanning = true;
+      _shouldScan = true;
       return true;
     } catch (e) {
       _emitError('Could not start scanning: $e');
       return false;
+    }
+  }
+
+  /// Connects briefly to read the app user ID advertised through GATT.
+  /// This identifies the account claimed by the peer; it does not authenticate
+  /// that account's owner.
+  Future<String?> identifyNearbyDevice(String deviceId) async {
+    final peripheral = _found[deviceId];
+    if (peripheral == null) return null;
+
+    final resumeScanning = _scanning;
+    try {
+      if (resumeScanning) {
+        await _central.stopDiscovery();
+        _scanning = false;
+      }
+
+      await _central.connect(peripheral);
+      final services = await _central.discoverGATT(peripheral);
+      final service = services.firstWhere((item) => item.uuid == _serviceUuid);
+      final characteristic = service.characteristics.firstWhere(
+        (item) => item.uuid == _characteristicUuid,
+      );
+      final bytes = await _central.readCharacteristic(
+        peripheral,
+        characteristic,
+      );
+      final userId = utf8.decode(bytes).trim();
+      if (userId.isEmpty || userId.length > 128) return null;
+      return userId;
+    } catch (_) {
+      return null;
+    } finally {
+      try {
+        await _central.disconnect(peripheral);
+      } catch (_) {}
+      if (resumeScanning && _shouldScan && !_disposed) {
+        try {
+          await _central.startDiscovery(serviceUUIDs: [_serviceUuid]);
+          _scanning = true;
+        } catch (e) {
+          _emitError('Could not resume Bluetooth scanning: $e');
+        }
+      }
     }
   }
 
@@ -303,10 +385,13 @@ class BluetoothFriendService {
   }
 
   Future<void> stop() async {
+    _shouldScan = false;
     await _discoverySub?.cancel();
+    await _readSub?.cancel();
     await _writeSub?.cancel();
     await _connSub?.cancel();
     _discoverySub = null;
+    _readSub = null;
     _writeSub = null;
     _connSub = null;
 
@@ -324,6 +409,7 @@ class BluetoothFriendService {
   }
 
   Future<void> dispose() async {
+    _disposed = true;
     await stop();
     try {
       await _peripheral.removeAllServices();
