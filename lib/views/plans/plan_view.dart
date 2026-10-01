@@ -65,6 +65,7 @@ class _PlanScreen extends StatelessWidget {
                             tab: vm.selectedTab,
                             going: vm.isGoing(plan),
                             notification: vm.notificationFor(plan),
+                            photoUrls: vm.photoUrlsFor(plan),
                           ),
                         )
                         .toList(),

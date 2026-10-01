@@ -5,17 +5,14 @@ import 'package:plansync/models/user.dart';
 class UserRepository {
   final _users = FirebaseFirestore.instance.collection('users');
 
-  Future<User?> getUser(String id) async {
-    final doc = await _users.doc(id).get();
-    if (!doc.exists) return null;
-    final data = doc.data()!;
+  User _getUserFromDoc(String docId, Map<String, dynamic> data) {
     return User(
-      id: id,
-      name: data['name'] as String,
-      lastName: data['lastName'] as String,
-      username: data['username'] as String,
-      email: data['email'] as String,
-      phone: data['phone'] as String,
+      id: docId,
+      name: data['name'] as String? ?? '',
+      lastName: data['lastName'] as String? ?? '',
+      username: data['username'] as String? ?? '',
+      email: data['email'] as String? ?? '',
+      phone: data['phone'] as String? ?? '',
       photoUrl: data['photoUrl'] as String?,
       reimbursementMethods:
           (data['reimbursementMethods'] as List<dynamic>? ?? [])
@@ -28,6 +25,13 @@ class UserRepository {
               )
               .toList(),
     );
+  }
+
+  Future<User?> getUser(String id) async {
+    final doc = await _users.doc(id).get();
+    if (!doc.exists) return null;
+    final data = doc.data()!;
+    return _getUserFromDoc(id, data);
   }
 
   Future<void> createUser(User user) {
@@ -70,32 +74,15 @@ class UserRepository {
     final snapshot = await _users
         .where(FieldPath.documentId, whereIn: ids)
         .get();
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-      return User(
-        id: doc.id,
-        name: data['name'] as String,
-        lastName: data['lastName'] as String,
-        username: data['username'] as String,
-        email: data['email'] as String,
-        phone: data['phone'] as String,
-      );
-    }).toList();
+    return snapshot.docs
+        .map((doc) => _getUserFromDoc(doc.id, doc.data()))
+        .toList();
   }
 
   Future<List<User>> getUsersForSearch({String? excludingId}) async {
     final snapshot = await _users.get();
     return snapshot.docs.where((doc) => doc.id != excludingId).map((doc) {
-      final data = doc.data();
-      return User(
-        id: doc.id,
-        name: data['name'] as String? ?? '',
-        lastName: data['lastName'] as String? ?? '',
-        username: data['username'] as String? ?? '',
-        email: data['email'] as String? ?? '',
-        phone: data['phone'] as String? ?? '',
-        photoUrl: data['photoUrl'] as String?,
-      );
+      return _getUserFromDoc(doc.id, doc.data());
     }).toList();
   }
 }

@@ -14,12 +14,14 @@ class PlanCard extends StatelessWidget {
     required this.tab,
     required this.going,
     required this.notification,
+    required this.photoUrls,
   });
 
   final Plan plan;
   final PlanTab tab;
   final bool going;
   final AppNotification? notification;
+  final List<String?> photoUrls;
 
   @override
   Widget build(BuildContext context) {
@@ -80,10 +82,7 @@ class PlanCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (tab == PlanTab.past)
-                    InitialsAvatar(name: plan.name)
-                  else
-                    AvatarRow(count: count),
+                  AvatarRow(photoUrls: photoUrls, count: count),
                 ],
               ),
               if (notification != null) ...[

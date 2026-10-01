@@ -185,9 +185,7 @@ class _PlanDetailBody extends StatelessWidget {
                           for (final p in vm.invitees)
                             ListTile(
                               contentPadding: EdgeInsets.zero,
-                              leading: InitialsAvatar(
-                                name: '${p.name} ${p.lastName}',
-                              ),
+                              leading: UserAvatar(photoUrl: p.photoUrl),
                               title: Text('${p.name} ${p.lastName}'),
                               trailing: Text(switch (vm.plan.rsvpFor(p.id)) {
                                 RsvpStatus.going => 'Going',

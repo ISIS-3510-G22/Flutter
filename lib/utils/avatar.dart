@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AvatarRow extends StatelessWidget {
-  const AvatarRow({required this.count, super.key});
+  const AvatarRow({required this.photoUrls, required this.count, super.key});
 
+  final List<String?> photoUrls;
   final int count;
 
   @override
@@ -16,15 +17,7 @@ class AvatarRow extends StatelessWidget {
         for (var i = 0; i < shown; i++)
           Padding(
             padding: const EdgeInsets.only(left: 4),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: colors.surfaceContainerHighest,
-              child: Icon(
-                Icons.person_outline,
-                size: 18,
-                color: colors.onSurfaceVariant,
-              ),
-            ),
+            child: UserAvatar(photoUrl: photoUrls.elementAtOrNull(i)),
           ),
         if (overflow > 0)
           Padding(
@@ -46,27 +39,23 @@ class AvatarRow extends StatelessWidget {
   }
 }
 
-class InitialsAvatar extends StatelessWidget {
-  const InitialsAvatar({required this.name, super.key});
+class UserAvatar extends StatelessWidget {
+  const UserAvatar({required this.photoUrl, super.key});
 
-  final String name;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final words = name.split(' ').where((w) => w.isNotEmpty).toList();
-    final initials = words.length >= 2
-        ? '${words[0][0]}${words[1][0]}'
-        : words.isNotEmpty
-        ? words[0].substring(0, 1)
-        : '?';
 
     return CircleAvatar(
       radius: 16,
-      backgroundColor: colors.primary,
-      child: Text(
-        initials.toUpperCase(),
-        style: TextStyle(color: colors.onPrimary, fontSize: 12),
+      backgroundColor: colors.surfaceContainerHighest,
+      foregroundImage: photoUrl == null ? null : NetworkImage(photoUrl!),
+      child: Icon(
+        Icons.person_outline,
+        size: 18,
+        color: colors.onSurfaceVariant,
       ),
     );
   }
