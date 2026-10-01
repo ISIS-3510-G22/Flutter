@@ -5,7 +5,7 @@ import 'package:plansync/models/user.dart';
 import 'package:plansync/utils/date_format.dart';
 import 'package:plansync/viewmodels/activities/add_to_plan_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
-import 'package:plansync/views/plans/create_plan_view.dart';
+import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:provider/provider.dart';
 
 class AddToPlanView extends StatelessWidget {
@@ -80,7 +80,8 @@ class _AddToPlanBody extends StatelessWidget {
                     onTap: () => Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => CreatePlanView(activityId: activity.id),
+                        builder: (_) =>
+                            CreateEditPlanView(activityId: activity.id),
                       ),
                     ),
                   ),

@@ -69,12 +69,16 @@ class PlanRepository {
     });
   }
 
-  Future<void> updateTags(String planId, Set<String> tags) {
-    return _plans.doc(planId).update({'tags': tags.toList()});
+  Future<void> update(Plan plan) {
+    return _plans.doc(plan.id).update({
+      'name': plan.name,
+      'date': Timestamp.fromDate(plan.date),
+      'isPublic': plan.isPublic,
+    });
   }
 
-  Future<void> setPublic(String planId, bool isPublic) {
-    return _plans.doc(planId).update({'isPublic': isPublic});
+  Future<void> updateTags(String planId, Set<String> tags) {
+    return _plans.doc(planId).update({'tags': tags.toList()});
   }
 
   Future<List<Plan>> publicPlans() async {
