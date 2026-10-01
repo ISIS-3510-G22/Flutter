@@ -103,9 +103,9 @@ class BluetoothFriendService {
     }
   }
 
-  Future<void> startAdvertising() async {
-    if (_advertising) return;
-    if (!await ensureReady()) return;
+  Future<bool> startAdvertising() async {
+    if (_advertising) return true;
+    if (!await ensureReady()) return false;
 
     try {
       if (!_serviceAdded) {
@@ -134,8 +134,10 @@ class BluetoothFriendService {
         Advertisement(serviceUUIDs: [_serviceUuid]),
       );
       _advertising = true;
+      return true;
     } catch (e) {
       _emitError('Could not start advertising: $e');
+      return false;
     }
   }
 
@@ -203,9 +205,9 @@ class BluetoothFriendService {
     return null;
   }
 
-  Future<void> startScanning() async {
-    if (_scanning) return;
-    if (!await ensureReady()) return;
+  Future<bool> startScanning() async {
+    if (_scanning) return true;
+    if (!await ensureReady()) return false;
 
     try {
       _discoverySub ??= _central.discovered.listen((args) {
@@ -227,16 +229,18 @@ class BluetoothFriendService {
 
       await _central.startDiscovery(serviceUUIDs: [_serviceUuid]);
       _scanning = true;
+      return true;
     } catch (e) {
       _emitError('Could not start scanning: $e');
+      return false;
     }
   }
 
-  Future<void> sendFriendRequest(String recipientDeviceId) async {
+  Future<bool> sendFriendRequest(String recipientDeviceId) async {
     final peripheral = _found[recipientDeviceId];
     if (peripheral == null) {
       _emitError('Device no longer nearby');
-      return;
+      return false;
     }
 
     try {
@@ -287,8 +291,10 @@ class BluetoothFriendService {
       _eventController.add(
         BluetoothEvent(BluetoothEventType.requestSent, recipientDeviceId),
       );
+      return true;
     } catch (e) {
       _emitError('Could not send friend request: $e');
+      return false;
     } finally {
       try {
         await _central.disconnect(peripheral);
