@@ -8,9 +8,14 @@ import 'package:plansync/views/crew/invite_friends_view.dart';
 import 'package:provider/provider.dart';
 
 class GroupDetailView extends StatefulWidget {
-  const GroupDetailView({super.key, required this.group});
+  const GroupDetailView({
+    super.key,
+    required this.group,
+    required this.friendsViewModel,
+  });
 
   final Group group;
+  final FriendsViewModel friendsViewModel;
 
   @override
   State<GroupDetailView> createState() => _GroupDetailViewState();
@@ -21,13 +26,12 @@ class _GroupDetailViewState extends State<GroupDetailView> {
 
   void _openInviteFriends() {
     final groupVm = context.read<CrewViewmodel>();
-    final friendsVm = context.read<FriendsViewModel>();
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MultiProvider(
           providers: [
             ChangeNotifierProvider.value(value: groupVm),
-            ChangeNotifierProvider.value(value: friendsVm),
+            ChangeNotifierProvider.value(value: widget.friendsViewModel),
           ],
           child: InviteFriendsView(group: widget.group),
         ),
