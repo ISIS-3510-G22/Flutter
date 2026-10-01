@@ -4,6 +4,7 @@ import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
 import 'package:plansync/views/plans/create_plan_view.dart';
 import 'package:plansync/views/plans/plan_card.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
+import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
 class PlanView extends StatelessWidget {
@@ -26,25 +27,21 @@ class _PlanScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<MyPlansViewModel>();
-    final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('My Plans', style: text.headlineMedium),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CreatePlanView()),
-            ),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CreatePlanView()),
+        ),
+        child: const Icon(Icons.add),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const ViewHeader(title: 'My Plans'),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TabTrack(
               children: [
                 for (final tab in PlanTab.values)
@@ -60,7 +57,7 @@ class _PlanScreen extends StatelessWidget {
             child: vm.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                     children: vm.visiblePlans
                         .map(
                           (plan) => PlanCard(

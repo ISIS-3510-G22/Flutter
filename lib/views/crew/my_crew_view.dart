@@ -13,6 +13,7 @@ import 'package:plansync/views/crew/group_invite_view.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
+import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
 class MyCrewView extends StatelessWidget {
@@ -141,19 +142,9 @@ class _MyCrewContentState extends State<_MyCrewContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const ViewHeader(title: 'My Crew'),
           Padding(
-            padding: EdgeInsets.fromLTRB(34, 20, 20, 10),
-            child: Text(
-              'My Crew',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontSize: 36,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          Divider(height: 1, color: colors.outline),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: TabTrack(
               children: [
                 TabButton(
