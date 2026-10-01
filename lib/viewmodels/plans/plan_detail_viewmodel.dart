@@ -26,6 +26,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   List<Activity> activities = [];
   List<User> invitees = [];
   bool isLoading = true;
+  bool showInvitees = true;
 
   bool get isCreator => plan.creatorId == _uid;
 
@@ -33,6 +34,11 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   List<User> get participants =>
       invitees.where((u) => plan.rsvpFor(u.id) == RsvpStatus.going).toList();
+
+  void setShowInvitees(bool value) {
+    showInvitees = value;
+    notifyListeners();
+  }
 
   Future<void> setPublic(bool value) =>
       _planRepository.setPublic(plan.id, value);
