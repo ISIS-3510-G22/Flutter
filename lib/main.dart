@@ -38,7 +38,8 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  late final Stream<User?> _authStateChanges;
+  final AuthService _authService = AuthService();
+  late Stream<User?> _authStateChanges;
   final NotificationService _notificationService = NotificationService();
   String? _notificationRegistrationUserId;
   String? _activeUserId;
@@ -48,7 +49,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    _authStateChanges = AuthService().authStateChanges;
+    _authStateChanges = _authService.authStateChanges;
     unawaited(
       _notificationService.initialize(onTap: _handleNotificationTap).catchError(
         (Object error) {
@@ -61,6 +62,12 @@ class _AuthGateState extends State<AuthGate> {
   void _handleNotificationTap(String type) {
     _pendingNotificationType = type;
     _scheduleNotificationRoute();
+  }
+
+  void _retryAuthState() {
+    setState(() {
+      _authStateChanges = _authService.authStateChanges;
+    });
   }
 
   void _scheduleNotificationRoute() {
@@ -122,33 +129,60 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: _authStateChanges,
-      builder: (context, snapshot) {
-        MaterialApp app(Widget home) => MaterialApp(
-          navigatorKey: _appNavigatorKey,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: context.watch<ThemeService>().mode,
-          home: home,
-        );
+    return MaterialApp(
+      navigatorKey: _appNavigatorKey,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: context.watch<ThemeService>().mode,
+      home: StreamBuilder<User?>(
+        stream: _authStateChanges,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            debugPrint(
+              'Could not load the signed-in user profile: ${snapshot.error}',
+            );
+            return Scaffold(
+              body: SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Could not load your account. Check your internet connection and try again.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: _retryAuthState,
+                          child: const Text('Try again'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return app(
-            Scaffold(body: Center(child: CircularProgressIndicator())),
-          );
-        }
-        final user = snapshot.data;
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final user = snapshot.data;
 
-        if (user == null) {
-          _activeUserId = null;
-          return app(LoginView());
-        }
-        _activeUserId = user.id;
-        _registerNotificationsOnce(user);
-        if (_pendingNotificationType != null) _scheduleNotificationRoute();
-        return Provider<User>.value(value: user, child: app(HomeShell()));
-      },
+          if (user == null) {
+            _activeUserId = null;
+            return const LoginView();
+          }
+          _activeUserId = user.id;
+          _registerNotificationsOnce(user);
+          if (_pendingNotificationType != null) _scheduleNotificationRoute();
+          return Provider<User>.value(value: user, child: const HomeShell());
+        },
+      ),
     );
   }
 }

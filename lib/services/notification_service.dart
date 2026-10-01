@@ -137,7 +137,13 @@ class NotificationService {
       _activeUserId = userId;
     }
 
-    final allowed = await requestPermission();
+    late final bool allowed;
+    try {
+      allowed = await requestPermission();
+    } catch (error) {
+      _lastError = 'Could not request notification permission: $error';
+      return false;
+    }
     if (!allowed) return false;
 
     _tokenRefreshSubscription ??= _messaging.onTokenRefresh.listen(
