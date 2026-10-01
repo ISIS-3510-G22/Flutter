@@ -18,6 +18,7 @@ dependencies:
   light: ^5.0.0
   shared_preferences: ^2.5.5
   bluetooth_low_energy: ^6.2.1
+  firebase_messaging: ^16.7.0
 
 dev_dependencies:
   flutter_test:
