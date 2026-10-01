@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
-import 'package:plansync/views/plans/create_plan_view.dart';
+import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:plansync/views/plans/plan_card.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:plansync/views/widgets/view_header.dart';
@@ -32,7 +32,7 @@ class _PlanScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const CreatePlanView()),
+          MaterialPageRoute(builder: (_) => const CreateEditPlanView()),
         ),
         child: const Icon(Icons.add),
       ),

@@ -1,29 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/models/plan.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/utils/date_format.dart';
-import 'package:plansync/viewmodels/plans/create_plan_viewmodel.dart';
+import 'package:plansync/viewmodels/plans/create_edit_plan_viewmodel.dart';
 import 'package:plansync/views/plans/plan_detail_view.dart';
 import 'package:provider/provider.dart';
 
-class CreatePlanView extends StatelessWidget {
-  const CreatePlanView({this.activityId, super.key});
+class CreateEditPlanView extends StatelessWidget {
+  const CreateEditPlanView({this.activityId, this.editingPlan, super.key});
 
   final String? activityId;
+  final Plan? editingPlan;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) =>
-          CreatePlanViewModel(context.read<User>().id, activityId),
-      child: const _CreatePlanForm(),
+      create: (context) => CreateEditPlanViewModel(
+        context.read<User>().id,
+        editingPlan,
+        activityId,
+      ),
+      child: const _CreateEditPlanForm(),
     );
   }
 }
 
-class _CreatePlanForm extends StatelessWidget {
-  const _CreatePlanForm();
+class _CreateEditPlanForm extends StatelessWidget {
+  const _CreateEditPlanForm();
 
-  Future<void> _pickDate(BuildContext context, CreatePlanViewModel vm) async {
+  Future<void> _pickDate(
+    BuildContext context,
+    CreateEditPlanViewModel vm,
+  ) async {
     final now = DateTime.now();
     final day = await showDatePicker(
       context: context,
@@ -42,10 +50,10 @@ class _CreatePlanForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<CreatePlanViewModel>();
+    final vm = context.watch<CreateEditPlanViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Plan')),
+      appBar: AppBar(title: Text(vm.isEditing ? 'Edit Plan' : 'Create Plan')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -89,15 +97,19 @@ class _CreatePlanForm extends StatelessWidget {
                 : () async {
                     final plan = await vm.save();
                     if (plan != null && context.mounted) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PlanDetailView(plan: plan),
-                        ),
-                      );
+                      if (vm.isEditing) {
+                        Navigator.pop(context);
+                      } else {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PlanDetailView(plan: plan),
+                          ),
+                        );
+                      }
                     }
                   },
-            child: const Text('Create Plan'),
+            child: Text(vm.isEditing ? 'Save Changes' : 'Create Plan'),
           ),
         ],
       ),

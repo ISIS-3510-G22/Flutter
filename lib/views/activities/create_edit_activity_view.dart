@@ -45,27 +45,42 @@ class _CreateEditActivityForm extends StatelessWidget {
                 final source = await showImageSourceSheet(context);
                 if (source != null) vm.pickPhoto(source);
               },
-              child: vm.pickedPhoto != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.file(
-                        vm.pickedPhoto!,
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  : ActivityPhoto(
-                      url: vm.currentPhotoUrl,
-                      height: 180,
-                      radius: 16,
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  vm.pickedPhoto != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.file(
+                            vm.pickedPhoto!,
+                            height: 180,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : ActivityPhoto(
+                          url: vm.currentPhotoUrl,
+                          height: 180,
+                          radius: 16,
+                        ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: CircleAvatar(
+                      radius: 18,
+                      child: Icon(Icons.photo_camera_outlined, size: 18),
                     ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             const Text('PLACE NAME'),
             TextField(
               controller: vm.nameController,
-              decoration: const InputDecoration(hintText: 'e.g. Dumbo House'),
+              decoration: const InputDecoration(
+                hintText: 'e.g. Dumbo House',
+                counterText: "",
+              ),
               maxLength: 50,
             ),
             const SizedBox(height: 16),

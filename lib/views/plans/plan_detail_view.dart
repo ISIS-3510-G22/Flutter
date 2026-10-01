@@ -8,6 +8,7 @@ import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/viewmodels/plans/plan_detail_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
+import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:plansync/views/plans/edit_plan_activities_view.dart';
 import 'package:plansync/views/widgets/decision_dialog.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
@@ -70,7 +71,21 @@ class _PlanDetailBody extends StatelessWidget {
     final vm = context.watch<PlanDetailViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Plan Detail')),
+      appBar: AppBar(
+        title: const Text('Plan Detail'),
+        actions: [
+          if (vm.isCreator && vm.isActive > 0)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CreateEditPlanView(editingPlan: vm.plan),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
@@ -210,13 +225,6 @@ class _PlanDetailBody extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (vm.isCreator)
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Public plan'),
-                      value: vm.plan.isPublic,
-                      onChanged: vm.setPublic,
-                    ),
                 ],
               ),
             ),

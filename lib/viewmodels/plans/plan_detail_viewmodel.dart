@@ -40,9 +40,6 @@ class PlanDetailViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setPublic(bool value) =>
-      _planRepository.setPublic(plan.id, value);
-
   Future<void> _onPlanUpdate(Plan updated) async {
     plan = updated;
     final userIds = updated.invitations.map((i) => i.userId).toList();
