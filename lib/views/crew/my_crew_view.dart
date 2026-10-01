@@ -84,7 +84,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
             ChangeNotifierProvider.value(value: vm),
             ChangeNotifierProvider.value(value: friendsVm),
           ],
-          child: GroupDetailView(group: group),
+          child: GroupDetailView(group: group, friendsViewModel: friendsVm),
         ),
       ),
     );
@@ -109,7 +109,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
             ChangeNotifierProvider.value(value: vm),
             ChangeNotifierProvider.value(value: friendsVm),
           ],
-          child: GroupDetailView(group: group),
+          child: GroupDetailView(group: group, friendsViewModel: friendsVm),
         ),
       ),
     );
@@ -124,7 +124,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
             ChangeNotifierProvider.value(value: vm),
             ChangeNotifierProvider.value(value: friendsVm),
           ],
-          child: GroupDetailView(group: group),
+          child: GroupDetailView(group: group, friendsViewModel: friendsVm),
         ),
       ),
     );
