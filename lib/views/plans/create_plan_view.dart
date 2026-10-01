@@ -52,7 +52,11 @@ class _CreatePlanForm extends StatelessWidget {
           const Text('PLAN NAME'),
           TextField(
             controller: vm.nameController,
-            decoration: const InputDecoration(hintText: 'e.g. Friday dinner'),
+            decoration: const InputDecoration(
+              hintText: 'e.g. Friday dinner',
+              counterText: "",
+            ),
+            maxLength: 50,
           ),
           const SizedBox(height: 16),
           const Text('DATE'),

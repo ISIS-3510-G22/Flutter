@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:plansync/models/activity.dart';
 import 'package:plansync/models/place.dart';
 import 'package:plansync/models/user.dart';
@@ -65,6 +66,7 @@ class _CreateEditActivityForm extends StatelessWidget {
             TextField(
               controller: vm.nameController,
               decoration: const InputDecoration(hintText: 'e.g. Dumbo House'),
+              maxLength: 50,
             ),
             const SizedBox(height: 16),
             const Text('ADDRESS'),
@@ -89,7 +91,14 @@ class _CreateEditActivityForm extends StatelessWidget {
             TextField(
               controller: vm.expectedPriceController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(hintText: 'e.g. 120,000'),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(9),
+              ],
+              decoration: const InputDecoration(
+                hintText: 'e.g. 120,000',
+                counterText: "",
+              ),
             ),
             const SizedBox(height: 16),
             const Text('TAGS'),
@@ -119,7 +128,10 @@ class _CreateEditActivityForm extends StatelessWidget {
                   icon: const Icon(Icons.add),
                   onPressed: vm.addNewTag,
                 ),
+                errorText: vm.tagError,
+                counterText: "",
               ),
+              maxLength: 50,
             ),
             const SizedBox(height: 16),
             const Text('NOTES'),
@@ -129,7 +141,9 @@ class _CreateEditActivityForm extends StatelessWidget {
               maxLines: 4,
               decoration: const InputDecoration(
                 hintText: 'Add notes for your group...',
+                counterText: "",
               ),
+              maxLength: 300,
             ),
             const SizedBox(height: 16),
             SwitchListTile(
