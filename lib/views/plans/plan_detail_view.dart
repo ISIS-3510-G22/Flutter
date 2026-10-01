@@ -113,42 +113,51 @@ class _PlanDetailBody extends StatelessWidget {
                     ],
                   ],
                 ),
-                if (vm.isActive > 0) ...[
-                  const SizedBox(height: 16),
-                  if (vm.myRsvp == RsvpStatus.going)
-                    FilledButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => EditPlanActivitiesView(
-                            planId: vm.plan.id,
-                            existingActivityIds: vm.plan.activityIds,
+                const SizedBox(height: 4),
+                Row(
+                  spacing: 8,
+                  children: [
+                    if (vm.isActive > 0) ...[
+                      if (vm.myRsvp == RsvpStatus.going)
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => EditPlanActivitiesView(
+                                  planId: vm.plan.id,
+                                  existingActivityIds: vm.plan.activityIds,
+                                ),
+                              ),
+                            ),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Edit Activities'),
                           ),
                         ),
-                      ),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Edit Activities'),
-                    ),
-                  if (vm.isCreator) ...[
-                    const SizedBox(height: 8),
-                    FilledButton.icon(
-                      onPressed: () => _inviteFriends(context, vm),
-                      icon: const Icon(Icons.person_add_alt),
-                      label: const Text('Invite Friends'),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 8),
-                    FilledButton.icon(
-                      onPressed: () => _rsvp(context, vm),
-                      icon: const Icon(Icons.event_available),
-                      label: Text(switch (vm.myRsvp) {
-                        RsvpStatus.going => "You're going · Change",
-                        RsvpStatus.notGoing => 'Not going · Change',
-                        _ => 'RSVP',
-                      }),
-                    ),
+                      if (vm.isCreator) ...[
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => _inviteFriends(context, vm),
+                            icon: const Icon(Icons.person_add_alt),
+                            label: const Text('Invite Friends'),
+                          ),
+                        ),
+                      ] else ...[
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => _rsvp(context, vm),
+                            icon: const Icon(Icons.event_available),
+                            label: Text(switch (vm.myRsvp) {
+                              RsvpStatus.going => "You're going",
+                              RsvpStatus.notGoing => 'Not going',
+                              _ => 'RSVP',
+                            }),
+                          ),
+                        ),
+                      ],
+                    ],
                   ],
-                ],
+                ),
                 const Divider(height: 32),
                 Text(
                   'Participants (${vm.participants.length}/${vm.invitees.length} going)',
