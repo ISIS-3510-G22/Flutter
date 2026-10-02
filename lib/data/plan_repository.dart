@@ -11,6 +11,13 @@ class PlanRepository {
       .doc('6ae2b120-0000-2b6e-904c-34c7e91a4533')
       .collection('runs');
 
+  // Output of the "Plan suggestions" scheduled query (BigQuery view
+  // firestore_export.plan_recommendations), refreshed every 24 hours.
+  final _planRecommendationRuns = FirebaseFirestore.instance
+      .collection('transferConfigs')
+      .doc('6ad98dd9-0000-2094-90ce-f4f5e80b4358')
+      .collection('runs');
+
   String newId() => _plans.doc().id;
 
   Plan _fromData(String id, Map<String, dynamic> data) {
@@ -90,6 +97,28 @@ class PlanRepository {
   Future<List<Plan>> publicPlans() async {
     final snapshot = await _plans.where('isPublic', isEqualTo: true).get();
     return snapshot.docs.map((d) => _fromData(d.id, d.data())).toList();
+  }
+
+  /// IDs of the plans recommended to [uid] by the analytics pipeline, best
+  /// match first. Empty when the user has no recommendations yet.
+  Future<List<String>> recommendedPlanIds(String uid) async {
+    final latest = await _planRecommendationRuns.doc('latest').get();
+    final latestData = latest.data();
+    if (latestData == null) return [];
+    final runId = latestData['latestRunId'];
+    if (runId is! String) return [];
+
+    final output = await _planRecommendationRuns
+        .doc(runId)
+        .collection('output')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get();
+    if (output.docs.isEmpty) return [];
+
+    // The write-back extension stores arrays as maps {"0": ..., "1": ...}.
+    final map = output.docs.first['plan_ids'] as Map<String, dynamic>;
+    return List.generate(map.length, (i) => map['$i'] as String);
   }
 
   Future<void> invite(String planId, List<String> userIds) {

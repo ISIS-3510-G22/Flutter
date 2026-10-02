@@ -14,6 +14,7 @@ import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:plansync/views/plans/edit_plan_activities_view.dart';
 import 'package:plansync/views/plans/plan_expenses_view.dart';
+import 'package:plansync/views/plans/plan_route_view.dart';
 import 'package:plansync/views/widgets/decision_dialog.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:provider/provider.dart';
@@ -181,21 +182,40 @@ class _PlanDetailBody extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PlanExpensesView(
-                            planId: vm.plan.id,
-                            participants: vm.participants,
+                  Row(
+                    spacing: 8,
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PlanRouteView(
+                                plan: vm.plan,
+                                activities: vm.activities,
+                              ),
+                            ),
                           ),
+                          icon: const Icon(Icons.map_outlined),
+                          label: const Text('View Map'),
                         ),
                       ),
-                      icon: const Icon(Icons.receipt_long_outlined),
-                      label: const Text('Expenses'),
-                    ),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PlanExpensesView(
+                                planId: vm.plan.id,
+                                participants: vm.participants,
+                              ),
+                            ),
+                          ),
+                          icon: const Icon(Icons.receipt_long_outlined),
+                          label: const Text('Expenses'),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   TabTrack(

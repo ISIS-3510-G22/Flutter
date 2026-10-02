@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/utils/validators.dart';
 import 'package:plansync/viewmodels/sign_up_viewmodel.dart';
 import 'package:provider/provider.dart';
 
@@ -82,40 +83,39 @@ class _SignUpFormState extends State<_SignUpForm> {
                         label: 'NAME',
                         hint: 'e.g., Tomas',
                         controller: vm.nameController,
+                        validator: validateName,
                       ),
                       _ProfileField(
                         label: 'LAST NAME',
                         hint: 'e.g., Sierra',
                         controller: vm.lastNameController,
+                        validator: validateLastName,
                       ),
                       _ProfileField(
                         label: 'USERNAME',
                         hint: 'e.g., Tom1281',
                         controller: vm.usernameController,
+                        validator: validateUsername,
                       ),
                       _ProfileField(
                         label: 'PHONE',
                         hint: 'e.g., 310xxxyyyy',
                         controller: vm.phoneController,
                         keyboardType: TextInputType.phone,
+                        validator: validatePhone,
                       ),
                       _ProfileField(
                         label: 'EMAIL ADDRESS',
                         hint: '@gmail.com, @yahoo.com, etc',
                         controller: vm.emailController,
                         keyboardType: TextInputType.emailAddress,
-                        validator: (value) =>
-                            value != null && value.contains('@')
-                            ? null
-                            : 'Enter a valid email address.',
+                        validator: validateEmail,
                       ),
                       _ProfileField(
                         label: 'PASSWORD',
                         controller: vm.passwordController,
                         obscureText: true,
-                        validator: (value) => value != null && value.length >= 6
-                            ? null
-                            : 'Use at least 6 characters.',
+                        validator: validatePassword,
                       ),
                       if (vm.errorMessage != null)
                         Padding(
