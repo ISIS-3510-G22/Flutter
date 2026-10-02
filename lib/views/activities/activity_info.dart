@@ -104,17 +104,24 @@ class _InfoRow extends StatelessWidget {
             child: Icon(icon, size: 18, color: colors.onSurfaceVariant),
           ),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: text.labelSmall?.copyWith(
-                  color: colors.onSurfaceVariant,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: text.labelSmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
-              ),
-              Text(value, style: text.titleSmall),
-            ],
+                Text(
+                  value,
+                  style: text.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
