@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/models/group.dart';
 import 'package:plansync/models/invitations.dart';
+import 'package:plansync/models/invite_suggestion.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/utils/avatar.dart';
 import 'package:plansync/utils/date_format.dart';
 import 'package:plansync/utils/text_format.dart';
@@ -40,7 +43,7 @@ class _PlanDetailBody extends StatelessWidget {
     if (!context.mounted) return;
     final selected = await showModalBottomSheet<Set<String>>(
       context: context,
-      builder: (_) => _FriendPicker(friends: friends),
+      builder: (_) => _FriendPicker(friends: friends, viewModel: vm),
     );
     if (selected != null) await vm.invite(selected.toList());
   }
@@ -251,9 +254,10 @@ class _PlanDetailBody extends StatelessWidget {
 }
 
 class _FriendPicker extends StatefulWidget {
-  const _FriendPicker({required this.friends});
+  const _FriendPicker({required this.friends, required this.viewModel});
 
   final List<User> friends;
+  final PlanDetailViewModel viewModel;
 
   @override
   State<_FriendPicker> createState() => _FriendPickerState();
@@ -264,30 +268,151 @@ class _FriendPickerState extends State<_FriendPicker> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        if (widget.friends.isEmpty) const Text('No friends left to invite.'),
-        for (final friend in widget.friends)
-          CheckboxListTile(
-            value: _selected.contains(friend.id),
-            title: Text('${friend.name} ${friend.lastName}'),
-            subtitle: Text('@${friend.username}'),
-            onChanged: (checked) => setState(() {
-              if (checked!) {
-                _selected.add(friend.id);
-              } else {
-                _selected.remove(friend.id);
-              }
-            }),
-          ),
-        FilledButton(
-          onPressed: _selected.isEmpty
-              ? null
-              : () => Navigator.pop(context, _selected),
-          child: const Text('Invite'),
-        ),
-      ],
+    return ListenableBuilder(
+      listenable: widget.viewModel,
+      builder: (context, _) {
+        final vm = widget.viewModel;
+        final friendIds = widget.friends.map((friend) => friend.id).toSet();
+        final suggestions = vm.suggestedPeople
+            .where((suggestion) => friendIds.contains(suggestion.user.id))
+            .toList();
+        final suggestedIds = suggestions
+            .map((suggestion) => suggestion.user.id)
+            .toSet();
+        final friends = widget.friends
+            .where((friend) => !suggestedIds.contains(friend.id))
+            .toList();
+        final showSuggested =
+            suggestions.isNotEmpty || vm.suggestedGroups.isNotEmpty;
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (showSuggested) ...[
+              Text(
+                'SUGGESTED',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(color: AppTheme.greyDark),
+              ),
+              const SizedBox(height: 8),
+              for (final suggestion in suggestions)
+                _suggestedPersonTile(suggestion),
+              if (vm.suggestedGroups.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final group in vm.suggestedGroups)
+                      ActionChip(
+                        label: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 160),
+                          child: Text(
+                            group.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        onPressed: () => _addGroup(context, vm, group),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 12),
+            ],
+            if (showSuggested && friends.isNotEmpty) ...[
+              Text(
+                'FRIENDS',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(color: AppTheme.greyDark),
+              ),
+              const SizedBox(height: 2),
+            ],
+            if (friends.isEmpty && suggestions.isEmpty)
+              const Text('No friends left to invite.'),
+            for (final friend in friends)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                secondary: UserAvatar(photoUrl: friend.photoUrl),
+                value: _selected.contains(friend.id),
+                title: Text(
+                  '${friend.name} ${friend.lastName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '@${friend.username}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onChanged: (checked) => _toggle(friend.id, checked),
+              ),
+            FilledButton(
+              onPressed: _selected.isEmpty
+                  ? null
+                  : () => Navigator.pop(context, _selected),
+              child: const Text('Invite'),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  Widget _suggestedPersonTile(InviteSuggestion suggestion) {
+    final user = suggestion.user;
+    final details = <String>[];
+    if (suggestion.invitesSent > 0) {
+      details.add('Invited ${suggestion.invitesSent}x');
+    }
+    if (suggestion.sharedPlans > 0) {
+      details.add(
+        '${suggestion.sharedPlans} ${suggestion.sharedPlans == 1 ? 'plan' : 'plans'} together',
+      );
+    }
+
+    return CheckboxListTile(
+      contentPadding: EdgeInsets.zero,
+      secondary: UserAvatar(photoUrl: user.photoUrl),
+      value: _selected.contains(user.id),
+      title: Text(
+        '${user.name} ${user.lastName}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: details.isEmpty
+          ? null
+          : Text(
+              details.join(' · '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+      onChanged: (checked) => _toggle(user.id, checked),
+    );
+  }
+
+  void _toggle(String id, bool? checked) => setState(() {
+    if (checked == true) {
+      _selected.add(id);
+    } else {
+      _selected.remove(id);
+    }
+  });
+
+  Future<void> _addGroup(
+    BuildContext context,
+    PlanDetailViewModel vm,
+    Group group,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ids = await vm.invitableMemberIds(group);
+    if (!mounted) return;
+    if (ids.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('No one left to invite from ${group.name}.')),
+      );
+      return;
+    }
+    setState(() => _selected.addAll(ids));
   }
 }
