@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:plansync/utils/validators.dart';
 import 'package:plansync/viewmodels/sign_up_viewmodel.dart';
+import 'package:provider/provider.dart';
 
 class SignUpView extends StatelessWidget {
   const SignUpView({super.key});
@@ -40,7 +41,10 @@ class _SignUpFormState extends State<_SignUpForm> {
       appBar: AppBar(
         toolbarHeight: 84,
         centerTitle: true,
-        title: const Text('Create Profile', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Create Profile',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+        ),
         leadingWidth: 88,
         leading: Padding(
           padding: const EdgeInsets.only(left: 40),
@@ -70,32 +74,56 @@ class _SignUpFormState extends State<_SignUpForm> {
                   padding: const EdgeInsets.fromLTRB(40, 34, 40, 28),
                   child: Column(
                     children: [
-                      _ProfileField(label: 'NAME', hint: 'e.g., Tomas', controller: vm.nameController),
-                      _ProfileField(label: 'LAST NAME', hint: 'e.g., Sierra', controller: vm.lastNameController),
-                      _ProfileField(label: 'USERNAME', hint: 'e.g., Tom1281', controller: vm.usernameController),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(9),
+                        child: Image.asset('assets/images/banner_sign_up.png'),
+                      ),
+                      const SizedBox(height: 28),
+                      _ProfileField(
+                        label: 'NAME',
+                        hint: 'e.g., Tomas',
+                        controller: vm.nameController,
+                        validator: validateName,
+                      ),
+                      _ProfileField(
+                        label: 'LAST NAME',
+                        hint: 'e.g., Sierra',
+                        controller: vm.lastNameController,
+                        validator: validateLastName,
+                      ),
+                      _ProfileField(
+                        label: 'USERNAME',
+                        hint: 'e.g., Tom1281',
+                        controller: vm.usernameController,
+                        validator: validateUsername,
+                      ),
                       _ProfileField(
                         label: 'PHONE',
                         hint: 'e.g., 310xxxyyyy',
                         controller: vm.phoneController,
                         keyboardType: TextInputType.phone,
+                        validator: validatePhone,
                       ),
                       _ProfileField(
                         label: 'EMAIL ADDRESS',
                         hint: '@gmail.com, @yahoo.com, etc',
                         controller: vm.emailController,
                         keyboardType: TextInputType.emailAddress,
-                        validator: (value) => value != null && value.contains('@') ? null : 'Enter a valid email address.',
+                        validator: validateEmail,
                       ),
                       _ProfileField(
                         label: 'PASSWORD',
                         controller: vm.passwordController,
                         obscureText: true,
-                        validator: (value) => value != null && value.length >= 6 ? null : 'Use at least 6 characters.',
+                        validator: validatePassword,
                       ),
                       if (vm.errorMessage != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: Text(vm.errorMessage!, style: TextStyle(color: colors.error)),
+                          child: Text(
+                            vm.errorMessage!,
+                            style: TextStyle(color: colors.error),
+                          ),
                         ),
                     ],
                   ),
@@ -111,18 +139,42 @@ class _SignUpFormState extends State<_SignUpForm> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: vm.isLoading ? null : () => Navigator.of(context).pop(),
-                      child: Text('Cancel', style: TextStyle(fontSize: 20, color: colors.onSurfaceVariant)),
+                      onPressed: vm.isLoading
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                     SizedBox(
                       height: 52,
                       width: 140,
                       child: FilledButton(
                         onPressed: vm.isLoading ? null : () => _submit(vm),
-                        style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9))),
+                        style: FilledButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                        ),
                         child: vm.isLoading
-                            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Text('Create', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Create',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -162,18 +214,37 @@ class _ProfileField extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: colors.onSurfaceVariant)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: colors.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 12),
           TextFormField(
             controller: controller,
             keyboardType: keyboardType,
             obscureText: obscureText,
-            validator: validator ?? (value) => value == null || value.trim().isEmpty ? 'This field is required.' : null,
+            validator:
+                validator ??
+                (value) => value == null || value.trim().isEmpty
+                    ? 'This field is required.'
+                    : null,
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: const TextStyle(fontSize: 20, color: Color(0xFF9B9DAA)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
+              hintStyle: const TextStyle(
+                fontSize: 20,
+                color: Color(0xFF9B9DAA),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 17,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+              ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(9),
                 borderSide: BorderSide(color: colors.outline),

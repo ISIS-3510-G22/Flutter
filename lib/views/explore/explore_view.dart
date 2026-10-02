@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/plan.dart';
+import 'package:plansync/data/explore_repository.dart';
+import 'package:plansync/models/user.dart';
+import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/viewmodels/explore_viewmodel.dart';
+import 'package:plansync/views/activities/activity_card.dart';
+import 'package:plansync/views/explore/nearby_map_view.dart';
+import 'package:plansync/views/explore/public_plan_detail_view.dart';
+import 'package:plansync/views/widgets/activity_photo.dart';
+import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
 class ExploreView extends StatelessWidget {
@@ -9,7 +16,7 @@ class ExploreView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ExploreViewModel()..loadPlans(),
+      create: (context) => ExploreViewModel(context.read<User>().id)..load(),
       child: const _ExploreBody(),
     );
   }
@@ -27,22 +34,50 @@ class _ExploreBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Text('Explore', style: text.headlineMedium),
+        Row(
+          children: [
+            const Expanded(child: ViewHeader(title: 'Explore')),
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: SegmentedButton<bool>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                    value: false,
+                    icon: Icon(Icons.view_list_outlined),
+                    label: Text('List'),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    icon: Icon(Icons.map_outlined),
+                    label: Text('Map'),
+                  ),
+                ],
+                selected: const {false},
+                onSelectionChanged: (selection) {
+                  if (!selection.first) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NearbyMapView()),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: _SearchRow(
             controller: vm.searchController,
             onQueryChange: vm.onSearchQueryChange,
           ),
         ),
-        _CategoryChipsRow(
-          options: ExploreViewModel.categoryOptions,
-          selected: vm.selectedCategory,
-          onSelect: vm.onCategorySelect,
-        ),
+        if (vm.tagOptions.length > 1)
+          _TagChipsRow(
+            options: vm.tagOptions,
+            selected: vm.selectedTag,
+            onSelect: vm.onTagSelect,
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
@@ -52,11 +87,11 @@ class _ExploreBody extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _FilterGroupCard(
-                      title: 'PLAN TYPE',
-                      icon: Icons.groups_outlined,
-                      options: ExploreViewModel.planTypeOptions,
-                      selected: vm.selectedPlanType,
-                      onSelect: vm.onPlanTypeSelect,
+                      title: 'WHEN',
+                      icon: Icons.calendar_today_outlined,
+                      options: ExploreViewModel.whenOptions,
+                      selected: vm.selectedWhen,
+                      onSelect: vm.onWhenSelect,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -115,11 +150,42 @@ class _ExploreBody extends StatelessWidget {
             ),
           )
         else
-          for (final plan in vm.filteredPlans)
+          for (final item in vm.filteredPlans)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: _FeaturedPlanCard(plan: plan, onTap: () {}),
+              child: _FeaturedPlanCard(
+                item: item,
+                recommended: vm.isRecommended(item),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PublicPlanDetailView(plan: item.plan),
+                  ),
+                ),
+              ),
             ),
+        if (!vm.isLoading && vm.errorMessage == null) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Text(
+              'Activities',
+              style: text.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          if (vm.filteredActivities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'No activities match your filters.',
+                style: text.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            )
+          else
+            for (final activity in vm.filteredActivities)
+              ActivityCard(activity: activity),
+        ],
       ],
     );
   }
@@ -143,7 +209,7 @@ class _SearchRow extends StatelessWidget {
             controller: controller,
             onChanged: onQueryChange,
             decoration: InputDecoration(
-              hintText: 'Search plans or activities',
+              hintText: 'Search plans or tags',
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -166,8 +232,8 @@ class _SearchRow extends StatelessWidget {
   }
 }
 
-class _CategoryChipsRow extends StatelessWidget {
-  const _CategoryChipsRow({
+class _TagChipsRow extends StatelessWidget {
+  const _TagChipsRow({
     required this.options,
     required this.selected,
     required this.onSelect,
@@ -186,7 +252,7 @@ class _CategoryChipsRow extends StatelessWidget {
         children: [
           for (final option in options) ...[
             _SelectableChip(
-              text: option,
+              text: capitalize(option),
               selected: option == selected,
               onTap: () => onSelect(option),
               borderRadius: BorderRadius.circular(50),
@@ -211,7 +277,7 @@ class _FilterGroupCard extends StatelessWidget {
   final String title;
   final IconData icon;
   final List<String> options;
-  final String selected;
+  final String? selected;
   final ValueChanged<String> onSelect;
 
   List<List<String>> _chunked(List<String> items, int size) {
@@ -366,9 +432,16 @@ class _DashedLinePainter extends CustomPainter {
 }
 
 class _FeaturedPlanCard extends StatelessWidget {
-  const _FeaturedPlanCard({required this.plan, required this.onTap});
+  const _FeaturedPlanCard({
+    required this.item,
+    required this.recommended,
+    required this.onTap,
+  });
 
-  final Plan plan;
+  final ExplorePlan item;
+
+  /// Recommended by the analytics pipeline for this user.
+  final bool recommended;
   final VoidCallback onTap;
 
   @override
@@ -385,7 +458,10 @@ class _FeaturedPlanCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: colors.outline),
+            border: Border.all(
+              color: recommended ? colors.primary : colors.outline,
+              width: recommended ? 2 : 1,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,46 +470,83 @@ class _FeaturedPlanCard extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
-                child: Container(
+                child: SizedBox(
                   width: double.infinity,
                   height: 160,
-                  color: colors.surfaceContainerHighest,
                   child: Stack(
                     children: [
-                      Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          size: 40,
-                          color: colors.onSurfaceVariant,
+                      Positioned.fill(
+                        child: ActivityPhoto(
+                          url: item.photoUrl,
+                          height: 160,
+                          radius: 0,
                         ),
                       ),
-                      Positioned(
-                        top: 10,
-                        right: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colors.surface,
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.star, size: 14, color: colors.primary),
-                              const SizedBox(width: 2),
-                              Text(
-                                "5.0",
-                                style: text.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                      if (recommended)
+                        Positioned(
+                          top: 10,
+                          left: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.primary,
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  size: 14,
+                                  color: colors.onPrimary,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  'For you',
+                                  style: text.labelMedium?.copyWith(
+                                    color: colors.onPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                      if (item.rating != null)
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.surface,
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color: colors.primary,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  item.rating!.toStringAsFixed(1),
+                                  style: text.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -444,14 +557,15 @@ class _FeaturedPlanCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      plan.name,
+                      item.plan.name,
                       style: text.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${plan.activityIds.length} Activities   Cost: 10000',
+                      '${item.plan.activityIds.length} Activities   '
+                      'Est. \$${item.totalCost.toStringAsFixed(0)}',
                       style: text.bodyMedium?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),

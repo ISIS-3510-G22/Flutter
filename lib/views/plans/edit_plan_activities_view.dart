@@ -42,22 +42,17 @@ class _EditPlanActivitiesBody extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: TabTrack(
               children: [
-                Expanded(
-                  child: TabButton(
-                    label: 'Private',
-                    selected: vm.currentTab == ActivitiesTab.private,
-                    onPressed: () => vm.selectTab(ActivitiesTab.private),
-                  ),
+                TabButton(
+                  label: 'Private',
+                  selected: vm.currentTab == ActivitiesTab.private,
+                  onPressed: () => vm.selectTab(ActivitiesTab.private),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TabButton(
-                    label: 'Liked',
-                    selected: vm.currentTab == ActivitiesTab.liked,
-                    onPressed: () => vm.selectTab(ActivitiesTab.liked),
-                  ),
+                TabButton(
+                  label: 'Liked',
+                  selected: vm.currentTab == ActivitiesTab.liked,
+                  onPressed: () => vm.selectTab(ActivitiesTab.liked),
                 ),
               ],
             ),

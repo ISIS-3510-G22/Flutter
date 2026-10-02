@@ -107,6 +107,13 @@ class ActivityRepository {
     });
   }
 
+  Future<List<Activity>> publicActivities() async {
+    final snapshot = await _activities
+        .where('visibility', isEqualTo: ActivityVisibility.public.name)
+        .get();
+    return snapshot.docs.map(_fromDoc).toList();
+  }
+
   Future<List<Activity>> getByIds(List<String> ids) async {
     if (ids.isEmpty) return [];
     final snapshot = await _activities

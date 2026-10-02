@@ -17,6 +17,12 @@ dependencies:
   image_picker: ^1.2.0
   light: ^5.0.0
   shared_preferences: ^2.5.5
+  bluetooth_low_energy: ^6.2.1
+  firebase_messaging: ^16.7.0
+  flutter_local_notifications: ^22.3.1
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  geolocator: ^14.1.1
 
 dev_dependencies:
   flutter_test:
@@ -26,4 +32,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/activity_placeholder.png
+    - assets/images/
