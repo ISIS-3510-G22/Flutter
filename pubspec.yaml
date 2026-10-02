@@ -20,6 +20,9 @@ dependencies:
   bluetooth_low_energy: ^6.2.1
   firebase_messaging: ^16.7.0
   flutter_local_notifications: ^22.3.1
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  geolocator: ^14.1.1
 
 dev_dependencies:
   flutter_test:
