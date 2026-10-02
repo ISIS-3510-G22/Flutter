@@ -1,9 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/models/invitations.dart';
+import 'package:plansync/models/invite_suggestion_ids.dart';
 import 'package:plansync/models/plan.dart';
 
 class PlanRepository {
   final _plans = FirebaseFirestore.instance.collection('plans');
+
+  final _inviteSuggestionRuns = FirebaseFirestore.instance
+      .collection('transferConfigs')
+      .doc('6ae2b120-0000-2b6e-904c-34c7e91a4533')
+      .collection('runs');
 
   String newId() => _plans.doc().id;
 
@@ -99,6 +105,38 @@ class PlanRepository {
           },
       ]),
     });
+  }
+
+  List<dynamic> _listFromFirestore(dynamic raw) {
+    if (raw is List) return raw;
+    if (raw is Map) return List.generate(raw.length, (i) => raw['$i']);
+    return const [];
+  }
+
+  Future<InviteSuggestionIds> inviteSuggestions(String uid) async {
+    final latest = await _inviteSuggestionRuns.doc('latest').get();
+    final runId = latest.data()?['latestRunId'] as String?;
+    if (runId == null) return InviteSuggestionIds.empty;
+
+    final output = await _inviteSuggestionRuns
+        .doc(runId)
+        .collection('output')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get();
+    if (output.docs.isEmpty) return InviteSuggestionIds.empty;
+
+    final data = output.docs.first.data();
+    return InviteSuggestionIds(
+      userIds: _listFromFirestore(data['user_ids']).cast<String>(),
+      invitesSent: _listFromFirestore(
+        data['invites_sent'],
+      ).map((e) => (e as num).toInt()).toList(),
+      sharedPlans: _listFromFirestore(
+        data['shared_plans'],
+      ).map((e) => (e as num).toInt()).toList(),
+      groupIds: _listFromFirestore(data['group_ids']).cast<String>(),
+    );
   }
 
   Future<void> setRsvp(String planId, String userId, RsvpStatus rsvp) {

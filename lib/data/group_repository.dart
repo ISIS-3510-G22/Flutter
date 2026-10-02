@@ -118,6 +118,15 @@ class GroupRepository {
     return Group.fromFirestore(doc.id, doc.data()!);
   }
 
+  Future<List<Group>> groupsByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+    final docs = await Future.wait(ids.map((id) => _groups.doc(id).get()));
+    return docs
+        .where((d) => d.exists)
+        .map((d) => Group.fromFirestore(d.id, d.data()!))
+        .toList();
+  }
+
   Future<void> acceptInvitation(GroupInvitation invitation) {
     final batch = _db.batch();
     batch.update(_invitations.doc(invitation.id), {
