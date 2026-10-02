@@ -27,20 +27,22 @@ class SignUpViewModel extends ChangeNotifier {
         email: emailController.text.trim(),
         password: passwordController.text,
       );
-      await _userRepository.createUser(User(
-        id: userId,
-        name: nameController.text.trim(),
-        lastName: lastNameController.text.trim(),
-        username: usernameController.text.trim(),
-        phone: phoneController.text.trim(),
-        email: emailController.text.trim(),
-      ));
+      await _userRepository.createUser(
+        User(
+          id: userId,
+          name: nameController.text.trim(),
+          lastName: lastNameController.text.trim(),
+          username: usernameController.text.trim(),
+          phone: phoneController.text.trim(),
+          email: emailController.text.trim(),
+        ),
+      );
       return true;
     } on FirebaseAuthException catch (e) {
       errorMessage = switch (e.code) {
         'email-already-in-use' => 'An account already uses this email address.',
         'invalid-email' => 'Enter a valid email address.',
-        'weak-password' => 'Use a password with at least 6 characters.',
+        'weak-password' => 'Use a password with at least 8 characters.',
         'network-request-failed' => 'No internet connection.',
         _ => 'Could not create your profile. Try again.',
       };
