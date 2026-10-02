@@ -8,14 +8,12 @@ import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
 class PlanView extends StatelessWidget {
-  const PlanView({super.key, required this.user});
-
-  final User user;
+  const PlanView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => MyPlansViewModel(user.id),
+      create: (context) => MyPlansViewModel(context.read<User>().id),
       child: const _PlanScreen(),
     );
   }

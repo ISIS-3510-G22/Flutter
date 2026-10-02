@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/user.dart';
 import 'package:plansync/views/activities/my_activities_view.dart';
 import 'package:plansync/views/crew/my_crew_view.dart';
 import 'package:plansync/views/explore/explore_view.dart';
 import 'package:plansync/views/plans/plan_view.dart';
 import 'package:plansync/views/profile/my_profile_view.dart';
-import 'package:provider/provider.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -21,7 +19,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final tabs = [
       const ExploreView(),
-      PlanView(user: context.read<User>()),
+      const PlanView(),
       const MyActivitiesView(),
       const MyCrewView(),
       const MyProfileView(),
@@ -60,26 +58,6 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  const _PlaceholderTab({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(title, style: Theme.of(context).textTheme.headlineMedium),
-        ),
-        Expanded(child: Center(child: Text('$title placeholder'))),
-      ],
     );
   }
 }
