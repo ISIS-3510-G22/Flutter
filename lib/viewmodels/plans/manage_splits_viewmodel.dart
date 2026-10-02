@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:plansync/data/expense_repository.dart';
+import 'package:plansync/data/plan_payment_repository.dart';
 import 'package:plansync/data/settlement_repository.dart';
 import 'package:plansync/data/user_repository.dart';
 import 'package:plansync/models/expense.dart';
@@ -51,6 +52,10 @@ class ManageSplitsViewModel extends ChangeNotifier {
       _settlementsLoaded = true;
       _recalculate();
     });
+    _choicesSub = _paymentRepository.choicesForPlan(_planId).listen((c) {
+      _methodChoices = c;
+      notifyListeners();
+    });
   }
 
   final String _planId;
@@ -60,8 +65,11 @@ class ManageSplitsViewModel extends ChangeNotifier {
   final _expenseRepository = ExpenseRepository();
   final _settlementRepository = SettlementRepository();
   final _userRepository = UserRepository();
+  final _paymentRepository = PlanPaymentRepository();
   late final StreamSubscription<List<Expense>> _expensesSub;
   late final StreamSubscription<List<Settlement>> _settlementsSub;
+  late final StreamSubscription<Map<String, String>> _choicesSub;
+  Map<String, String> _methodChoices = {};
 
   List<Expense> _expenses = [];
   List<Settlement> _settlements = [];
@@ -93,10 +101,16 @@ class ManageSplitsViewModel extends ChangeNotifier {
       paidByYou.isEmpty &&
       paidToYou.isEmpty;
 
-  /// Bre-B keys or accounts the user saved in their profile.
+  /// Where to pay [userId]: the method they chose for this plan, or all the
+  /// methods in their profile if they haven't chosen one.
   List<ReimbursementMethod> reimbursementMethodsOf(String userId) {
     for (final p in _participants) {
-      if (p.id == userId) return p.reimbursementMethods;
+      if (p.id != userId) continue;
+      final chosen = _methodChoices[userId];
+      for (final m in p.reimbursementMethods) {
+        if (m.id == chosen) return [m];
+      }
+      return p.reimbursementMethods;
     }
     return const [];
   }
@@ -226,6 +240,7 @@ class ManageSplitsViewModel extends ChangeNotifier {
   void dispose() {
     _expensesSub.cancel();
     _settlementsSub.cancel();
+    _choicesSub.cancel();
     super.dispose();
   }
 }
