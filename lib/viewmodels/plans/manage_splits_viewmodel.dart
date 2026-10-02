@@ -2,14 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:plansync/data/expense_repository.dart';
+import 'package:plansync/data/overdue_debt_repository.dart';
 import 'package:plansync/data/plan_payment_repository.dart';
+import 'package:plansync/data/plan_repository.dart';
 import 'package:plansync/data/settlement_repository.dart';
 import 'package:plansync/data/user_repository.dart';
 import 'package:plansync/models/expense.dart';
+import 'package:plansync/models/overdue_debt.dart';
 import 'package:plansync/models/reimbursement_method.dart';
 import 'package:plansync/models/settlement.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/utils/debt_simplifier.dart';
+import 'package:plansync/utils/overdue.dart';
 
 class SplitRow {
   final String userId;
@@ -17,11 +21,15 @@ class SplitRow {
   final double amount;
   final String? settlementId;
 
+  /// Days unpaid after the plan's grace period, null when not overdue.
+  final int? overdueDays;
+
   const SplitRow({
     required this.userId,
     required this.name,
     required this.amount,
     this.settlementId,
+    this.overdueDays,
   });
 }
 
@@ -52,6 +60,7 @@ class ManageSplitsViewModel extends ChangeNotifier {
       _settlementsLoaded = true;
       _recalculate();
     });
+    _loadPlanDate();
     _choicesSub = _paymentRepository.choicesForPlan(_planId).listen((c) {
       _methodChoices = c;
       notifyListeners();
@@ -66,6 +75,10 @@ class ManageSplitsViewModel extends ChangeNotifier {
   final _settlementRepository = SettlementRepository();
   final _userRepository = UserRepository();
   final _paymentRepository = PlanPaymentRepository();
+  final _planRepository = PlanRepository();
+  final _overdueRepository = OverdueDebtRepository();
+  DateTime? _planDate;
+  var _syncedOverdue = '';
   late final StreamSubscription<List<Expense>> _expensesSub;
   late final StreamSubscription<List<Settlement>> _settlementsSub;
   late final StreamSubscription<Map<String, String>> _choicesSub;
@@ -84,6 +97,49 @@ class ManageSplitsViewModel extends ChangeNotifier {
   String? errorMessage;
 
   bool get hasExpenses => _expenses.isNotEmpty;
+
+  Future<void> _loadPlanDate() async {
+    try {
+      final plan = await _planRepository.planById(_planId).first;
+      _planDate = plan.date;
+      _recalculate();
+    } catch (_) {
+      // Without the date there is just no overdue label.
+    }
+  }
+
+  int? _overdueDays() {
+    final date = _planDate;
+    if (date == null) return null;
+    return overdueDays(date, DateTime.now());
+  }
+
+  /// Keeps plans/{planId}/overdueDebts in sync with the debts that are
+  /// overdue right now, so the record only exists while it is happening.
+  Future<void> _syncOverdue(List<Transfer> transfers) async {
+    final days = _overdueDays();
+    if (_planDate == null) return;
+    final overdue = [
+      if (days != null)
+        for (final t in transfers)
+          OverdueDebt(
+            fromId: t.fromId,
+            toId: t.toId,
+            amount: t.amount,
+            daysOverdue: days,
+          ),
+    ];
+    final signature = [
+      for (final d in overdue) '${d.id}:${d.amount}:${d.daysOverdue}',
+    ].join('|');
+    if (signature == _syncedOverdue) return;
+    _syncedOverdue = signature;
+    try {
+      await _overdueRepository.sync(_planId, overdue);
+    } catch (_) {
+      _syncedOverdue = '';
+    }
+  }
 
   Future<void> _loadParticipants(List<String> ids) async {
     try {
@@ -166,17 +222,26 @@ class ManageSplitsViewModel extends ChangeNotifier {
 
     youOwe = [];
     owedToYou = [];
-    for (final t in simplifyDebts(_balancesCents())) {
+    final transfers = simplifyDebts(_balancesCents());
+    final days = _overdueDays();
+    for (final t in transfers) {
       if (t.fromId == _currentUserId) {
         youOwe.add(
           SplitRow(userId: t.toId, name: _nameOf(t.toId), amount: t.amount),
         );
       } else if (t.toId == _currentUserId) {
         owedToYou.add(
-          SplitRow(userId: t.fromId, name: _nameOf(t.fromId), amount: t.amount),
+          SplitRow(
+            userId: t.fromId,
+            name: _nameOf(t.fromId),
+            amount: t.amount,
+            overdueDays: days,
+          ),
         );
       }
     }
+
+    _syncOverdue(transfers);
 
     paidByYou = [];
     paidToYou = [];

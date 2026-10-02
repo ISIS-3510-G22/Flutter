@@ -115,7 +115,11 @@ class _ManageSplitsBody extends StatelessWidget {
                   Text('Owed to you', style: sectionStyle),
                   const SizedBox(height: 8),
                   for (final row in vm.owedToYou)
-                    _SplitCard(row: row, subtitle: 'Pending'),
+                    _SplitCard(
+                      row: row,
+                      subtitle: _owedSubtitle(row),
+                      alert: row.overdueDays != null,
+                    ),
                   const SizedBox(height: 16),
                 ],
                 if (vm.paidByYou.isNotEmpty || vm.paidToYou.isNotEmpty) ...[
@@ -137,10 +141,17 @@ class _ManageSplitsBody extends StatelessWidget {
   }
 }
 
+String _owedSubtitle(SplitRow row) {
+  final days = row.overdueDays;
+  if (days == null) return 'Pending';
+  return 'Overdue · $days days since the plan';
+}
+
 class _SplitCard extends StatelessWidget {
   const _SplitCard({
     required this.row,
     this.subtitle,
+    this.alert = false,
     this.methods,
     this.paid,
     this.onToggle,
@@ -148,6 +159,9 @@ class _SplitCard extends StatelessWidget {
 
   final SplitRow row;
   final String? subtitle;
+
+  /// Shows the subtitle in the error color (overdue debts).
+  final bool alert;
 
   /// When set, shows where to pay this person (from their profile).
   final List<ReimbursementMethod>? methods;
@@ -162,7 +176,16 @@ class _SplitCard extends StatelessWidget {
     final title = Text(row.name, style: bold);
     final amount = Text('\$${row.amount.toStringAsFixed(2)}', style: bold);
     Widget? subtitleWidget;
-    if (subtitle != null) subtitleWidget = Text(subtitle!);
+    if (subtitle != null) {
+      TextStyle? style;
+      if (alert) {
+        style = TextStyle(
+          color: Theme.of(context).colorScheme.error,
+          fontWeight: FontWeight.w600,
+        );
+      }
+      subtitleWidget = Text(subtitle!, style: style);
+    }
     final paymentMethods = methods;
     if (paymentMethods != null) {
       if (paymentMethods.isEmpty) {
