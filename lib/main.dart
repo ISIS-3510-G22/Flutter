@@ -129,60 +129,68 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: _appNavigatorKey,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: context.watch<ThemeService>().mode,
-      home: StreamBuilder<User?>(
-        stream: _authStateChanges,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            debugPrint(
-              'Could not load the signed-in user profile: ${snapshot.error}',
-            );
-            return Scaffold(
-              body: SafeArea(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Could not load your account. Check your internet connection and try again.',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: _retryAuthState,
-                          child: const Text('Try again'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
+    final themeMode = context.watch<ThemeService>().mode;
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final user = snapshot.data;
-
-          if (user == null) {
-            _activeUserId = null;
-            return const LoginView();
-          }
-          _activeUserId = user.id;
-          _registerNotificationsOnce(user);
-          if (_pendingNotificationType != null) _scheduleNotificationRoute();
-          return Provider<User>.value(value: user, child: const HomeShell());
-        },
-      ),
+    return StreamBuilder<User?>(
+      stream: _authStateChanges,
+      builder: (context, snapshot) {
+        final user = snapshot.data;
+        return MaterialApp(
+          navigatorKey: _appNavigatorKey,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: themeMode,
+          builder: (_, child) => user == null
+              ? child!
+              : Provider<User>.value(value: user, child: child!),
+          home: _home(snapshot),
+        );
+      },
     );
+  }
+
+  Widget _home(AsyncSnapshot<User?> snapshot) {
+    if (snapshot.hasError) {
+      debugPrint(
+        'Could not load the signed-in user profile: ${snapshot.error}',
+      );
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Could not load your account. Check your internet connection and try again.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _retryAuthState,
+                    child: const Text('Try again'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final user = snapshot.data;
+
+    if (user == null) {
+      _activeUserId = null;
+      return const LoginView();
+    }
+    _activeUserId = user.id;
+    _registerNotificationsOnce(user);
+    if (_pendingNotificationType != null) _scheduleNotificationRoute();
+    return const HomeShell();
   }
 }
