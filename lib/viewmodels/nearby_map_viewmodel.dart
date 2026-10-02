@@ -5,7 +5,6 @@ import 'package:plansync/data/plan_repository.dart';
 import 'package:plansync/models/activity.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/services/location_service.dart';
-import 'package:plansync/utils/recommendation.dart';
 
 enum NearbyStatus { loading, locationError, error, ready }
 
@@ -14,16 +13,16 @@ class NearbyItem {
   final Activity? activity;
   final LatLng point;
   final double distanceKm;
-  final double affinity;
-  final List<String> matchedTags;
+
+  /// Recommended by the analytics pipeline (plans only).
+  final bool isRecommended;
 
   const NearbyItem({
     this.plan,
     this.activity,
     required this.point,
     required this.distanceKm,
-    required this.affinity,
-    required this.matchedTags,
+    this.isRecommended = false,
   });
 
   bool get isPlan => plan != null;
@@ -31,11 +30,6 @@ class NearbyItem {
   String get name {
     if (plan != null) return plan!.name;
     return activity!.name;
-  }
-
-  String get id {
-    if (plan != null) return 'plan-${plan!.id}';
-    return 'activity-${activity!.id}';
   }
 }
 
@@ -45,7 +39,6 @@ class NearbyMapViewModel extends ChangeNotifier {
   }
 
   static const radiusOptions = [2.0, 5.0, 10.0];
-  static const _maxRecommendations = 5;
 
   final String _userId;
   final _locationService = LocationService();
@@ -59,10 +52,14 @@ class NearbyMapViewModel extends ChangeNotifier {
   double radiusKm = 5;
 
   List<NearbyItem> _allItems = [];
+  Map<String, int> _recommendedRank = {};
+
+  /// Everything inside the radius, shown as markers.
   List<NearbyItem> items = [];
-  List<NearbyItem> recommended = [];
-  Set<String> recommendedIds = {};
-  bool hasTasteProfile = false;
+
+  /// Plans inside the radius: recommended ones first (pipeline order), then
+  /// the rest by distance.
+  List<NearbyItem> nearbyPlans = [];
 
   Future<void> load() async {
     status = NearbyStatus.loading;
@@ -82,33 +79,21 @@ class NearbyMapViewModel extends ChangeNotifier {
       final results = await Future.wait([
         _planRepository.publicPlans(),
         _activityRepository.publicActivities(),
-        _planRepository.plansForUser(_userId).first,
-        _activityRepository.ownedActivities(_userId).first,
-        _activityRepository.likedActivities(_userId).first,
+        _recommendedPlanIds(),
       ]);
       final publicPlans = results[0] as List<Plan>;
       final publicActivities = results[1] as List<Activity>;
-      final myPlans = results[2] as List<Plan>;
-      final myActivities = results[3] as List<Activity>;
-      final likedActivities = results[4] as List<Activity>;
+      final recommended = results[2] as List<String>;
+      _recommendedRank = {
+        for (var i = 0; i < recommended.length; i++) recommended[i]: i,
+      };
 
-      final profile = buildTagProfile([
-        for (final p in myPlans) p.tags,
-        for (final a in myActivities) a.tags,
-        for (final a in likedActivities) a.tags,
-      ]);
-      hasTasteProfile = profile.isNotEmpty;
-
-      final upcomingPlans = publicPlans
-          .where((p) => _isUpcoming(p) && !_isMine(p))
-          .toList();
+      final upcomingPlans = publicPlans.where(_isUpcoming).toList();
       final planActivities = await _activitiesOf(upcomingPlans);
 
       _allItems = [
-        for (final plan in upcomingPlans)
-          ?_planItem(plan, planActivities, profile),
-        for (final activity in publicActivities)
-          if (activity.ownerId != _userId) ?_activityItem(activity, profile),
+        for (final plan in upcomingPlans) ?_planItem(plan, planActivities),
+        for (final activity in publicActivities) ?_activityItem(activity),
       ];
       _applyRadius();
       status = NearbyStatus.ready;
@@ -131,41 +116,32 @@ class NearbyMapViewModel extends ChangeNotifier {
     return _locationService.openSettings();
   }
 
+  /// A failure here only means no recommendations, never an empty map.
+  Future<List<String>> _recommendedPlanIds() async {
+    try {
+      return await _planRepository.recommendedPlanIds(_userId);
+    } catch (_) {
+      return [];
+    }
+  }
+
   void _applyRadius() {
     items = _allItems.where((i) => i.distanceKm <= radiusKm).toList();
-    final scored = [
-      for (final i in items)
-        (
-          item: i,
-          score: recommendationScore(
-            affinity: i.affinity,
-            distanceKm: i.distanceKm,
-            radiusKm: radiusKm,
-            daysUntil: _daysUntil(i.plan),
-          ),
-        ),
-    ];
-    scored.sort((a, b) => b.score.compareTo(a.score));
-    recommended = [for (final s in scored.take(_maxRecommendations)) s.item];
-    recommendedIds = recommended.map((i) => i.id).toSet();
+    nearbyPlans = items.where((i) => i.isPlan).toList();
+    nearbyPlans.sort((a, b) {
+      final rankA = _recommendedRank[a.plan!.id];
+      final rankB = _recommendedRank[b.plan!.id];
+      if (rankA != null && rankB != null) return rankA.compareTo(rankB);
+      if (rankA != null) return -1;
+      if (rankB != null) return 1;
+      return a.distanceKm.compareTo(b.distanceKm);
+    });
   }
 
   bool _isUpcoming(Plan plan) {
     final today = DateTime.now();
     final startOfToday = DateTime(today.year, today.month, today.day);
     return !plan.date.isBefore(startOfToday);
-  }
-
-  bool _isMine(Plan plan) {
-    if (plan.creatorId == _userId) return true;
-    return plan.invitations.any((i) => i.userId == _userId);
-  }
-
-  int? _daysUntil(Plan? plan) {
-    if (plan == null) return null;
-    final days = plan.date.difference(DateTime.now()).inDays;
-    if (days < 0) return 0;
-    return days;
   }
 
   Future<Map<String, Activity>> _activitiesOf(List<Plan> plans) async {
@@ -192,11 +168,8 @@ class NearbyMapViewModel extends ChangeNotifier {
   double _distanceKm(LatLng point) =>
       _distance.as(LengthUnit.Meter, position!, point) / 1000;
 
-  NearbyItem? _planItem(
-    Plan plan,
-    Map<String, Activity> activitiesById,
-    Map<String, double> profile,
-  ) {
+  /// A plan is placed at its first activity that has a location.
+  NearbyItem? _planItem(Plan plan, Map<String, Activity> activitiesById) {
     for (final id in plan.activityIds) {
       final activity = activitiesById[id];
       if (activity == null) continue;
@@ -206,22 +179,19 @@ class NearbyMapViewModel extends ChangeNotifier {
         plan: plan,
         point: point,
         distanceKm: _distanceKm(point),
-        affinity: tagAffinity(profile, plan.tags),
-        matchedTags: matchingTags(profile, plan.tags),
+        isRecommended: _recommendedRank.containsKey(plan.id),
       );
     }
     return null;
   }
 
-  NearbyItem? _activityItem(Activity activity, Map<String, double> profile) {
+  NearbyItem? _activityItem(Activity activity) {
     final point = _pointOf(activity);
     if (point == null) return null;
     return NearbyItem(
       activity: activity,
       point: point,
       distanceKm: _distanceKm(point),
-      affinity: tagAffinity(profile, activity.tags),
-      matchedTags: matchingTags(profile, activity.tags),
     );
   }
 }

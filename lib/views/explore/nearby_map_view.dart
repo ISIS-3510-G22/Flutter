@@ -3,7 +3,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/location_service.dart';
-import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/viewmodels/nearby_map_viewmodel.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/explore/public_plan_detail_view.dart';
@@ -11,6 +10,9 @@ import 'package:plansync/views/widgets/circle_back_button.dart';
 import 'package:provider/provider.dart';
 
 const _geoapifyKey = String.fromEnvironment('GEOAPIFY_KEY');
+
+// Plans recommended by the analytics pipeline stand out in gold.
+const _recommendedColor = Color(0xFFF2A900);
 
 class NearbyMapView extends StatelessWidget {
   const NearbyMapView({super.key});
@@ -141,7 +143,7 @@ class _NearbyMapState extends State<_NearbyMap> {
   // Space covered by the top bar and the recommendations card, so the whole
   // search radius stays visible between them.
   static const _topOverlay = 72.0;
-  static const _bottomOverlay = 200.0;
+  static const _bottomOverlay = 220.0;
 
   final _mapController = MapController();
   var _mapReady = false;
@@ -224,7 +226,6 @@ class _NearbyMapState extends State<_NearbyMap> {
                     height: 44,
                     child: _ItemMarker(
                       item: item,
-                      isRecommended: vm.recommendedIds.contains(item.id),
                       onTap: () => _openItem(context, item),
                     ),
                   ),
@@ -249,7 +250,7 @@ class _NearbyMapState extends State<_NearbyMap> {
           left: 0,
           right: 0,
           bottom: 0,
-          child: SafeArea(top: false, child: _RecommendationsSheet(vm: vm)),
+          child: SafeArea(top: false, child: _NearbyPlansSheet(vm: vm)),
         ),
       ],
     );
@@ -285,14 +286,9 @@ class _UserMarker extends StatelessWidget {
 }
 
 class _ItemMarker extends StatelessWidget {
-  const _ItemMarker({
-    required this.item,
-    required this.isRecommended,
-    required this.onTap,
-  });
+  const _ItemMarker({required this.item, required this.onTap});
 
   final NearbyItem item;
-  final bool isRecommended;
   final VoidCallback onTap;
 
   @override
@@ -300,54 +296,37 @@ class _ItemMarker extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     var background = colors.surface;
     var foreground = colors.primary;
-    if (item.isPlan) {
+    var border = colors.primary;
+    var icon = Icons.place;
+    if (item.isRecommended) {
+      background = _recommendedColor;
+      foreground = Colors.white;
+      border = Colors.white;
+      icon = Icons.auto_awesome;
+    } else if (item.isPlan) {
       background = colors.primary;
       foreground = colors.onPrimary;
+      border = Colors.white;
+      icon = Icons.event;
     }
 
     return GestureDetector(
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: background,
-              shape: BoxShape.circle,
-              border: Border.all(color: colors.primary, width: 2),
-              boxShadow: const [
-                BoxShadow(blurRadius: 4, color: Colors.black26),
-              ],
-            ),
-            child: Center(
-              child: Icon(
-                item.isPlan ? Icons.event : Icons.place,
-                size: 22,
-                color: foreground,
-              ),
-            ),
-          ),
-          if (isRecommended)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  color: Colors.amber,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.star, size: 12, color: Colors.white),
-              ),
-            ),
-        ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: background,
+          shape: BoxShape.circle,
+          border: Border.all(color: border, width: 2),
+          boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+        ),
+        child: Center(child: Icon(icon, size: 22, color: foreground)),
       ),
     );
   }
 }
 
-class _RecommendationsSheet extends StatelessWidget {
-  const _RecommendationsSheet({required this.vm});
+class _NearbyPlansSheet extends StatelessWidget {
+  const _NearbyPlansSheet({required this.vm});
 
   final NearbyMapViewModel vm;
 
@@ -355,11 +334,6 @@ class _RecommendationsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
-
-    var subtitle = 'Closest to you';
-    if (vm.hasTasteProfile) {
-      subtitle = 'Based on your past plans and activities';
-    }
 
     return Container(
       margin: const EdgeInsets.all(12),
@@ -376,37 +350,46 @@ class _RecommendationsSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Recommended for you',
+              'Plans near you',
               style: text.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
+          const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              subtitle,
-              style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            child: Wrap(
+              spacing: 12,
+              children: [
+                const _LegendDot(color: _recommendedColor, label: 'For you'),
+                _LegendDot(color: colors.primary, label: 'Plan'),
+                _LegendDot(
+                  color: colors.surface,
+                  border: colors.primary,
+                  label: 'Activity',
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
-          if (vm.recommended.isEmpty)
+          if (vm.nearbyPlans.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'No public plans or activities within '
-                '${vm.radiusKm.toInt()} km. Try a bigger radius.',
+                'No public plans within ${vm.radiusKm.toInt()} km. '
+                'Try a bigger radius.',
               ),
             )
           else
             SizedBox(
-              height: 104,
+              height: 96,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 scrollDirection: Axis.horizontal,
-                itemCount: vm.recommended.length,
+                itemCount: vm.nearbyPlans.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (context, i) => _RecommendationCard(
-                  item: vm.recommended[i],
-                  onTap: () => _openItem(context, vm.recommended[i]),
+                itemBuilder: (context, i) => _NearbyPlanCard(
+                  item: vm.nearbyPlans[i],
+                  onTap: () => _openItem(context, vm.nearbyPlans[i]),
                 ),
               ),
             ),
@@ -416,8 +399,40 @@ class _RecommendationsSheet extends StatelessWidget {
   }
 }
 
-class _RecommendationCard extends StatelessWidget {
-  const _RecommendationCard({required this.item, required this.onTap});
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label, this.border});
+
+  final Color color;
+  final Color? border;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    var borderColor = color;
+    if (border != null) borderColor = border!;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor, width: 2),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: text.bodySmall),
+      ],
+    );
+  }
+}
+
+class _NearbyPlanCard extends StatelessWidget {
+  const _NearbyPlanCard({required this.item, required this.onTap});
 
   final NearbyItem item;
   final VoidCallback onTap;
@@ -427,16 +442,20 @@ class _RecommendationCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
-    var reason = item.isPlan ? 'Public plan' : 'Activity';
-    if (item.matchedTags.isNotEmpty) {
-      reason =
-          'You like ${item.matchedTags.take(2).map(capitalize).join(', ')}';
-    }
+    var borderColor = colors.outline;
+    if (item.isRecommended) borderColor = _recommendedColor;
 
     return SizedBox(
       width: 220,
       child: Card.outlined(
         margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: borderColor,
+            width: item.isRecommended ? 2 : 1,
+          ),
+        ),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
@@ -445,33 +464,31 @@ class _RecommendationCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      item.isPlan ? Icons.event : Icons.place,
-                      size: 18,
-                      color: colors.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
                 Text(
-                  reason,
+                  item.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: text.bodySmall,
+                  style: text.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
+                const SizedBox(height: 4),
+                if (item.isRecommended)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 14,
+                        color: _recommendedColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Recommended for you',
+                        style: text.bodySmall?.copyWith(
+                          color: _recommendedColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 const Spacer(),
                 Text(
                   _formatDistance(item.distanceKm),
