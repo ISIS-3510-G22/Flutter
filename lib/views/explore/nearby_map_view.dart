@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/location_service.dart';
 import 'package:plansync/utils/text_format.dart';
@@ -127,20 +128,74 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _NearbyMap extends StatelessWidget {
+class _NearbyMap extends StatefulWidget {
   const _NearbyMap({required this.vm});
 
   final NearbyMapViewModel vm;
 
   @override
+  State<_NearbyMap> createState() => _NearbyMapState();
+}
+
+class _NearbyMapState extends State<_NearbyMap> {
+  // Space covered by the top bar and the recommendations card, so the whole
+  // search radius stays visible between them.
+  static const _topOverlay = 72.0;
+  static const _bottomOverlay = 200.0;
+
+  final _mapController = MapController();
+  var _mapReady = false;
+  late double _fittedRadiusKm = widget.vm.radiusKm;
+
+  @override
+  void didUpdateWidget(covariant _NearbyMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_mapReady || widget.vm.radiusKm == _fittedRadiusKm) return;
+    _fittedRadiusKm = widget.vm.radiusKm;
+    _mapController.fitCamera(_radiusFit(context));
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  CameraFit _radiusFit(BuildContext context) {
+    final center = widget.vm.position!;
+    final meters = widget.vm.radiusKm * 1000;
+    const distance = Distance();
+    final safe = MediaQuery.paddingOf(context);
+    return CameraFit.bounds(
+      bounds: LatLngBounds.fromPoints([
+        distance.offset(center, meters, 0),
+        distance.offset(center, meters, 90),
+        distance.offset(center, meters, 180),
+        distance.offset(center, meters, 270),
+      ]),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        safe.top + _topOverlay,
+        16,
+        safe.bottom + _bottomOverlay,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final vm = widget.vm;
     final colors = Theme.of(context).colorScheme;
     final center = vm.position!;
 
     return Stack(
       children: [
         FlutterMap(
-          options: MapOptions(initialCenter: center, initialZoom: 14),
+          mapController: _mapController,
+          options: MapOptions(
+            initialCameraFit: _radiusFit(context),
+            onMapReady: () => _mapReady = true,
+          ),
           children: [
             TileLayer(
               urlTemplate:
