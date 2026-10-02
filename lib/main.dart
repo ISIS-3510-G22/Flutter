@@ -134,19 +134,17 @@ class _AuthGateState extends State<AuthGate> {
     return StreamBuilder<User?>(
       stream: _authStateChanges,
       builder: (context, snapshot) {
-        final app = MaterialApp(
+        final user = snapshot.data;
+        return MaterialApp(
           navigatorKey: _appNavigatorKey,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: themeMode,
+          builder: (_, child) => user == null
+              ? child!
+              : Provider<User>.value(value: user, child: child!),
           home: _home(snapshot),
         );
-
-        // The user is provided above MaterialApp so every pushed route
-        // (not only HomeShell) can read it with context.read<User>().
-        final user = snapshot.data;
-        if (snapshot.hasError || user == null) return app;
-        return Provider<User>.value(value: user, child: app);
       },
     );
   }
