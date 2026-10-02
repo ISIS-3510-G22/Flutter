@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/data/explore_repository.dart';
+import 'package:plansync/models/activity.dart';
 
 class ExploreViewModel extends ChangeNotifier {
+  ExploreViewModel(this._userId);
+
+  final String _userId;
   final _repository = ExploreRepository();
 
   static const allTags = 'All';
@@ -24,25 +28,58 @@ class ExploreViewModel extends ChangeNotifier {
 
   List<ExplorePlan> _plans = [];
   List<ExplorePlan> filteredPlans = [];
+  List<Activity> _activities = [];
+  List<Activity> filteredActivities = [];
+
+  /// Plans the analytics pipeline recommends to this user (smart feature).
+  Set<String> recommendedIds = {};
   bool isLoading = false;
   String? errorMessage;
 
-  Future<void> loadPlans() async {
+  bool isRecommended(ExplorePlan item) => recommendedIds.contains(item.plan.id);
+
+  Future<void> load() async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      _plans = await _repository.getPlans();
+      final results = await Future.wait([
+        _repository.getPlans(),
+        _repository.getActivities(),
+        _repository.recommendedPlanIds(_userId),
+      ]);
+      final plans = results[0] as List<ExplorePlan>;
+      _activities = results[1] as List<Activity>;
+      final recommended = results[2] as List<String>;
+
+      recommendedIds = recommended.toSet();
+      _plans = _recommendedFirst(plans, recommended);
       tagOptions = [allTags, ..._tagsByPopularity()];
       if (!tagOptions.contains(selectedTag)) selectedTag = allTags;
       filteredPlans = _filterPlans();
+      filteredActivities = _filterActivities();
     } catch (_) {
       errorMessage = 'Could not load plans. Try again.';
     }
 
     isLoading = false;
     notifyListeners();
+  }
+
+  /// Every plan is shown; recommended ones go first in the pipeline's
+  /// order, the rest keep their order (soonest first).
+  List<ExplorePlan> _recommendedFirst(
+    List<ExplorePlan> plans,
+    List<String> recommended,
+  ) {
+    final rank = {
+      for (var i = 0; i < recommended.length; i++) recommended[i]: i,
+    };
+    final top = plans.where((p) => rank.containsKey(p.plan.id)).toList();
+    top.sort((a, b) => rank[a.plan.id]!.compareTo(rank[b.plan.id]!));
+    final rest = plans.where((p) => !rank.containsKey(p.plan.id));
+    return [...top, ...rest];
   }
 
   void onSearchQueryChange(String query) {
@@ -85,6 +122,7 @@ class ExploreViewModel extends ChangeNotifier {
 
   void _applyFilters() {
     filteredPlans = _filterPlans();
+    filteredActivities = _filterActivities();
     notifyListeners();
   }
 
@@ -94,11 +132,15 @@ class ExploreViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Tags of the loaded plans, most common first.
+  /// Tags of the loaded plans and activities, most common first.
   List<String> _tagsByPopularity() {
     final counts = <String, int>{};
-    for (final item in _plans) {
-      for (final tag in item.plan.tags.map((t) => t.toLowerCase()).toSet()) {
+    final tagLists = [
+      for (final item in _plans) item.plan.tags,
+      for (final activity in _activities) activity.tags,
+    ];
+    for (final tags in tagLists) {
+      for (final tag in tags.map((t) => t.toLowerCase()).toSet()) {
         final current = counts[tag];
         if (current == null) {
           counts[tag] = 1;
@@ -132,6 +174,24 @@ class ExploreViewModel extends ChangeNotifier {
           _matchesWhen(plan.date) &&
           _matchesPrice(item.totalCost) &&
           _matchesRating(item.rating);
+    }).toList();
+  }
+
+  /// Activities have no date or reviews, so the When and Rating filters
+  /// hide them; search, tags and price apply as for plans.
+  List<Activity> _filterActivities() {
+    if (selectedWhen != null || selectedRating != 'All') return [];
+    final query = searchQuery.toLowerCase();
+    return _activities.where((activity) {
+      final tags = activity.tags.map((t) => t.toLowerCase());
+      final matchesSearch =
+          query.isEmpty ||
+          activity.name.toLowerCase().contains(query) ||
+          tags.any((t) => t.contains(query));
+      final matchesTag = selectedTag == allTags || tags.contains(selectedTag);
+      return matchesSearch &&
+          matchesTag &&
+          _matchesPrice(activity.expectedPrice);
     }).toList();
   }
 

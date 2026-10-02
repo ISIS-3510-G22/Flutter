@@ -64,6 +64,26 @@ class ExploreRepository {
     );
   }
 
+  /// Public activities, alphabetically. They are not ranked by
+  /// recommendations.
+  Future<List<Activity>> getActivities() async {
+    final activities = await _activityRepository.publicActivities();
+    activities.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
+    return activities;
+  }
+
+  /// Plan IDs the analytics pipeline recommends to [uid], best first. A
+  /// failure here only means no recommendations, never an empty feed.
+  Future<List<String>> recommendedPlanIds(String uid) async {
+    try {
+      return await _planRepository.recommendedPlanIds(uid);
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<double?> _averageRating(String planId) async {
     final reviews = await _reviewRepository.reviewsForPlan(planId);
     if (reviews.isEmpty) return null;

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/data/explore_repository.dart';
+import 'package:plansync/models/user.dart';
 import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/viewmodels/explore_viewmodel.dart';
+import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/explore/nearby_map_view.dart';
 import 'package:plansync/views/explore/public_plan_detail_view.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
@@ -14,7 +16,7 @@ class ExploreView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ExploreViewModel()..loadPlans(),
+      create: (context) => ExploreViewModel(context.read<User>().id)..load(),
       child: const _ExploreBody(),
     );
   }
@@ -153,6 +155,7 @@ class _ExploreBody extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: _FeaturedPlanCard(
                 item: item,
+                recommended: vm.isRecommended(item),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -161,6 +164,28 @@ class _ExploreBody extends StatelessWidget {
                 ),
               ),
             ),
+        if (!vm.isLoading && vm.errorMessage == null) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Text(
+              'Activities',
+              style: text.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          if (vm.filteredActivities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'No activities match your filters.',
+                style: text.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            )
+          else
+            for (final activity in vm.filteredActivities)
+              ActivityCard(activity: activity),
+        ],
       ],
     );
   }
@@ -407,9 +432,16 @@ class _DashedLinePainter extends CustomPainter {
 }
 
 class _FeaturedPlanCard extends StatelessWidget {
-  const _FeaturedPlanCard({required this.item, required this.onTap});
+  const _FeaturedPlanCard({
+    required this.item,
+    required this.recommended,
+    required this.onTap,
+  });
 
   final ExplorePlan item;
+
+  /// Recommended by the analytics pipeline for this user.
+  final bool recommended;
   final VoidCallback onTap;
 
   @override
@@ -426,7 +458,10 @@ class _FeaturedPlanCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: colors.outline),
+            border: Border.all(
+              color: recommended ? colors.primary : colors.outline,
+              width: recommended ? 2 : 1,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,6 +482,39 @@ class _FeaturedPlanCard extends StatelessWidget {
                           radius: 0,
                         ),
                       ),
+                      if (recommended)
+                        Positioned(
+                          top: 10,
+                          left: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.primary,
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  size: 14,
+                                  color: colors.onPrimary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'For you',
+                                  style: text.labelMedium?.copyWith(
+                                    color: colors.onPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       if (item.rating != null)
                         Positioned(
                           top: 10,
