@@ -157,18 +157,24 @@ class ManageSplitsViewModel extends ChangeNotifier {
       paidByYou.isEmpty &&
       paidToYou.isEmpty;
 
-  /// Where to pay [userId]: the method they chose for this plan, or all the
-  /// methods in their profile if they haven't chosen one.
-  List<ReimbursementMethod> reimbursementMethodsOf(String userId) {
+  /// Every Bre-B key or account [userId] saved in their profile.
+  List<ReimbursementMethod> allMethodsOf(String userId) {
     for (final p in _participants) {
-      if (p.id != userId) continue;
-      final chosen = _methodChoices[userId];
-      for (final m in p.reimbursementMethods) {
-        if (m.id == chosen) return [m];
-      }
-      return p.reimbursementMethods;
+      if (p.id == userId) return p.reimbursementMethods;
     }
     return const [];
+  }
+
+  /// The method [userId] chose for this plan, or the first one in their
+  /// profile when they haven't chosen. Null if they have none.
+  ReimbursementMethod? preferredMethodOf(String userId) {
+    final methods = allMethodsOf(userId);
+    if (methods.isEmpty) return null;
+    final chosen = _methodChoices[userId];
+    for (final m in methods) {
+      if (m.id == chosen) return m;
+    }
+    return methods.first;
   }
 
   List<String> _splitIds(Expense expense) {
