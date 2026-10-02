@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/data/explore_repository.dart';
+import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/viewmodels/explore_viewmodel.dart';
 import 'package:plansync/views/explore/nearby_map_view.dart';
 import 'package:plansync/views/explore/public_plan_detail_view.dart';
@@ -69,11 +70,12 @@ class _ExploreBody extends StatelessWidget {
             onQueryChange: vm.onSearchQueryChange,
           ),
         ),
-        _CategoryChipsRow(
-          options: ExploreViewModel.categoryOptions,
-          selected: vm.selectedCategory,
-          onSelect: vm.onCategorySelect,
-        ),
+        if (vm.tagOptions.length > 1)
+          _TagChipsRow(
+            options: vm.tagOptions,
+            selected: vm.selectedTag,
+            onSelect: vm.onTagSelect,
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
@@ -182,7 +184,7 @@ class _SearchRow extends StatelessWidget {
             controller: controller,
             onChanged: onQueryChange,
             decoration: InputDecoration(
-              hintText: 'Search plans or activities',
+              hintText: 'Search plans or tags',
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -205,8 +207,8 @@ class _SearchRow extends StatelessWidget {
   }
 }
 
-class _CategoryChipsRow extends StatelessWidget {
-  const _CategoryChipsRow({
+class _TagChipsRow extends StatelessWidget {
+  const _TagChipsRow({
     required this.options,
     required this.selected,
     required this.onSelect,
@@ -225,7 +227,7 @@ class _CategoryChipsRow extends StatelessWidget {
         children: [
           for (final option in options) ...[
             _SelectableChip(
-              text: option,
+              text: capitalize(option),
               selected: option == selected,
               onTap: () => onSelect(option),
               borderRadius: BorderRadius.circular(50),
