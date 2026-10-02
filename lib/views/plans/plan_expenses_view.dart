@@ -69,22 +69,20 @@ class _PlanExpensesBody extends StatelessWidget {
                 icon: const Icon(Icons.account_balance_outlined),
                 label: const Text('Add Bre-B or account'),
               ),
-              if (vm.expenses.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                FilledButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ManageSplitsView(
-                        planId: vm.planId,
-                        participants: vm.participants,
-                      ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ManageSplitsView(
+                      planId: vm.planId,
+                      participants: vm.participants,
                     ),
                   ),
-                  icon: const Icon(Icons.account_balance_wallet_outlined),
-                  label: const Text('Manage Splits'),
                 ),
-              ],
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: const Text('Manage Splits'),
+              ),
             ],
           ),
         ),

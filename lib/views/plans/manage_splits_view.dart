@@ -7,18 +7,27 @@ import 'package:provider/provider.dart';
 class ManageSplitsView extends StatelessWidget {
   const ManageSplitsView({
     required this.planId,
-    required this.participants,
+    this.participants,
+    this.participantIds = const [],
     super.key,
   });
 
   final String planId;
-  final List<User> participants;
+
+  /// Already loaded participants. When null they are loaded from
+  /// [participantIds].
+  final List<User>? participants;
+  final List<String> participantIds;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) =>
-          ManageSplitsViewModel(planId, participants, context.read<User>().id),
+      create: (context) => ManageSplitsViewModel(
+        planId,
+        context.read<User>().id,
+        participants: participants,
+        participantIds: participantIds,
+      ),
       child: const _ManageSplitsBody(),
     );
   }
@@ -40,6 +49,37 @@ class _ManageSplitsBody extends StatelessWidget {
       appBar: AppBar(title: const Text('Manage Splits')),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
+          : !vm.hasExpenses
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 48,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'There are no expenses for this plan yet',
+                      textAlign: TextAlign.center,
+                      style: text.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'When someone adds an expense, you will see here '
+                      'who owes whom.',
+                      textAlign: TextAlign.center,
+                      style: text.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : vm.isEmpty
           ? Center(
               child: Text(
@@ -121,8 +161,9 @@ class _SplitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bold = Theme.of(context).textTheme.titleMedium
-        ?.copyWith(fontWeight: FontWeight.bold);
+    final bold = Theme.of(
+      context,
+    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold);
     final title = Text(row.name, style: bold);
     final amount = Text('\$${row.amount.toStringAsFixed(2)}', style: bold);
     Widget? subtitleWidget;

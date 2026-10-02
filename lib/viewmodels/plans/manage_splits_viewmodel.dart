@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:plansync/data/expense_repository.dart';
 import 'package:plansync/data/payment_info_repository.dart';
 import 'package:plansync/data/settlement_repository.dart';
+import 'package:plansync/data/user_repository.dart';
 import 'package:plansync/models/expense.dart';
 import 'package:plansync/models/payment_info.dart';
 import 'package:plansync/models/settlement.dart';
@@ -25,7 +26,20 @@ class SplitRow {
 }
 
 class ManageSplitsViewModel extends ChangeNotifier {
-  ManageSplitsViewModel(this._planId, this._participants, this._currentUserId) {
+  /// Pass [participants] when they are already loaded; otherwise they are
+  /// fetched from [participantIds].
+  ManageSplitsViewModel(
+    this._planId,
+    this._currentUserId, {
+    List<User>? participants,
+    List<String> participantIds = const [],
+  }) {
+    if (participants != null) {
+      _participants = participants;
+      _participantsLoaded = true;
+    } else {
+      _loadParticipants(participantIds);
+    }
     _expensesSub = _expenseRepository.expensesForPlan(_planId).listen((e) {
       _expenses = e;
       _expensesLoaded = true;
@@ -44,10 +58,12 @@ class ManageSplitsViewModel extends ChangeNotifier {
   }
 
   final String _planId;
-  final List<User> _participants;
   final String _currentUserId;
+  List<User> _participants = [];
+  bool _participantsLoaded = false;
   final _expenseRepository = ExpenseRepository();
   final _settlementRepository = SettlementRepository();
+  final _userRepository = UserRepository();
   final _paymentInfoRepository = PaymentInfoRepository();
   late final StreamSubscription<List<Expense>> _expensesSub;
   late final StreamSubscription<List<Settlement>> _settlementsSub;
@@ -65,6 +81,18 @@ class ManageSplitsViewModel extends ChangeNotifier {
   List<SplitRow> paidToYou = [];
   bool isLoading = true;
   String? errorMessage;
+
+  bool get hasExpenses => _expenses.isNotEmpty;
+
+  Future<void> _loadParticipants(List<String> ids) async {
+    try {
+      _participants = await _userRepository.getUsers(ids);
+    } catch (_) {
+      errorMessage = 'Could not load the participants.';
+    }
+    _participantsLoaded = true;
+    _recalculate();
+  }
 
   bool get isEmpty =>
       youOwe.isEmpty &&
@@ -124,7 +152,9 @@ class ManageSplitsViewModel extends ChangeNotifier {
   }
 
   void _recalculate() {
-    if (!_expensesLoaded || !_settlementsLoaded) return;
+    if (!_expensesLoaded || !_settlementsLoaded || !_participantsLoaded) {
+      return;
+    }
 
     youOwe = [];
     owedToYou = [];
