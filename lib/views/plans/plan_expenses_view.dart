@@ -3,7 +3,6 @@ import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/plans/plan_expenses_viewmodel.dart';
 import 'package:plansync/views/plans/create_edit_expense_view.dart';
 import 'package:plansync/views/plans/manage_splits_view.dart';
-import 'package:plansync/views/plans/payment_info_view.dart';
 import 'package:provider/provider.dart';
 
 class PlanExpensesView extends StatelessWidget {
@@ -59,17 +58,6 @@ class _PlanExpensesBody extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              OutlinedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PaymentInfoView(planId: vm.planId),
-                  ),
-                ),
-                icon: const Icon(Icons.account_balance_outlined),
-                label: const Text('Add Bre-B or account'),
-              ),
-              const SizedBox(height: 8),
               FilledButton.icon(
                 onPressed: () => Navigator.push(
                   context,

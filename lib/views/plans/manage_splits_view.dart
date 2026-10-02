@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:plansync/models/reimbursement_method.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/plans/manage_splits_viewmodel.dart';
 import 'package:provider/provider.dart';
@@ -104,10 +105,7 @@ class _ManageSplitsBody extends StatelessWidget {
                   for (final row in vm.youOwe)
                     _SplitCard(
                       row: row,
-                      subtitle: _paymentSubtitle(
-                        vm.paymentDetailsOf(row.userId),
-                      ),
-                      copyText: vm.paymentDetailsOf(row.userId),
+                      methods: vm.reimbursementMethodsOf(row.userId),
                       paid: false,
                       onToggle: (_) => vm.markPaid(row),
                     ),
@@ -139,23 +137,20 @@ class _ManageSplitsBody extends StatelessWidget {
   }
 }
 
-String _paymentSubtitle(String? details) {
-  if (details == null) return 'No Bre-B or account added yet';
-  return details;
-}
-
 class _SplitCard extends StatelessWidget {
   const _SplitCard({
     required this.row,
     this.subtitle,
-    this.copyText,
+    this.methods,
     this.paid,
     this.onToggle,
   });
 
   final SplitRow row;
   final String? subtitle;
-  final String? copyText;
+
+  /// When set, shows where to pay this person (from their profile).
+  final List<ReimbursementMethod>? methods;
   final bool? paid;
   final ValueChanged<bool>? onToggle;
 
@@ -168,18 +163,31 @@ class _SplitCard extends StatelessWidget {
     final amount = Text('\$${row.amount.toStringAsFixed(2)}', style: bold);
     Widget? subtitleWidget;
     if (subtitle != null) subtitleWidget = Text(subtitle!);
-    if (copyText != null) {
-      subtitleWidget = Row(
-        children: [
-          Flexible(child: SelectableText(copyText!)),
-          IconButton(
-            icon: const Icon(Icons.copy, size: 18),
-            tooltip: 'Copy',
-            visualDensity: VisualDensity.compact,
-            onPressed: () => _copy(context, copyText!),
-          ),
-        ],
-      );
+    final paymentMethods = methods;
+    if (paymentMethods != null) {
+      if (paymentMethods.isEmpty) {
+        subtitleWidget = const Text('No Bre-B or account in their profile');
+      } else {
+        subtitleWidget = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final method in paymentMethods)
+              Row(
+                children: [
+                  Flexible(
+                    child: SelectableText('${method.type}: ${method.account}'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    tooltip: 'Copy',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _copy(context, method.account),
+                  ),
+                ],
+              ),
+          ],
+        );
+      }
     }
 
     if (paid != null && onToggle != null) {
