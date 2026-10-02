@@ -3,22 +3,27 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/data/friend_repository.dart';
+import 'package:plansync/data/group_repository.dart';
 import 'package:plansync/data/plan_repository.dart';
 import 'package:plansync/data/user_repository.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/models/group.dart';
 import 'package:plansync/models/invitations.dart';
+import 'package:plansync/models/invite_suggestion.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/models/user.dart';
 
 class PlanDetailViewModel extends ChangeNotifier {
   PlanDetailViewModel(this.plan, this._uid) {
     _sub = _planRepository.planById(plan.id).listen(_onPlanUpdate);
+    loadSuggestions();
   }
 
   final _planRepository = PlanRepository();
   final _activityRepository = ActivityRepository();
   final _userRepository = UserRepository();
   final _friendRepository = FriendRepository();
+  final _groupRepository = GroupRepository();
   late final StreamSubscription<Plan> _sub;
 
   final String _uid;
@@ -86,6 +91,45 @@ class PlanDetailViewModel extends ChangeNotifier {
     } catch (_) {
       return false;
     }
+  }
+
+  List<InviteSuggestion> _allSuggestedPeople = [];
+  List<Group> suggestedGroups = [];
+
+  List<InviteSuggestion> get suggestedPeople {
+    final invited = plan.invitations.map((i) => i.userId).toSet();
+    return _allSuggestedPeople
+        .where((s) => !invited.contains(s.user.id))
+        .toList();
+  }
+
+  Future<void> loadSuggestions() async {
+    try {
+      final ids = await _planRepository.inviteSuggestions(_uid);
+      final users = await _userRepository.getUsers(ids.userIds);
+      final groups = await _groupRepository.groupsByIds(ids.groupIds);
+      final userById = {for (final u in users) u.id: u};
+
+      _allSuggestedPeople = [
+        for (var i = 0; i < ids.userIds.length; i++)
+          if (userById[ids.userIds[i]] != null)
+            InviteSuggestion(
+              userById[ids.userIds[i]]!,
+              ids.invitesSent[i],
+              ids.sharedPlans[i],
+            ),
+      ];
+      suggestedGroups = groups;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Invite suggestions failed: $e');
+    }
+  }
+
+  Future<List<String>> invitableMemberIds(Group group) async {
+    final invited = plan.invitations.map((i) => i.userId).toSet();
+    final members = await _groupRepository.memberIdsForGroup(group.id);
+    return members.where((id) => id != _uid && !invited.contains(id)).toList();
   }
 
   @override

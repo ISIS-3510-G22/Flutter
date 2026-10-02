@@ -101,6 +101,8 @@ class FriendRepository {
 
     var sentDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
     var receivedDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    var sentInitialized = false;
+    var receivedInitialized = false;
 
     final controller = StreamController<List<User>>();
 
@@ -121,11 +123,17 @@ class FriendRepository {
 
     final sentSub = sent.listen((snap) {
       sentDocs = snap.docs;
-      if (controller.hasListener) emit();
+      sentInitialized = true;
+      if (sentInitialized && receivedInitialized && controller.hasListener) {
+        emit();
+      }
     });
     final receivedSub = received.listen((snap) {
       receivedDocs = snap.docs;
-      if (controller.hasListener) emit();
+      receivedInitialized = true;
+      if (sentInitialized && receivedInitialized && controller.hasListener) {
+        emit();
+      }
     });
 
     controller.onCancel = () {
