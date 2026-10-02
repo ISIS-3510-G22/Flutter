@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/plan.dart';
+import 'package:plansync/data/explore_repository.dart';
 import 'package:plansync/viewmodels/explore_viewmodel.dart';
 import 'package:plansync/views/explore/nearby_map_view.dart';
+import 'package:plansync/views/explore/public_plan_detail_view.dart';
+import 'package:plansync/views/widgets/activity_photo.dart';
 import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
@@ -144,10 +146,18 @@ class _ExploreBody extends StatelessWidget {
             ),
           )
         else
-          for (final plan in vm.filteredPlans)
+          for (final item in vm.filteredPlans)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: _FeaturedPlanCard(plan: plan, onTap: () {}),
+              child: _FeaturedPlanCard(
+                item: item,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PublicPlanDetailView(plan: item.plan),
+                  ),
+                ),
+              ),
             ),
       ],
     );
@@ -395,9 +405,9 @@ class _DashedLinePainter extends CustomPainter {
 }
 
 class _FeaturedPlanCard extends StatelessWidget {
-  const _FeaturedPlanCard({required this.plan, required this.onTap});
+  const _FeaturedPlanCard({required this.item, required this.onTap});
 
-  final Plan plan;
+  final ExplorePlan item;
   final VoidCallback onTap;
 
   @override
@@ -423,46 +433,50 @@ class _FeaturedPlanCard extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
-                child: Container(
+                child: SizedBox(
                   width: double.infinity,
                   height: 160,
-                  color: colors.surfaceContainerHighest,
                   child: Stack(
                     children: [
-                      Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          size: 40,
-                          color: colors.onSurfaceVariant,
+                      Positioned.fill(
+                        child: ActivityPhoto(
+                          url: item.photoUrl,
+                          height: 160,
+                          radius: 0,
                         ),
                       ),
-                      Positioned(
-                        top: 10,
-                        right: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colors.surface,
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.star, size: 14, color: colors.primary),
-                              const SizedBox(width: 2),
-                              Text(
-                                "5.0",
-                                style: text.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                      if (item.rating != null)
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.surface,
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color: colors.primary,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 2),
+                                Text(
+                                  item.rating!.toStringAsFixed(1),
+                                  style: text.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -473,14 +487,15 @@ class _FeaturedPlanCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      plan.name,
+                      item.plan.name,
                       style: text.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${plan.activityIds.length} Activities   Cost: 10000',
+                      '${item.plan.activityIds.length} Activities   '
+                      'Est. \$${item.totalCost.toStringAsFixed(0)}',
                       style: text.bodyMedium?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),

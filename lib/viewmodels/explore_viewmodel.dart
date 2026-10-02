@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/data/explore_repository.dart';
-import 'package:plansync/models/plan.dart';
 
 class ExploreViewModel extends ChangeNotifier {
   final _repository = ExploreRepository();
@@ -24,8 +23,8 @@ class ExploreViewModel extends ChangeNotifier {
   String selectedPrice = r'$$';
   String selectedRating = 'All';
 
-  List<Plan> _plans = [];
-  List<Plan> filteredPlans = [];
+  List<ExplorePlan> _plans = [];
+  List<ExplorePlan> filteredPlans = [];
   bool isLoading = false;
   String? errorMessage;
 
@@ -81,13 +80,17 @@ class ExploreViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  List<Plan> _filterPlans() {
-    return _plans.where((plan) {
+  List<ExplorePlan> _filterPlans() {
+    return _plans.where((item) {
+      final plan = item.plan;
       final matchesSearch =
           searchQuery.isEmpty ||
           plan.name.toLowerCase().contains(searchQuery.toLowerCase());
       final matchesCategory =
-          selectedCategory == 'All' || plan.tags.contains(selectedCategory);
+          selectedCategory == 'All' ||
+          plan.tags.any(
+            (t) => t.toLowerCase() == selectedCategory.toLowerCase(),
+          );
 
       return matchesSearch && matchesCategory;
     }).toList();
