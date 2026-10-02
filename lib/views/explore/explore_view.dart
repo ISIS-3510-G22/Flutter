@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/viewmodels/explore_viewmodel.dart';
+import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
 class ExploreView extends StatelessWidget {
@@ -27,12 +28,9 @@ class _ExploreBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
+        const ViewHeader(title: 'Explore'),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Text('Explore', style: text.headlineMedium),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: _SearchRow(
             controller: vm.searchController,
             onQueryChange: vm.onSearchQueryChange,

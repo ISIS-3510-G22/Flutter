@@ -26,6 +26,8 @@ class ActivityRepository {
       ownerId: data['ownerId'] as String,
       likedBy: (data['likedBy'] as List).cast<String>(),
       photoUrl: data['photoUrl'] as String?,
+      lat: (data['lat'] as num?)?.toDouble(),
+      lng: (data['lng'] as double?)?.toDouble(),
     );
   }
 
@@ -74,6 +76,8 @@ class ActivityRepository {
       'ownerId': activity.ownerId,
       'likedBy': <String>[],
       'photoUrl': activity.photoUrl,
+      'lat': activity.lat,
+      'lng': activity.lng,
     });
   }
 
@@ -90,6 +94,8 @@ class ActivityRepository {
       'tags': activity.tags.toList(),
       'visibility': activity.visibility.name,
       'photoUrl': activity.photoUrl,
+      'lat': activity.lat,
+      'lng': activity.lng,
     });
   }
 

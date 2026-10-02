@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
-import 'package:plansync/views/plans/create_plan_view.dart';
+import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:plansync/views/plans/plan_card.dart';
+import 'package:plansync/views/widgets/tab_button.dart';
+import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
 class PlanView extends StatelessWidget {
@@ -25,65 +27,46 @@ class _PlanScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<MyPlansViewModel>();
-    final colors = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('My Plans', style: text.headlineMedium),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CreatePlanView()),
-            ),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CreateEditPlanView()),
+        ),
+        child: const Icon(Icons.add),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: PlanTab.values.map((tab) {
-              final selected = vm.selectedTab == tab;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => vm.selectTab(tab),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: selected ? colors.primary : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    child: Text(
-                      _tabLabel(tab),
-                      textAlign: TextAlign.center,
-                      style: text.titleSmall?.copyWith(
-                        color: selected
-                            ? colors.primary
-                            : colors.onSurfaceVariant,
-                        fontWeight: selected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
+          const ViewHeader(title: 'My Plans'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TabTrack(
+              children: [
+                for (final tab in PlanTab.values)
+                  TabButton(
+                    label: _tabLabel(tab),
+                    selected: vm.selectedTab == tab,
+                    onPressed: () => vm.selectTab(tab),
                   ),
-                ),
-              );
-            }).toList(),
+              ],
+            ),
           ),
           Expanded(
             child: vm.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                     children: vm.visiblePlans
                         .map(
-                          (plan) => PlanCard(plan: plan, tab: vm.selectedTab),
+                          (plan) => PlanCard(
+                            plan: plan,
+                            tab: vm.selectedTab,
+                            going: vm.isGoing(plan),
+                            notification: vm.notificationFor(plan),
+                            photoUrls: vm.photoUrlsFor(plan),
+                          ),
                         )
                         .toList(),
                   ),
@@ -95,7 +78,7 @@ class _PlanScreen extends StatelessWidget {
 
   String _tabLabel(PlanTab tab) => switch (tab) {
     PlanTab.upcoming => 'Upcoming',
-    PlanTab.pendingInvite => 'Pending Invites',
+    PlanTab.pendingInvite => 'My Invites',
     PlanTab.past => 'Past',
   };
 }

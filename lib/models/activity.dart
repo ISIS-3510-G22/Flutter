@@ -11,6 +11,8 @@ class Activity {
   final String ownerId;
   final List<String> likedBy;
   final String? photoUrl;
+  final double? lat;
+  final double? lng;
 
   const Activity({
     required this.id,
@@ -23,5 +25,7 @@ class Activity {
     required this.ownerId,
     required this.likedBy,
     required this.photoUrl,
+    required this.lat,
+    required this.lng,
   });
 }

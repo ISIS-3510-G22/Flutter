@@ -36,6 +36,8 @@ class ActivityDetailViewmodel extends ChangeNotifier {
       ownerId: activity.ownerId,
       likedBy: likedBy,
       photoUrl: activity.photoUrl,
+      lat: activity.lat,
+      lng: activity.lng,
     );
     notifyListeners();
   }
