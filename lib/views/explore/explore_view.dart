@@ -85,11 +85,11 @@ class _ExploreBody extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _FilterGroupCard(
-                      title: 'PLAN TYPE',
-                      icon: Icons.groups_outlined,
-                      options: ExploreViewModel.planTypeOptions,
-                      selected: vm.selectedPlanType,
-                      onSelect: vm.onPlanTypeSelect,
+                      title: 'WHEN',
+                      icon: Icons.calendar_today_outlined,
+                      options: ExploreViewModel.whenOptions,
+                      selected: vm.selectedWhen,
+                      onSelect: vm.onWhenSelect,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -252,7 +252,7 @@ class _FilterGroupCard extends StatelessWidget {
   final String title;
   final IconData icon;
   final List<String> options;
-  final String selected;
+  final String? selected;
   final ValueChanged<String> onSelect;
 
   List<List<String>> _chunked(List<String> items, int size) {

@@ -5,17 +5,21 @@ class ExploreViewModel extends ChangeNotifier {
   final _repository = ExploreRepository();
 
   static const allTags = 'All';
-  static const planTypeOptions = ['Solo', 'Couple', 'Group', 'Family'];
+  static const whenOptions = ['Week', 'Month', 'Later'];
   static const priceOptions = ['Free', r'$', r'$$', r'$$$'];
   static const ratingOptions = ['4+', '3+', 'All'];
+
+  // Upper limit (in pesos) of the estimated plan cost for each price level.
+  static const _cheapMax = 50000.0;
+  static const _midMax = 150000.0;
 
   final searchController = TextEditingController();
 
   String searchQuery = '';
   String selectedTag = allTags;
   List<String> tagOptions = [allTags];
-  String selectedPlanType = 'Group';
-  String selectedPrice = r'$$';
+  String? selectedWhen;
+  String? selectedPrice;
   String selectedRating = 'All';
 
   List<ExplorePlan> _plans = [];
@@ -51,18 +55,31 @@ class ExploreViewModel extends ChangeNotifier {
     _applyFilters();
   }
 
-  void onPlanTypeSelect(String planType) {
-    selectedPlanType = planType;
+  /// Tapping the selected option again clears the filter.
+  void onWhenSelect(String when) {
+    if (selectedWhen == when) {
+      selectedWhen = null;
+    } else {
+      selectedWhen = when;
+    }
     _applyFilters();
   }
 
   void onPriceSelect(String price) {
-    selectedPrice = price;
+    if (selectedPrice == price) {
+      selectedPrice = null;
+    } else {
+      selectedPrice = price;
+    }
     _applyFilters();
   }
 
   void onRatingSelect(String rating) {
-    selectedRating = rating;
+    if (selectedRating == rating) {
+      selectedRating = 'All';
+    } else {
+      selectedRating = rating;
+    }
     _applyFilters();
   }
 
@@ -110,7 +127,54 @@ class ExploreViewModel extends ChangeNotifier {
           tags.any((t) => t.contains(query));
       final matchesTag = selectedTag == allTags || tags.contains(selectedTag);
 
-      return matchesSearch && matchesTag;
+      return matchesSearch &&
+          matchesTag &&
+          _matchesWhen(plan.date) &&
+          _matchesPrice(item.totalCost) &&
+          _matchesRating(item.rating);
     }).toList();
+  }
+
+  /// Explore only lists upcoming plans, so these ranges start today.
+  bool _matchesWhen(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final endOfWeek = today.add(Duration(days: 8 - today.weekday));
+    final endOfMonth = DateTime(today.year, today.month + 1);
+    switch (selectedWhen) {
+      case null:
+        return true;
+      case 'Week':
+        return date.isBefore(endOfWeek);
+      case 'Month':
+        return date.isBefore(endOfMonth);
+      case 'Later':
+        return !date.isBefore(endOfMonth);
+    }
+    return true;
+  }
+
+  bool _matchesPrice(double cost) {
+    switch (selectedPrice) {
+      case null:
+        return true;
+      case 'Free':
+        return cost == 0;
+      case r'$':
+        return cost > 0 && cost <= _cheapMax;
+      case r'$$':
+        return cost > _cheapMax && cost <= _midMax;
+      case r'$$$':
+        return cost > _midMax;
+    }
+    return true;
+  }
+
+  bool _matchesRating(double? rating) {
+    if (selectedRating == 'All') return true;
+    if (rating == null) return false;
+    if (selectedRating == '4+') return rating >= 4;
+    if (selectedRating == '3+') return rating >= 3;
+    return true;
   }
 }
