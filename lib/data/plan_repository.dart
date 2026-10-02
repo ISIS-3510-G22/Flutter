@@ -20,6 +20,7 @@ class PlanRepository {
             (i) => Invitation(
               userId: i['userId'] as String,
               rsvp: RsvpStatus.values.byName(i['rsvp'] as String),
+              invitedAt: (i['invitedAt'] as Timestamp?)?.toDate(),
             ),
           )
           .toList(),
@@ -68,16 +69,49 @@ class PlanRepository {
     });
   }
 
-  Future<void> updateTags(String planId, Set<String> tags) {
-    return _plans.doc(planId).update({'tags': tags.toList()});
+  Future<void> update(Plan plan) {
+    return _plans.doc(plan.id).update({
+      'name': plan.name,
+      'date': Timestamp.fromDate(plan.date),
+      'isPublic': plan.isPublic,
+    });
   }
 
-  Future<void> setPublic(String planId, bool isPublic) {
-    return _plans.doc(planId).update({'isPublic': isPublic});
+  Future<void> updateTags(String planId, Set<String> tags) {
+    return _plans.doc(planId).update({'tags': tags.toList()});
   }
 
   Future<List<Plan>> publicPlans() async {
     final snapshot = await _plans.where('isPublic', isEqualTo: true).get();
     return snapshot.docs.map((d) => _fromData(d.id, d.data())).toList();
+  }
+
+  Future<void> invite(String planId, List<String> userIds) {
+    final invitedAt = Timestamp.now();
+    return _plans.doc(planId).update({
+      'participantsIds': FieldValue.arrayUnion(userIds),
+      'invitations': FieldValue.arrayUnion([
+        for (final id in userIds)
+          {
+            'userId': id,
+            'rsvp': RsvpStatus.invited.name,
+            'invitedAt': invitedAt,
+          },
+      ]),
+    });
+  }
+
+  Future<void> setRsvp(String planId, String userId, RsvpStatus rsvp) {
+    final ref = _plans.doc(planId);
+    return _plans.firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(ref);
+      final invitations = snapshot.data()!['invitations'] as List;
+      tx.update(ref, {
+        'invitations': [
+          for (final i in invitations)
+            i['userId'] == userId ? {...i, 'rsvp': rsvp.name} : i,
+        ],
+      });
+    });
   }
 }

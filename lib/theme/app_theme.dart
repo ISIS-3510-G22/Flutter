@@ -20,6 +20,8 @@ class AppTheme {
       surfaceContainerHighest: greyLight,
       secondaryContainer: Color(0xFFFFF0EC),
       onSecondaryContainer: black,
+      errorContainer: Color(0xFFFFDAD6),
+      onErrorContainer: Color(0xFF410002),
     ),
   );
 
@@ -35,6 +37,8 @@ class AppTheme {
       surfaceContainerLow: Color(0xFF1E1E1E),
       secondaryContainer: Color(0xFF592D23),
       onSecondaryContainer: white,
+      errorContainer: Color(0xFF93000A),
+      onErrorContainer: Color(0xFFFFDAD6),
     ),
   );
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/plan.dart';
-import 'package:plansync/viewmodels/plans/piblic_plan_detail_viewmodel.dart';
+import 'package:plansync/viewmodels/plans/public_plan_detail_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/widgets/circle_back_button.dart';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/viewmodels/explore_viewmodel.dart';
 import 'package:plansync/views/explore/nearby_map_view.dart';
+import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
 class ExploreView extends StatelessWidget {
@@ -28,12 +29,12 @@ class _ExploreBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Row(
-            children: [
-              Expanded(child: Text('Explore', style: text.headlineMedium)),
-              SegmentedButton<bool>(
+        Row(
+          children: [
+            const Expanded(child: ViewHeader(title: 'Explore')),
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: SegmentedButton<bool>(
                 showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(
@@ -56,11 +57,11 @@ class _ExploreBody extends StatelessWidget {
                   );
                 },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: _SearchRow(
             controller: vm.searchController,
             onQueryChange: vm.onSearchQueryChange,

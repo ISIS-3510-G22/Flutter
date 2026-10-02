@@ -1,0 +1,233 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class NotificationService {
+  NotificationService({
+    FirebaseMessaging? messaging,
+    FirebaseFirestore? firestore,
+  }) : _messaging = messaging ?? FirebaseMessaging.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseMessaging _messaging;
+  final FirebaseFirestore _firestore;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  StreamSubscription<String>? _tokenRefreshSubscription;
+  StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
+  StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
+  Future<void> _pendingTokenWrite = Future<void>.value();
+  String? _activeUserId;
+  String? _lastError;
+  void Function(String type)? _onNotificationTap;
+  bool _initialized = false;
+
+  String? get lastError => _lastError;
+
+  Future<void> initialize({required void Function(String type) onTap}) async {
+    if (_initialized) return;
+    _onNotificationTap = onTap;
+
+    await _localNotifications.initialize(
+      settings: const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ),
+      onDidReceiveNotificationResponse: (response) {
+        _handleNotificationPayload(response.payload);
+      },
+    );
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'request_notifications',
+        'Friend and group requests',
+        description: 'Notifications for friend requests and group invites.',
+        importance: Importance.high,
+      ),
+    );
+
+    _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen(
+      _showForegroundNotification,
+    );
+    _messageOpenedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
+      _handleRemoteMessageTap,
+    );
+    _initialized = true;
+
+    final launchDetails = await _localNotifications
+        .getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp == true) {
+      _handleNotificationPayload(launchDetails?.notificationResponse?.payload);
+    }
+    final initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) _handleRemoteMessageTap(initialMessage);
+  }
+
+  Future<void> _showForegroundNotification(RemoteMessage message) async {
+    final type = message.data['type']?.toString();
+    if (type != 'friend_request' && type != 'group_invite') return;
+
+    await _localNotifications.show(
+      id:
+          (message.messageId ?? DateTime.now().microsecondsSinceEpoch)
+              .hashCode &
+          0x7fffffff,
+      title: message.notification?.title ?? 'PlanSync',
+      body: message.notification?.body ?? 'You have a new request.',
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'request_notifications',
+          'Friend and group requests',
+          channelDescription:
+              'Notifications for friend requests and group invites.',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+      payload: jsonEncode(message.data),
+    );
+  }
+
+  void _handleRemoteMessageTap(RemoteMessage message) {
+    _handleNotificationPayload(jsonEncode(message.data));
+  }
+
+  void _handleNotificationPayload(String? payload) {
+    if (payload == null || payload.isEmpty) return;
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final type = data['type']?.toString();
+      if (type == 'friend_request' || type == 'group_invite') {
+        _onNotificationTap?.call(type!);
+      }
+    } on FormatException {
+      //ignore malformed or unrelated notification payloads.
+    } on TypeError {
+      //ignore payloads that are not JSON objects.
+    }
+  }
+
+  Future<bool> requestPermission() async {
+    final settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    return settings.authorizationStatus == AuthorizationStatus.authorized;
+  }
+
+  Future<bool> requestPermissionAndRegisterToken(String userId) async {
+    if (userId.trim().isEmpty) {
+      throw ArgumentError.value(userId, 'userId', 'Must not be empty.');
+    }
+
+    _lastError = null;
+    if (_activeUserId != userId) {
+      await _tokenRefreshSubscription?.cancel();
+      _tokenRefreshSubscription = null;
+      _activeUserId = userId;
+    }
+
+    late final bool allowed;
+    try {
+      allowed = await requestPermission();
+    } catch (error) {
+      _lastError = 'Could not request notification permission: $error';
+      return false;
+    }
+    if (!allowed) return false;
+
+    _tokenRefreshSubscription ??= _messaging.onTokenRefresh.listen(
+      (token) {
+        unawaited(_queueTokenSave(userId, token).catchError((_) {}));
+      },
+      onError: (Object error) {
+        _lastError = 'Could not listen for FCM token updates: $error';
+      },
+    );
+
+    try {
+      final token = await _messaging.getToken();
+      if (token == null || token.isEmpty) {
+        _lastError = 'Firebase Messaging did not return a device token.';
+        return false;
+      }
+      await _queueTokenSave(userId, token);
+      return true;
+    } catch (error) {
+      _lastError = 'Could not register this device for notifications: $error';
+      return false;
+    }
+  }
+
+  Future<void> unregisterForUser(String userId) async {
+    if (_activeUserId == userId) {
+      await _tokenRefreshSubscription?.cancel();
+      _tokenRefreshSubscription = null;
+      _activeUserId = null;
+    }
+
+    final preferences = await SharedPreferences.getInstance();
+    final key = _preferenceKey(userId);
+    final token = preferences.getString(key) ?? await _messaging.getToken();
+    if (token != null && token.isNotEmpty) {
+      await _tokenCollection(userId).doc(_tokenDocumentId(token)).delete();
+    }
+    await preferences.remove(key);
+  }
+
+  Future<void> _queueTokenSave(String userId, String token) {
+    final write = _pendingTokenWrite.then((_) => _saveToken(userId, token));
+    _pendingTokenWrite = write.catchError((Object error) {
+      _lastError = 'Could not save the FCM token: $error';
+    });
+    return write;
+  }
+
+  Future<void> _saveToken(String userId, String token) async {
+    final preferences = await SharedPreferences.getInstance();
+    final preferenceKey = _preferenceKey(userId);
+    final previousToken = preferences.getString(preferenceKey);
+
+    await _tokenCollection(userId).doc(_tokenDocumentId(token)).set({
+      'token': token,
+      'platform': 'android',
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    if (previousToken != null && previousToken != token) {
+      await _tokenCollection(
+        userId,
+      ).doc(_tokenDocumentId(previousToken)).delete();
+    }
+    await preferences.setString(preferenceKey, token);
+    _lastError = null;
+  }
+
+  CollectionReference<Map<String, dynamic>> _tokenCollection(String userId) =>
+      _firestore.collection('users').doc(userId).collection('fcmTokens');
+
+  String _preferenceKey(String userId) => 'fcm_token_$userId';
+
+  String _tokenDocumentId(String token) =>
+      base64Url.encode(utf8.encode(token)).replaceAll('=', '');
+
+  Future<void> dispose() async {
+    await _tokenRefreshSubscription?.cancel();
+    await _foregroundMessageSubscription?.cancel();
+    await _messageOpenedSubscription?.cancel();
+    _tokenRefreshSubscription = null;
+    _foregroundMessageSubscription = null;
+    _messageOpenedSubscription = null;
+    _activeUserId = null;
+  }
+}

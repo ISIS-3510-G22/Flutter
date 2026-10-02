@@ -5,7 +5,7 @@ import 'package:plansync/models/user.dart';
 import 'package:plansync/utils/date_format.dart';
 import 'package:plansync/viewmodels/activities/add_to_plan_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
-import 'package:plansync/views/plans/create_plan_view.dart';
+import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:provider/provider.dart';
 
 class AddToPlanView extends StatelessWidget {
@@ -80,7 +80,8 @@ class _AddToPlanBody extends StatelessWidget {
                     onTap: () => Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => CreatePlanView(activityId: activity.id),
+                        builder: (_) =>
+                            CreateEditPlanView(activityId: activity.id),
                       ),
                     ),
                   ),
@@ -131,7 +132,7 @@ class _PlanOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final count = plan.invitations.length;
+    final count = plan.goingIds.length;
     final peopleLabel = count == 1 ? 'Solo Trip' : '$count People';
 
     return Card(

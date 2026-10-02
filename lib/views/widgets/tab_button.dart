@@ -17,26 +17,42 @@ class TabButton extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? colors.primary : Colors.transparent,
-              width: 2,
-            ),
-          ),
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        backgroundColor: selected ? colors.primary : Colors.transparent,
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      ),
+      child: Text(
+        label,
+        style: text.labelLarge?.copyWith(
+          color: selected ? colors.onPrimary : colors.onSurfaceVariant,
         ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: text.titleSmall?.copyWith(
-            color: selected ? colors.primary : colors.onSurfaceVariant,
-            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
+      ),
+    );
+  }
+}
+
+class TabTrack extends StatelessWidget {
+  const TabTrack({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        border: Border.all(color: colors.outline),
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: Row(
+        children: [for (final child in children) Expanded(child: child)],
       ),
     );
   }
