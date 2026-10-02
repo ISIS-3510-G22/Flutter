@@ -54,10 +54,15 @@ class _NearbyMapBody extends StatelessWidget {
       body: Stack(
         children: [
           Positioned.fill(child: content),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: _TopBar(vm: vm),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: _TopBar(vm: vm),
+              ),
             ),
           ),
         ],
