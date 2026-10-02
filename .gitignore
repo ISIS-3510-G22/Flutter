@@ -46,5 +46,5 @@ app.*.map.json
 
 CLAUDE.md
 
-env.jsonfunctions/node_modules/
+env.json
 functions/node_modules/

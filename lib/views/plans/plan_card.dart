@@ -5,6 +5,7 @@ import 'package:plansync/utils/avatar.dart';
 import 'package:plansync/utils/date_format.dart';
 import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
 import 'package:plansync/views/plans/leave_review_view.dart';
+import 'package:plansync/views/plans/manage_splits_view.dart';
 import 'package:plansync/views/plans/plan_detail_view.dart';
 
 class PlanCard extends StatelessWidget {
@@ -112,7 +113,15 @@ class PlanCard extends StatelessWidget {
                 Row(
                   children: [
                     FilledButton.icon(
-                      onPressed: () {},
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ManageSplitsView(
+                            planId: plan.id,
+                            participantIds: plan.goingIds,
+                          ),
+                        ),
+                      ),
                       icon: const Icon(Icons.receipt_long_outlined, size: 18),
                       label: const Text('Manage Split'),
                     ),
