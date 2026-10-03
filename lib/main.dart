@@ -17,6 +17,7 @@ import 'package:plansync/views/home_shell.dart';
 import 'package:provider/provider.dart';
 
 final _appNavigatorKey = GlobalKey<NavigatorState>();
+final _homeShellKey = GlobalKey<HomeShellState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,7 +84,10 @@ class _AuthGateState extends State<AuthGate> {
       if (type == null || userId == null || navigator == null) return;
       _pendingNotificationType = null;
 
-      if (type == 'friend_request') {
+      if (type == 'nearby_friend') {
+        navigator.popUntil((route) => route.isFirst);
+        _homeShellKey.currentState?.showExplore();
+      } else if (type == 'friend_request') {
         navigator.push<void>(
           MaterialPageRoute<void>(
             builder: (_) => ChangeNotifierProvider(
@@ -191,6 +195,9 @@ class _AuthGateState extends State<AuthGate> {
     _activeUserId = user.id;
     _registerNotificationsOnce(user);
     if (_pendingNotificationType != null) _scheduleNotificationRoute();
-    return const HomeShell();
+    return HomeShell(
+      key: _homeShellKey,
+      notificationService: _notificationService,
+    );
   }
 }

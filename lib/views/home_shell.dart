@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/notification_service.dart';
 import 'package:plansync/views/activities/my_activities_view.dart';
 import 'package:plansync/views/crew/my_crew_view.dart';
 import 'package:plansync/viewmodels/nearby_friends_viewmodel.dart';
@@ -9,14 +10,21 @@ import 'package:plansync/views/profile/my_profile_view.dart';
 import 'package:provider/provider.dart';
 
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+  const HomeShell({super.key, required this.notificationService});
+
+  final NotificationService notificationService;
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  HomeShellState createState() => HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class HomeShellState extends State<HomeShell> {
   int _selectedIndex = 0;
+
+  void showExplore() {
+    if (_selectedIndex == 0) return;
+    setState(() => _selectedIndex = 0);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +37,10 @@ class _HomeShellState extends State<HomeShell> {
     ];
 
     return ChangeNotifierProvider(
-      create: (_) => NearbyFriendsViewModel(context.read<User>().id),
+      create: (_) => NearbyFriendsViewModel(
+        context.read<User>().id,
+        widget.notificationService,
+      ),
       child: Scaffold(
         body: SafeArea(child: tabs[_selectedIndex]),
         bottomNavigationBar: NavigationBar(
