@@ -15,6 +15,13 @@ class ProfileViewModel extends ChangeNotifier {
   final _picker = ImagePicker();
   bool isUploadingPhoto = false;
 
+  Future<void> refreshUser() async {
+    final refreshedUser = await _userRepository.getUser(user.id);
+    if (refreshedUser == null) return;
+    user = refreshedUser;
+    notifyListeners();
+  }
+
   Future<void> pickAndUploadPhoto(ImageSource source) async {
     final picked = await _picker.pickImage(source: source);
     if (picked == null) return;
@@ -36,6 +43,7 @@ class ProfileViewModel extends ChangeNotifier {
         email: user.email,
         phone: user.phone,
         photoUrl: url,
+        reimbursementMethods: user.reimbursementMethods,
       );
     } finally {
       isUploadingPhoto = false;

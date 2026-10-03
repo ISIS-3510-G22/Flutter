@@ -11,6 +11,7 @@ class AddReimbursementMethodView extends StatefulWidget {
 
 class _AddReimbursementMethodViewState
     extends State<AddReimbursementMethodView> {
+  final _formKey = GlobalKey<FormState>();
   final _typeController = TextEditingController();
   final _accountController = TextEditingController();
 
@@ -22,6 +23,8 @@ class _AddReimbursementMethodViewState
   }
 
   void _save() {
+    if (!_formKey.currentState!.validate()) return;
+
     Navigator.of(context).pop(
       ReimbursementMethod(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -37,18 +40,29 @@ class _AddReimbursementMethodViewState
       appBar: AppBar(title: const Text('Add Reimbursement Method')),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            TextField(
-              controller: _typeController,
-              decoration: const InputDecoration(labelText: 'Account Type'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _accountController,
-              decoration: const InputDecoration(labelText: 'Account'),
-            ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _typeController,
+                decoration: const InputDecoration(labelText: 'Account Type'),
+                textInputAction: TextInputAction.next,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Account type is required.'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _accountController,
+                decoration: const InputDecoration(labelText: 'Account'),
+                textInputAction: TextInputAction.done,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Account is required.'
+                    : null,
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: Padding(
