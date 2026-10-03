@@ -36,11 +36,14 @@ class _MyProfileBody extends StatelessWidget {
               const Expanded(child: ViewHeader(title: 'Profile')),
               IconButton(
                 icon: const Icon(Icons.edit_outlined),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => EditProfileView(user: vm.user),
-                  ),
-                ),
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => EditProfileView(user: vm.user),
+                    ),
+                  );
+                  if (context.mounted) await vm.refreshUser();
+                },
               ),
               const SizedBox(width: 4),
             ],
