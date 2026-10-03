@@ -274,9 +274,6 @@ class BluetoothFriendService {
     }
   }
 
-  /// Connects briefly to read the app user ID advertised through GATT.
-  /// This identifies the account claimed by the peer; it does not authenticate
-  /// that account's owner.
   Future<String?> identifyNearbyDevice(String deviceId) async {
     final peripheral = _found[deviceId];
     if (peripheral == null) return null;

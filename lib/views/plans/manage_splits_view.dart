@@ -15,8 +15,6 @@ class ManageSplitsView extends StatelessWidget {
 
   final String planId;
 
-  /// Already loaded participants. When null they are loaded from
-  /// [participantIds].
   final List<User>? participants;
   final List<String> participantIds;
 
@@ -162,12 +160,8 @@ class _SplitCard extends StatelessWidget {
   final SplitRow row;
   final String? subtitle;
 
-  /// Shows the subtitle in the error color (overdue debts).
   final bool alert;
 
-  /// Where to pay this person: their preferred method for the plan is
-  /// shown, and the three dots open all the methods in their profile.
-  /// Null when the card is not about paying someone.
   final ReimbursementMethod? preferredMethod;
   final List<ReimbursementMethod>? allMethods;
   final bool? paid;
@@ -261,8 +255,6 @@ class _SplitCard extends StatelessWidget {
   }
 }
 
-/// All the reimbursement methods of a person, in the style of
-/// Friend Details, each one with its own Copy button.
 class _AllMethodsSheet extends StatelessWidget {
   const _AllMethodsSheet({
     required this.name,

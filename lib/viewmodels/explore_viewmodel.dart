@@ -13,7 +13,6 @@ class ExploreViewModel extends ChangeNotifier {
   static const priceOptions = ['Free', r'$', r'$$', r'$$$'];
   static const ratingOptions = ['4+', '3+', 'All'];
 
-  // Upper limit (in pesos) of the estimated plan cost for each price level.
   static const _cheapMax = 50000.0;
   static const _midMax = 150000.0;
 
@@ -31,7 +30,6 @@ class ExploreViewModel extends ChangeNotifier {
   List<Activity> _activities = [];
   List<Activity> filteredActivities = [];
 
-  /// Plans the analytics pipeline recommends to this user (smart feature).
   Set<String> recommendedIds = {};
   bool isLoading = false;
   String? errorMessage;
@@ -67,8 +65,6 @@ class ExploreViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Every plan is shown; recommended ones go first in the pipeline's
-  /// order, the rest keep their order (soonest first).
   List<ExplorePlan> _recommendedFirst(
     List<ExplorePlan> plans,
     List<String> recommended,
@@ -92,7 +88,6 @@ class ExploreViewModel extends ChangeNotifier {
     _applyFilters();
   }
 
-  /// Tapping the selected option again clears the filter.
   void onWhenSelect(String when) {
     if (selectedWhen == when) {
       selectedWhen = null;
@@ -132,7 +127,6 @@ class ExploreViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Tags of the loaded plans and activities, most common first.
   List<String> _tagsByPopularity() {
     final counts = <String, int>{};
     final tagLists = [
@@ -177,8 +171,6 @@ class ExploreViewModel extends ChangeNotifier {
     }).toList();
   }
 
-  /// Activities have no date or reviews, so the When and Rating filters
-  /// hide them; search, tags and price apply as for plans.
   List<Activity> _filterActivities() {
     if (selectedWhen != null || selectedRating != 'All') return [];
     final query = searchQuery.toLowerCase();
@@ -195,7 +187,6 @@ class ExploreViewModel extends ChangeNotifier {
     }).toList();
   }
 
-  /// Explore only lists upcoming plans, so these ranges start today.
   bool _matchesWhen(DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);

@@ -114,7 +114,6 @@ class _RouteMap extends StatelessWidget {
 
   final PlanRouteViewModel vm;
 
-  // Space covered by the top bar and the summary card.
   static const _topOverlay = 72.0;
   static const _bottomOverlay = 230.0;
 
