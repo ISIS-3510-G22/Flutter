@@ -85,9 +85,23 @@ class _NearbyFriendsBody extends StatelessWidget {
           const SizedBox(height: 24),
           Text('NEARBY FRIENDS', style: text.labelLarge),
           const SizedBox(height: 12),
+          Text('Notify me when a sharing friend is within:'),
+          const SizedBox(height: 8),
+          SegmentedButton<int>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: 1, label: Text('1 km')),
+              ButtonSegment(value: 2, label: Text('2 km')),
+            ],
+            selected: {vm.notificationRadiusKm},
+            onSelectionChanged: (selection) {
+              vm.selectNotificationRadius(selection.first);
+            },
+          ),
+          const SizedBox(height: 12),
           if (!vm.isSharing)
             const _EmptyMessage(
-              text: 'Turn on sharing to see friends who are nearby.',
+              text: 'Turn on sharing to see nearby friends and get alerts.',
             )
           else if (vm.nearbyFriends.isEmpty)
             const _EmptyMessage(

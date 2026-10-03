@@ -6,6 +6,7 @@ import 'package:plansync/data/friend_repository.dart';
 import 'package:plansync/data/live_location_repository.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/location_service.dart';
+import 'package:plansync/services/notification_service.dart';
 
 class NearbyFriend {
   const NearbyFriend({required this.user, required this.distanceKm});
@@ -16,11 +17,14 @@ class NearbyFriend {
 
 class NearbyFriendsViewModel extends ChangeNotifier
     with WidgetsBindingObserver {
-  NearbyFriendsViewModel(this._userId) {
+  NearbyFriendsViewModel(this._userId, this._notificationService) {
     WidgetsBinding.instance.addObserver(this);
     _staleLocationTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) => _notify(),
+      (_) {
+        _evaluateNearbyAlerts();
+        _notify();
+      },
     );
     _friendsSubscription = _friendRepository
         .friendsForUser(_userId)
@@ -41,10 +45,12 @@ class NearbyFriendsViewModel extends ChangeNotifier
   }
 
   final String _userId;
+  final NotificationService _notificationService;
   final _friendRepository = FriendRepository();
   final _locationRepository = LiveLocationRepository();
   final _locationService = LocationService();
   final _distance = const Distance();
+  static const notificationRadiusOptions = [1, 2];
   late final StreamSubscription<List<User>> _friendsSubscription;
   StreamSubscription<List<SharedLocation>>? _locationsSubscription;
   Timer? _refreshTimer;
@@ -52,7 +58,9 @@ class NearbyFriendsViewModel extends ChangeNotifier
   late final Timer _staleLocationTimer;
   List<User> _friends = [];
   Map<String, SharedLocation> _sharedLocations = {};
+  final Set<String> _alreadyAlerted = {};
   LatLng? _myPosition;
+  int notificationRadiusKm = 2;
   bool isSharing = false;
   bool isLoading = false;
   bool _disposed = false;
@@ -77,6 +85,13 @@ class NearbyFriendsViewModel extends ChangeNotifier
     }
     matches.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
     return matches;
+  }
+
+  void selectNotificationRadius(int radiusKm) {
+    if (!notificationRadiusOptions.contains(radiusKm)) return;
+    notificationRadiusKm = radiusKm;
+    _evaluateNearbyAlerts();
+    _notify();
   }
 
   @override
@@ -113,6 +128,7 @@ class NearbyFriendsViewModel extends ChangeNotifier
     if (isSharing) {
       _watchFriendLocations();
       _startRefreshTimer();
+      _evaluateNearbyAlerts();
     }
     _notify();
   }
@@ -122,6 +138,7 @@ class NearbyFriendsViewModel extends ChangeNotifier
     _refreshTimer?.cancel();
     _stopWatchingFriendLocations();
     _myPosition = null;
+    _alreadyAlerted.clear();
     _notify();
     try {
       await _locationRepository.stopSharing(_userId);
@@ -149,6 +166,7 @@ class NearbyFriendsViewModel extends ChangeNotifier
             _sharedLocations = {
               for (final item in locations) item.userId: item,
             };
+            _evaluateNearbyAlerts();
             _notify();
           },
           onError: (Object error) {
@@ -185,6 +203,7 @@ class NearbyFriendsViewModel extends ChangeNotifier
     }
     _myPosition = result.position;
     await _publish(result.position!);
+    _evaluateNearbyAlerts();
     _notify();
   }
 
@@ -197,6 +216,7 @@ class NearbyFriendsViewModel extends ChangeNotifier
     if (isSharing) {
       _watchFriendLocations();
       _startRefreshTimer();
+      _evaluateNearbyAlerts();
     }
   }
 
@@ -209,6 +229,39 @@ class NearbyFriendsViewModel extends ChangeNotifier
       _refreshTimer?.cancel();
       error = 'Could not start location sharing. Check your connection.';
     }
+  }
+
+  void _evaluateNearbyAlerts() {
+    if (!isSharing ||
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+
+    final friends = nearbyFriends;
+    final distances = {for (final friend in friends) friend.user.id: friend};
+    final inRange = distances.entries
+        .where((entry) => entry.value.distanceKm <= notificationRadiusKm)
+        .toList();
+
+    for (final entry in inRange) {
+      if (_alreadyAlerted.add(entry.key)) {
+        final name = '${entry.value.user.name} ${entry.value.user.lastName}'
+            .trim();
+        unawaited(
+          _notificationService.showNearbyFriendAlert(
+            friendId: entry.key,
+            friendName: name.isEmpty ? entry.value.user.username : name,
+          ),
+        );
+      }
+    }
+
+    final outsideHysteresis = distances.entries
+        .where((entry) => entry.value.distanceKm > notificationRadiusKm + 0.25)
+        .map((entry) => entry.key)
+        .toSet();
+    _alreadyAlerted.removeAll(outsideHysteresis);
+    _alreadyAlerted.removeWhere((id) => !distances.containsKey(id));
   }
 
   void _notify() {
