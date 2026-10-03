@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Which of their profile reimbursement methods each participant wants to
-/// be paid with in a plan: plans/{planId}/paymentMethods/{userId}.
 class PlanPaymentRepository {
   CollectionReference<Map<String, dynamic>> _choices(String planId) =>
       FirebaseFirestore.instance
@@ -9,7 +7,6 @@ class PlanPaymentRepository {
           .doc(planId)
           .collection('paymentMethods');
 
-  /// userId -> chosen reimbursement method id.
   Stream<Map<String, String>> choicesForPlan(String planId) {
     return _choices(planId).snapshots().map(
       (snapshot) => {

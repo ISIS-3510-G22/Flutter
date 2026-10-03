@@ -27,8 +27,6 @@ class PlanExpensesViewModel extends ChangeNotifier {
   List<Expense> expenses = [];
   bool isLoading = true;
 
-  /// The current user's profile methods, read fresh so recently added ones
-  /// show up without signing in again.
   List<ReimbursementMethod> myMethods = [];
   String? myMethodId;
 
@@ -50,7 +48,6 @@ class PlanExpensesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The chosen method, if it still exists in the profile.
   String? get selectedMethodId {
     for (final m in myMethods) {
       if (m.id == myMethodId) return m.id;

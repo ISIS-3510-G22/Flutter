@@ -13,7 +13,6 @@ class GroupRepository {
 
   String _memberId(String groupId, String userId) => '${groupId}_$userId';
 
-  //groups user belongs to: look up membership records, then fetch each group.
   Stream<List<Group>> groupsForUser(String uid) {
     return _members.where('userId', isEqualTo: uid).snapshots().asyncMap((
       snapshot,
@@ -44,7 +43,6 @@ class GroupRepository {
     return snapshot.docs.map((doc) => doc.data()['userId'] as String).toList();
   }
 
-  //writes the group and the creator's membership together.
   Future<Group> createGroup({
     required String name,
     required String description,
