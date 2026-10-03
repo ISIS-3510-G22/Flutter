@@ -11,7 +11,6 @@ import 'package:provider/provider.dart';
 
 const _geoapifyKey = String.fromEnvironment('GEOAPIFY_KEY');
 
-// Plans recommended by the analytics pipeline stand out in gold.
 const _recommendedColor = Color(0xFFF2A900);
 
 class NearbyMapView extends StatelessWidget {
@@ -145,8 +144,6 @@ class _NearbyMap extends StatefulWidget {
 }
 
 class _NearbyMapState extends State<_NearbyMap> {
-  // Space covered by the top bar and the recommendations card, so the whole
-  // search radius stays visible between them.
   static const _topOverlay = 72.0;
   static const _bottomOverlay = 220.0;
 

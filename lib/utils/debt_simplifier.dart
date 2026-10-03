@@ -19,10 +19,6 @@ class _Balance {
   int cents;
 }
 
-/// Turns net balances (positive = must receive, negative = must pay) into
-/// the transfers that settle everyone. Equal amounts are matched first, then
-/// the biggest debtor pays the biggest creditor, so there are at most n - 1
-/// transfers.
 List<Transfer> simplifyDebts(Map<String, int> balancesCents) {
   final creditors = <_Balance>[];
   final debtors = <_Balance>[];
@@ -73,7 +69,6 @@ List<Transfer> simplifyDebts(Map<String, int> balancesCents) {
   return transfers;
 }
 
-/// Splits [totalCents] in [parts] shares that add up exactly to the total.
 List<int> splitCents(int totalCents, int parts) {
   final base = totalCents ~/ parts;
   final remainder = totalCents % parts;

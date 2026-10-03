@@ -21,7 +21,6 @@ class SplitRow {
   final double amount;
   final String? settlementId;
 
-  /// Days unpaid after the plan's grace period, null when not overdue.
   final int? overdueDays;
 
   const SplitRow({
@@ -34,8 +33,6 @@ class SplitRow {
 }
 
 class ManageSplitsViewModel extends ChangeNotifier {
-  /// Pass [participants] when they are already loaded; otherwise they are
-  /// fetched from [participantIds].
   ManageSplitsViewModel(
     this._planId,
     this._currentUserId, {
@@ -114,8 +111,6 @@ class ManageSplitsViewModel extends ChangeNotifier {
     return overdueDays(date, DateTime.now());
   }
 
-  /// Keeps plans/{planId}/overdueDebts in sync with the debts that are
-  /// overdue right now, so the record only exists while it is happening.
   Future<void> _syncOverdue(List<Transfer> transfers) async {
     final days = _overdueDays();
     if (_planDate == null) return;
@@ -157,7 +152,6 @@ class ManageSplitsViewModel extends ChangeNotifier {
       paidByYou.isEmpty &&
       paidToYou.isEmpty;
 
-  /// Every Bre-B key or account [userId] saved in their profile.
   List<ReimbursementMethod> allMethodsOf(String userId) {
     for (final p in _participants) {
       if (p.id == userId) return p.reimbursementMethods;
@@ -165,8 +159,6 @@ class ManageSplitsViewModel extends ChangeNotifier {
     return const [];
   }
 
-  /// The method [userId] chose for this plan, or the first one in their
-  /// profile when they haven't chosen. Null if they have none.
   ReimbursementMethod? preferredMethodOf(String userId) {
     final methods = allMethodsOf(userId);
     if (methods.isEmpty) return null;
@@ -191,7 +183,6 @@ class ManageSplitsViewModel extends ChangeNotifier {
     return 'Unknown';
   }
 
-  // Positive = must receive money, negative = must pay.
   Map<String, int> _balancesCents() {
     final balances = <String, int>{};
     void add(String id, int cents) {

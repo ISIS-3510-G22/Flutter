@@ -14,7 +14,7 @@ class PlaceRepository {
       'limit': '5',
       'lang': 'es',
       'filter': 'countrycode:co',
-      'bias': 'proximity:-74.06,4.65', // lon,lat — Bogotá for now
+      'bias': 'proximity:-74.06,4.65',
       'apiKey': _apiKey,
     });
     final response = await (await _client.getUrl(uri)).close();

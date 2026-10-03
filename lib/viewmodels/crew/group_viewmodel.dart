@@ -18,7 +18,6 @@ class CrewViewmodel extends ChangeNotifier {
   List<Group> _groups = [];
   List<GroupInvitation> _invitations = [];
 
-  //extra data the cards need, keyed by group ID.
   final Map<String, int> _memberCounts = {};
   final Map<String, Group> _invitedGroups = {};
 
@@ -98,7 +97,6 @@ class CrewViewmodel extends ChangeNotifier {
         );
   }
 
-  //fetches counts for groups we haven't looked up yet.
   Future<void> _loadMemberCounts(Iterable<String> groupIds) async {
     try {
       await Future.wait(
@@ -111,7 +109,6 @@ class CrewViewmodel extends ChangeNotifier {
     }
   }
 
-  //fetches the group (and count) behind each pending invitation.
   Future<void> _loadInvitedGroups(List<GroupInvitation> invitations) async {
     try {
       await Future.wait(

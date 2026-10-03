@@ -17,8 +17,6 @@ class PlanRoute {
   });
 }
 
-/// Reads a Geoapify Routing response (GeoJSON) into a [PlanRoute].
-/// Returns null when the response has no route.
 PlanRoute? parseGeoapifyRoute(Map<String, dynamic> json) {
   final features = json['features'];
   if (features is! List || features.isEmpty) return null;

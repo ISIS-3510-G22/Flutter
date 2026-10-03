@@ -440,7 +440,6 @@ class _FeaturedPlanCard extends StatelessWidget {
 
   final ExplorePlan item;
 
-  /// Recommended by the analytics pipeline for this user.
   final bool recommended;
   final VoidCallback onTap;
 

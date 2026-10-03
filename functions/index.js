@@ -23,7 +23,6 @@ async function sendRequestNotification(userId, title, body, data) {
     return;
   }
 
-  // FCM multicast requests accept at most 500 registration tokens each.
   for (let offset = 0; offset < tokenDocs.length; offset += 500) {
     const chunk = tokenDocs.slice(offset, offset + 500);
     const response = await getMessaging().sendEachForMulticast({

@@ -14,7 +14,6 @@ class NearbyItem {
   final LatLng point;
   final double distanceKm;
 
-  /// Recommended by the analytics pipeline (plans only).
   final bool isRecommended;
 
   const NearbyItem({
@@ -54,11 +53,8 @@ class NearbyMapViewModel extends ChangeNotifier {
   List<NearbyItem> _allItems = [];
   Map<String, int> _recommendedRank = {};
 
-  /// Everything inside the radius, shown as markers.
   List<NearbyItem> items = [];
 
-  /// Plans inside the radius: recommended ones first (pipeline order), then
-  /// the rest by distance.
   List<NearbyItem> nearbyPlans = [];
 
   Future<void> load() async {
@@ -116,7 +112,6 @@ class NearbyMapViewModel extends ChangeNotifier {
     return _locationService.openSettings();
   }
 
-  /// A failure here only means no recommendations, never an empty map.
   Future<List<String>> _recommendedPlanIds() async {
     try {
       return await _planRepository.recommendedPlanIds(_userId);
@@ -168,7 +163,6 @@ class NearbyMapViewModel extends ChangeNotifier {
   double _distanceKm(LatLng point) =>
       _distance.as(LengthUnit.Meter, position!, point) / 1000;
 
-  /// A plan is placed at its first activity that has a location.
   NearbyItem? _planItem(Plan plan, Map<String, Activity> activitiesById) {
     for (final id in plan.activityIds) {
       final activity = activitiesById[id];
