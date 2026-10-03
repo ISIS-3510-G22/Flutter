@@ -1,5 +1,5 @@
 final _tagPattern = RegExp(r'^[\p{L}\p{N}][\p{L}\p{N} -]*$', unicode: true);
-final _alphabeticPattern = RegExp(r'^\p{L}+$', unicode: true);
+final _namePattern = RegExp(r'^\p{L}+(?: +\p{L}+)*$', unicode: true);
 final _usernamePattern = RegExp(r'^[A-Za-z0-9]+$');
 final _phonePattern = RegExp(r'^[0-9]+$');
 final _emailPattern = RegExp(
@@ -15,8 +15,8 @@ String? _validateName(String? value, String label) {
   final name = value?.trim() ?? '';
   if (name.isEmpty) return '$label is required.';
   if (name.length > 20) return '$label can be 20 characters at most.';
-  if (!_alphabeticPattern.hasMatch(name)) {
-    return '$label can contain letters only.';
+  if (!_namePattern.hasMatch(name)) {
+    return '$label can contain letters and spaces only.';
   }
   return null;
 }

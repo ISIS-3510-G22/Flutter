@@ -53,6 +53,14 @@ class NotificationService {
         importance: Importance.high,
       ),
     );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'nearby_friend_notifications',
+        'Friends nearby',
+        description: 'Alerts when a sharing friend is close by.',
+        importance: Importance.high,
+      ),
+    );
 
     _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen(
       _showForegroundNotification,
@@ -96,6 +104,31 @@ class NotificationService {
     );
   }
 
+  Future<void> showNearbyFriendAlert({
+    required String friendId,
+    required String friendName,
+  }) async {
+    try {
+      await _localNotifications.show(
+        id: friendId.hashCode & 0x7fffffff,
+        title: "You're close to $friendName",
+        body: 'Invite them to make a plan.',
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'nearby_friend_notifications',
+            'Friends nearby',
+            channelDescription: 'Alerts when a sharing friend is close by.',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+        payload: jsonEncode({'type': 'nearby_friend'}),
+      );
+    } catch (error) {
+      _lastError = 'Could not show a nearby friend notification: $error';
+    }
+  }
+
   void _handleRemoteMessageTap(RemoteMessage message) {
     _handleNotificationPayload(jsonEncode(message.data));
   }
@@ -105,7 +138,9 @@ class NotificationService {
     try {
       final data = jsonDecode(payload) as Map<String, dynamic>;
       final type = data['type']?.toString();
-      if (type == 'friend_request' || type == 'group_invite') {
+      if (type == 'friend_request' ||
+          type == 'group_invite' ||
+          type == 'nearby_friend') {
         _onNotificationTap?.call(type!);
       }
     } on FormatException {
