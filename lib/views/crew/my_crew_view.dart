@@ -10,10 +10,12 @@ import 'package:plansync/views/crew/friend_detail_view.dart';
 import 'package:plansync/views/crew/friend_request_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
+import 'package:plansync/views/crew/nearby_friends_view.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:plansync/views/widgets/view_header.dart';
+import 'package:plansync/viewmodels/nearby_friends_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 class MyCrewView extends StatelessWidget {
@@ -325,30 +327,54 @@ class _FriendsList extends StatelessWidget {
       return Center(child: Text(vm.error!));
     }
 
-    return ListView.separated(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-      itemCount: vm.friends.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 14),
-      itemBuilder: (context, index) {
-        final friend = vm.friends[index];
-
-        return CrewFriendsCard(
-          name: '${friend.name} ${friend.lastName}'.trim(),
-          email: friend.email,
-          initials:
-              '${friend.name.isNotEmpty ? friend.name[0] : ''}'
-              '${friend.lastName.isNotEmpty ? friend.lastName[0] : ''}',
-          avatarColors: const Color(0xFFFFB5A6),
-          photoUrl: friend.photoUrl,
-          onTap: () {
-            Navigator.of(context).push(
+      children: [
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.people_alt_outlined),
+            title: const Text('Friends nearby'),
+            subtitle: const Text('See who’s around and make a plan'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => FriendDetailView(friend: friend),
+                builder: (_) => ChangeNotifierProvider.value(
+                  value: context.read<NearbyFriendsViewModel>(),
+                  child: const NearbyFriendsView(),
+                ),
               ),
-            );
-          },
-        );
-      },
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (vm.friends.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 32),
+            child: Center(
+              child: Text('Add friends to start building your crew.'),
+            ),
+          )
+        else
+          for (final friend in vm.friends) ...[
+            CrewFriendsCard(
+              name: '${friend.name} ${friend.lastName}'.trim(),
+              email: friend.email,
+              initials:
+                  '${friend.name.isNotEmpty ? friend.name[0] : ''}'
+                  '${friend.lastName.isNotEmpty ? friend.lastName[0] : ''}',
+              avatarColors: const Color(0xFFFFB5A6),
+              photoUrl: friend.photoUrl,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => FriendDetailView(friend: friend),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 14),
+          ],
+      ],
     );
   }
 }
