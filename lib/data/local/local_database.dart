@@ -13,12 +13,5 @@ class LocalDatabase {
     return openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
-  static Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE activities (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL
-      )
-    ''');
-  }
+  static Future<void> _onCreate(Database db, int version) async {}
 }
