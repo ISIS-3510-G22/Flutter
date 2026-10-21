@@ -58,26 +58,36 @@ class _PlanScreen extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(
-            child: vm.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-                    children: vm.visiblePlans
-                        .map(
-                          (plan) => PlanCard(
-                            plan: plan,
-                            tab: vm.selectedTab,
-                            going: vm.isGoing(plan),
-                            notification: vm.notificationFor(plan),
-                            photoUrls: vm.photoUrlsFor(plan),
-                          ),
-                        )
-                        .toList(),
-                  ),
-          ),
+          Expanded(child: _planList(vm, online)),
         ],
       ),
+    );
+  }
+
+  Widget _planList(MyPlansViewModel vm, bool online) {
+    if (vm.isLoading) {
+      return Center(
+        child: online
+            ? const CircularProgressIndicator()
+            : const Text('Connect to load your plans'),
+      );
+    }
+    if (vm.visiblePlans.isEmpty) {
+      return const Center(child: Text('No plans yet'));
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+      children: vm.visiblePlans
+          .map(
+            (plan) => PlanCard(
+              plan: plan,
+              tab: vm.selectedTab,
+              going: vm.isGoing(plan),
+              notification: vm.notificationFor(plan),
+              photoUrls: vm.photoUrlsFor(plan),
+            ),
+          )
+          .toList(),
     );
   }
 
