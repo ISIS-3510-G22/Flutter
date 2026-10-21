@@ -34,4 +34,29 @@ class Plan {
     for (final i in invitations)
       if (i.rsvp == RsvpStatus.going) i.userId,
   ];
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'date': date.microsecondsSinceEpoch,
+    'tags': tags,
+    'creatorId': creatorId,
+    'activityIds': activityIds,
+    'invitations': [for (final i in invitations) i.toJson()],
+    'isPublic': isPublic,
+  };
+
+  factory Plan.fromJson(Map<String, dynamic> json) => Plan(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    date: DateTime.fromMicrosecondsSinceEpoch(json['date'] as int),
+    tags: (json['tags'] as List).cast<String>(),
+    creatorId: json['creatorId'] as String,
+    activityIds: (json['activityIds'] as List).cast<String>(),
+    invitations: [
+      for (final i in json['invitations'] as List)
+        Invitation.fromJson(i as Map<String, dynamic>),
+    ],
+    isPublic: json['isPublic'] as bool,
+  );
 }
