@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
 import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:plansync/views/plans/plan_card.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +27,7 @@ class _PlanScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<MyPlansViewModel>();
+    final online = context.watch<ConnectivityService>().isOnline;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -38,6 +41,10 @@ class _PlanScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const ViewHeader(title: 'My Plans'),
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing your plans as last saved.",
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TabTrack(
