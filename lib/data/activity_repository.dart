@@ -30,7 +30,7 @@ class ActivityRepository {
       likedBy: (data['likedBy'] as List).cast<String>(),
       photoUrl: data['photoUrl'] as String?,
       lat: (data['lat'] as num?)?.toDouble(),
-      lng: (data['lng'] as double?)?.toDouble(),
+      lng: (data['lng'] as num?)?.toDouble(),
     );
   }
 
