@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/activities/create_edit_activity_view.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +27,7 @@ class _MyActivitiesBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<MyActivitiesViewmodel>();
+    final online = context.watch<ConnectivityService>().isOnline;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -37,6 +40,10 @@ class _MyActivitiesBody extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing your saved activities.",
+            ),
           const ViewHeader(title: 'My activities'),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -61,12 +68,20 @@ class _MyActivitiesBody extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.only(bottom: 88),
-              itemCount: vm.activities.length,
-              itemBuilder: (context, index) =>
-                  ActivityCard(activity: vm.activities[index]),
-            ),
+            child: vm.activities.isEmpty && !online
+                ? Center(
+                    child: Text(
+                      vm.currentTab == ActivitiesTab.recommended
+                          ? 'Connect to load your recommendations'
+                          : 'Connect to load your activities',
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 88),
+                    itemCount: vm.activities.length,
+                    itemBuilder: (context, index) =>
+                        ActivityCard(activity: vm.activities[index]),
+                  ),
           ),
         ],
       ),

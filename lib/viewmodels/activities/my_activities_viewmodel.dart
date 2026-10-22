@@ -21,6 +21,8 @@ class MyActivitiesViewmodel extends ChangeNotifier {
   StreamSubscription<List<Activity>>? _recommendedSub;
 
   MyActivitiesViewmodel(this._uid) {
+    ConnectivityService.instance.addListener(_onConnectivityChanged);
+
     _ownedSub = _repository.ownedActivities(_uid).listen((activities) {
       _owned = activities;
       notifyListeners();
@@ -32,6 +34,8 @@ class MyActivitiesViewmodel extends ChangeNotifier {
     });
 
     _loadRecommended();
+
+    _onConnectivityChanged();
   }
 
   void _loadRecommended() {
