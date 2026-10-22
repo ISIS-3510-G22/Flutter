@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/services/connectivity_service.dart';
 
 enum ActivitiesTab { liked, private, recommended }
 
@@ -16,21 +17,33 @@ class MyActivitiesViewmodel extends ChangeNotifier {
   List<Activity> _liked = [];
   List<Activity> _recommended = [];
 
-  MyActivitiesViewmodel(String uid) {
-    _ownedSub = _repository.ownedActivities(uid).listen((activities) {
+  final String _uid;
+  StreamSubscription<List<Activity>>? _recommendedSub;
+
+  MyActivitiesViewmodel(this._uid) {
+    _ownedSub = _repository.ownedActivities(_uid).listen((activities) {
       _owned = activities;
       notifyListeners();
     });
 
-    _likedSub = _repository.likedActivities(uid).listen((activities) {
+    _likedSub = _repository.likedActivities(_uid).listen((activities) {
       _liked = activities;
       notifyListeners();
     });
 
-    _repository.recommended(uid).then((activities) {
+    _loadRecommended();
+  }
+
+  void _loadRecommended() {
+    _recommendedSub?.cancel();
+    _recommendedSub = _repository.recommended(_uid).listen((activities) {
       _recommended = activities;
       notifyListeners();
-    }, onError: (_) {});
+    });
+  }
+
+  void _onConnectivityChanged() {
+    if (ConnectivityService.instance.isOnline) _loadRecommended();
   }
 
   void selectTab(ActivitiesTab tab) {
@@ -48,6 +61,8 @@ class MyActivitiesViewmodel extends ChangeNotifier {
   void dispose() {
     _ownedSub.cancel();
     _likedSub.cancel();
+    _recommendedSub?.cancel();
+    ConnectivityService.instance.removeListener(_onConnectivityChanged);
     super.dispose();
   }
 }
