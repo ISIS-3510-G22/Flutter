@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:plansync/firebase_options.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
+import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/services/notification_service.dart';
 import 'package:plansync/services/theme_service.dart';
 import 'package:plansync/theme/app_theme.dart';
@@ -23,9 +24,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final savedTheme = await ThemeService.loadSaved();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await ConnectivityService.instance.init();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeService()..setPreference(savedTheme),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => ThemeService()..setPreference(savedTheme),
+        ),
+        ChangeNotifierProvider.value(value: ConnectivityService.instance),
+      ],
       child: const AuthGate(),
     ),
   );
