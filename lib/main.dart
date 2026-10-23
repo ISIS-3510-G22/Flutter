@@ -7,7 +7,9 @@ import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
 import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/services/notification_service.dart';
+import 'package:plansync/services/pending_write_service.dart';
 import 'package:plansync/services/theme_service.dart';
+import 'package:plansync/services/write_queue.dart';
 import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
@@ -18,6 +20,7 @@ import 'package:plansync/views/home_shell.dart';
 import 'package:provider/provider.dart';
 
 final _appNavigatorKey = GlobalKey<NavigatorState>();
+final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 final _homeShellKey = GlobalKey<HomeShellState>();
 
 void main() async {
@@ -32,6 +35,7 @@ void main() async {
           create: (_) => ThemeService()..setPreference(savedTheme),
         ),
         ChangeNotifierProvider.value(value: ConnectivityService.instance),
+        ChangeNotifierProvider.value(value: PendingWriteService.instance),
       ],
       child: const AuthGate(),
     ),
@@ -57,6 +61,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
+    _listenForDropped(PendingWriteService.instance);
     _authStateChanges = _authService.authStateChanges;
     unawaited(
       _notificationService.initialize(onTap: _handleNotificationTap).catchError(
@@ -132,6 +137,16 @@ class _AuthGateState extends State<AuthGate> {
     if (error != null) debugPrint(error);
   }
 
+  void _listenForDropped(WriteQueue queue) {
+    queue.addListener(() {
+      final message = queue.takeDropped();
+      if (message == null) return;
+      _messengerKey.currentState?.showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    });
+  }
+
   @override
   void dispose() {
     unawaited(_notificationService.dispose());
@@ -148,6 +163,7 @@ class _AuthGateState extends State<AuthGate> {
         final user = snapshot.data;
         return MaterialApp(
           navigatorKey: _appNavigatorKey,
+          scaffoldMessengerKey: _messengerKey,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: themeMode,
@@ -201,6 +217,7 @@ class _AuthGateState extends State<AuthGate> {
     }
     _activeUserId = user.id;
     _registerNotificationsOnce(user);
+    unawaited(PendingWriteService.instance.start());
     if (_pendingNotificationType != null) _scheduleNotificationRoute();
     return HomeShell(
       key: _homeShellKey,
