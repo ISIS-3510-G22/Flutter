@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:isolate';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/data/local/json_file_store.dart';
 import 'package:plansync/models/invitations.dart';
 import 'package:plansync/models/invite_suggestion_ids.dart';
 import 'package:plansync/models/plan.dart';
@@ -17,6 +21,18 @@ class PlanRepository {
       .collection('runs');
 
   String newId() => _plans.doc().id;
+
+  final _files = JsonFileStore();
+
+  Future<List<Plan>?> _readPlans(String name) async {
+    final text = await _files.read(name);
+    if (text == null) return null;
+    try {
+      return await Isolate.run(() => decodePlans(text));
+    } catch (_) {
+      return null;
+    }
+  }
 
   Plan _fromData(String id, Map<String, dynamic> data) {
     return Plan(
@@ -39,14 +55,24 @@ class PlanRepository {
     );
   }
 
-  Stream<List<Plan>> plansForUser(String uid) {
-    return _plans
+  Stream<List<Plan>> plansForUser(String uid) async* {
+    final file = 'plans_$uid.json';
+    final saved = await _readPlans(file);
+    if (saved != null) yield saved;
+    yield* _plans
         .where('participantsIds', arrayContains: uid)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((d) => _fromData(d.id, d.data())).toList(),
-        );
+        .snapshots(includeMetadataChanges: true)
+        .where((snapshot) => !snapshot.metadata.isFromCache)
+        .asyncMap((snapshot) async {
+          final plans = snapshot.docs
+              .map((d) => _fromData(d.id, d.data()))
+              .toList();
+          await _files.write(
+            file,
+            jsonEncode([for (final p in plans) p.toJson()]),
+          );
+          return plans;
+        });
   }
 
   Stream<Plan> planById(String id) {
@@ -177,3 +203,8 @@ class PlanRepository {
     });
   }
 }
+
+List<Plan> decodePlans(String text) => [
+  for (final p in jsonDecode(text) as List)
+    Plan.fromJson(p as Map<String, dynamic>),
+];

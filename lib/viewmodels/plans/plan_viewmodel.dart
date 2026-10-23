@@ -37,9 +37,11 @@ class MyPlansViewModel extends ChangeNotifier {
         .toSet()
         .take(30)
         .toList();
-    final users = await _userRepository.getUsers(ids);
-    _photoUrls = {for (final u in users) u.id: u.photoUrl};
-    notifyListeners();
+    try {
+      final users = await _userRepository.getUsers(ids);
+      _photoUrls = {for (final u in users) u.id: u.photoUrl};
+      notifyListeners();
+    } catch (_) {}
   }
 
   bool isGoing(Plan plan) => plan.rsvpFor(_userId) == RsvpStatus.going;
