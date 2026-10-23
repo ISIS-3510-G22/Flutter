@@ -112,6 +112,14 @@ class _CreateEditActivityForm extends StatelessWidget {
                               ),
                             ),
                   ),
+                  if (vm.searchFailed)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Address suggestions need a connection. Type the full address; the map pin will be skipped.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
                   const SizedBox(height: 16),
                   const Text('EXPECTED PRICE'),
                   TextField(
