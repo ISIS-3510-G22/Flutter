@@ -62,6 +62,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   String? errorMessage;
 
   bool isLoadingTags = true;
+  bool searchFailed = false;
 
   Future<void> _loadTags() async {
     allTags = await _tagRepository.allTags();
@@ -103,10 +104,19 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 250));
     if (query != addressController.text || query.trim().length < 3) return [];
     try {
-      return await _placeRepository.search(query);
+      final places = await _placeRepository.search(query);
+      _setSearchFailed(false);
+      return places;
     } catch (_) {
+      _setSearchFailed(true);
       return [];
     }
+  }
+
+  void _setSearchFailed(bool failed) {
+    if (searchFailed == failed) return;
+    searchFailed = failed;
+    notifyListeners();
   }
 
   void pickPlace(Place place) => _place = place;
