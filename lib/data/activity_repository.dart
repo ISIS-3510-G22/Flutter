@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/data/local/activity_local_store.dart';
 import 'package:plansync/models/activity.dart';
 
 class ActivityRepository {
   final _activities = FirebaseFirestore.instance.collection("activities");
+
+  final _local = ActivityLocalStore();
 
   final _recommendationRuns = FirebaseFirestore.instance
       .collection('transferConfigs')
@@ -27,12 +30,30 @@ class ActivityRepository {
       likedBy: (data['likedBy'] as List).cast<String>(),
       photoUrl: data['photoUrl'] as String?,
       lat: (data['lat'] as num?)?.toDouble(),
-      lng: (data['lng'] as double?)?.toDouble(),
+      lng: (data['lng'] as num?)?.toDouble(),
     );
   }
 
-  Future<List<Activity>> recommended(String uid) async {
-    final latest = await _recommendationRuns.doc('latest').get();
+  Stream<List<Activity>> _savedThenServer(
+    String uid,
+    ActivityList list,
+    Query<Map<String, dynamic>> query,
+  ) async* {
+    yield await _local.list(uid, list);
+    yield* query
+        .snapshots(includeMetadataChanges: true)
+        .where((snapshot) => !snapshot.metadata.isFromCache)
+        .asyncMap((snapshot) async {
+          final activities = snapshot.docs.map(_fromDoc).toList();
+          await _local.saveList(uid, list, activities);
+          return activities;
+        });
+  }
+
+  Future<List<Activity>> _recommendedFromServer(String uid) async {
+    final latest = await _recommendationRuns
+        .doc('latest')
+        .get(const GetOptions(source: Source.server));
     final runId = latest.data()?['latestRunId'] as String?;
     if (runId == null) return [];
 
@@ -41,7 +62,7 @@ class ActivityRepository {
         .collection('output')
         .where('uid', isEqualTo: uid)
         .limit(1)
-        .get();
+        .get(const GetOptions(source: Source.server));
     if (output.docs.isEmpty) return [];
 
     final map = output.docs.first['activity_ids'] as Map<String, dynamic>;
@@ -51,19 +72,28 @@ class ActivityRepository {
       ..sort((a, b) => ids.indexOf(a.id).compareTo(ids.indexOf(b.id)));
   }
 
-  Stream<List<Activity>> ownedActivities(String uid) {
-    return _activities
-        .where('ownerId', isEqualTo: uid)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(_fromDoc).toList());
+  Stream<List<Activity>> recommended(String uid) async* {
+    yield await _local.list(uid, ActivityList.recommended);
+    try {
+      final activities = await _recommendedFromServer(
+        uid,
+      ).timeout(const Duration(seconds: 8));
+      await _local.saveList(uid, ActivityList.recommended, activities);
+      yield activities;
+    } catch (_) {}
   }
 
-  Stream<List<Activity>> likedActivities(String uid) {
-    return _activities
-        .where('likedBy', arrayContains: uid)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(_fromDoc).toList());
-  }
+  Stream<List<Activity>> ownedActivities(String uid) => _savedThenServer(
+    uid,
+    ActivityList.owned,
+    _activities.where('ownerId', isEqualTo: uid),
+  );
+
+  Stream<List<Activity>> likedActivities(String uid) => _savedThenServer(
+    uid,
+    ActivityList.liked,
+    _activities.where('likedBy', arrayContains: uid),
+  );
 
   Future<void> create(Activity activity) {
     return _activities.doc(activity.id).set({
