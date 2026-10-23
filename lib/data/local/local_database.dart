@@ -39,5 +39,13 @@ class LocalDatabase {
         PRIMARY KEY (uid, list, activityId)
       )
     ''');
+    await db.execute('''
+      CREATE TABLE pending_writes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL,
+        docId TEXT NOT NULL,
+        payload TEXT NOT NULL
+      )
+    ''');
   }
 }
