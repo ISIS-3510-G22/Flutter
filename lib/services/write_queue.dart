@@ -15,9 +15,23 @@ abstract class WriteQueue<K extends Enum> extends ChangeNotifier {
 
   bool _flushing = false;
   String? _dropped;
+  bool _started = false;
 
   Set<String> get pendingDocIds => {for (final w in _pending) w.docId};
   bool get hasPending => _pending.isNotEmpty;
+
+  Future<void> start() async {
+    if (_started) return;
+    _started = true;
+    ConnectivityService.instance.addListener(flush);
+    await _reload();
+    await flush();
+  }
+
+  Future<void> clear() async {
+    await _store.clear();
+    await _reload();
+  }
 
   Future<void> send(PendingWrite<K> write);
 
