@@ -20,4 +20,29 @@ class User {
     this.photoUrl,
     this.reimbursementMethods = const [],
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'lastName': lastName,
+    'username': username,
+    'email': email,
+    'phone': phone,
+    'photoUrl': photoUrl,
+    'reimbursementMethods': [for (final m in reimbursementMethods) m.toJson()],
+  };
+
+  factory User.fromJson(Map<String, dynamic> json) => User(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    lastName: json['lastName'] as String,
+    username: json['username'] as String,
+    email: json['email'] as String,
+    phone: json['phone'] as String,
+    photoUrl: json['photoUrl'] as String?,
+    reimbursementMethods: [
+      for (final m in json['reimbursementMethods'] as List)
+        ReimbursementMethod.fromJson(m as Map<String, dynamic>),
+    ],
+  );
 }

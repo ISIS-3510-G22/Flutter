@@ -103,7 +103,7 @@ class UserRepository {
       'lastName': lastName,
       'phone': phone,
       'reimbursementMethods': reimbursementMethods
-          .map((m) => {'id': m.id, 'type': m.type, 'account': m.account})
+          .map((m) => m.toJson())
           .toList(),
     });
   }
