@@ -175,18 +175,7 @@ class _PlanDetailBody extends StatelessWidget {
                                     label: const Text('Invite Friends'),
                                   ),
                                 ),
-                              ],
-                              if (!online && !vm.isCreator && vm.isActive > 0)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    'Answering needs a connection so everyone seesthe same guest list.',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
-                                  ),
-                                )
-                              else ...[
+                              ] else ...[
                                 Expanded(
                                   child: FilledButton.icon(
                                     onPressed: online
@@ -204,6 +193,14 @@ class _PlanDetailBody extends StatelessWidget {
                             ],
                           ],
                         ),
+                        if (!online && !vm.isCreator && vm.isActive > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Answering needs a connection so everyone sees the same guest list.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
                         const SizedBox(height: 8),
                         Row(
                           spacing: 8,
@@ -285,15 +282,18 @@ class _PlanDetailBody extends StatelessWidget {
                                 for (final activity in vm.activities)
                                   ActivityCard(
                                     activity: activity,
-                                    onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ActivityDetailView(
-                                          activity: activity,
-                                          showAddToPlan: false,
+                                    onTap: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ActivityDetailView(
+                                            activity: activity,
+                                            showAddToPlan: false,
+                                          ),
                                         ),
-                                      ),
-                                    ),
+                                      );
+                                      vm.refresh();
+                                    },
                                   ),
                             ],
                           ),

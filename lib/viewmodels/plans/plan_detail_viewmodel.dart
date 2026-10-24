@@ -41,6 +41,8 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   RsvpStatus? get myRsvp => plan.rsvpFor(_uid);
 
+  Future<void> refresh() => _onPlanUpdate(plan);
+
   List<User> get participants =>
       invitees.where((u) => plan.rsvpFor(u.id) == RsvpStatus.going).toList();
 
