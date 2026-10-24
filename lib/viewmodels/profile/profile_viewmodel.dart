@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/data/user_repository.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/auth_service.dart';
+import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/services/pending_write_service.dart';
 import 'package:plansync/services/storage_service.dart';
 
@@ -17,6 +19,22 @@ class ProfileViewModel extends ChangeNotifier {
   final _storageService = StorageService();
   final _picker = ImagePicker();
   bool isUploadingPhoto = false;
+
+  String? get signOutWarning {
+    if (PendingWriteService.instance.hasPending) {
+      return "You have changes that haven't synced yet. If you log out now, they'll be lost.";
+    }
+    if (!ConnectivityService.instance.isOnline) {
+      return "You can't log back in until you're online. Log out anyway?";
+    }
+    return null;
+  }
+
+  Future<void> signOut() async {
+    PendingWriteService.instance.removeListener(refreshUser);
+    await PendingWriteService.instance.clear();
+    await AuthService().signOut();
+  }
 
   Future<void> refreshUser() async {
     final refreshedUser = await _userRepository.currentUser(user.id);

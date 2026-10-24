@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
-import 'package:plansync/services/auth_service.dart';
 import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/services/theme_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
@@ -24,6 +23,31 @@ class MyProfileView extends StatelessWidget {
 
 class _MyProfileBody extends StatelessWidget {
   const _MyProfileBody();
+
+  Future<void> _signOut(BuildContext context, ProfileViewModel vm) async {
+    final warning = vm.signOutWarning;
+    if (warning != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Log out?'),
+          content: Text(warning),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Log out'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    await vm.signOut();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +153,7 @@ class _MyProfileBody extends StatelessWidget {
                     width: double.infinity,
                     height: 52,
                     child: FilledButton(
-                      onPressed: AuthService().signOut,
+                      onPressed: () => _signOut(context, vm),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
