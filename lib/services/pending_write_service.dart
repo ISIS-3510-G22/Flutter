@@ -1,9 +1,11 @@
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/data/plan_repository.dart';
+import 'package:plansync/data/review_repository.dart';
 import 'package:plansync/data/tag_repository.dart';
 import 'package:plansync/models/activity.dart';
 import 'package:plansync/models/pending_write.dart';
 import 'package:plansync/models/plan.dart';
+import 'package:plansync/models/review.dart';
 import 'package:plansync/services/write_queue.dart';
 
 enum WriteKind {
@@ -16,6 +18,7 @@ enum WriteKind {
   planUpdate,
   planAddActivity,
   planRemoveActivity,
+  reviewSubmit,
 }
 
 class PendingWriteService extends WriteQueue<WriteKind> {
@@ -26,6 +29,7 @@ class PendingWriteService extends WriteQueue<WriteKind> {
   final _activities = ActivityRepository();
   final _plans = PlanRepository();
   final _tags = TagRepository();
+  final _reviews = ReviewRepository();
 
   @override
   Future<void> send(PendingWrite<WriteKind> write) async {
@@ -57,6 +61,10 @@ class PendingWriteService extends WriteQueue<WriteKind> {
         write.docId,
         payload['activityId'] as String,
       ),
+      WriteKind.reviewSubmit => _reviews.submit(
+        write.docId,
+        Review.fromJson(payload),
+      ),
     };
   }
 
@@ -76,6 +84,7 @@ class PendingWriteService extends WriteQueue<WriteKind> {
         "Your activity's tags couldn't update the suggestions.",
       WriteKind.planAddActivity || WriteKind.planRemoveActivity =>
         "A plan you edited was deleted, so its activity changes couldn't sync.",
+      WriteKind.reviewSubmit => "We couldn't post your review.",
     };
   }
 }
