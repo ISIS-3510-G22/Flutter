@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/connectivity_service.dart';
+import 'package:plansync/services/pending_write_service.dart';
 import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
 import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:plansync/views/plans/plan_card.dart';
@@ -28,6 +29,7 @@ class _PlanScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = context.watch<MyPlansViewModel>();
     final online = context.watch<ConnectivityService>().isOnline;
+    final pending = context.watch<PendingWriteService>().pendingDocIds;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -58,13 +60,13 @@ class _PlanScreen extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(child: _planList(vm, online)),
+          Expanded(child: _planList(vm, online, pending)),
         ],
       ),
     );
   }
 
-  Widget _planList(MyPlansViewModel vm, bool online) {
+  Widget _planList(MyPlansViewModel vm, bool online, Set<String> pending) {
     if (vm.isLoading) {
       return Center(
         child: online
@@ -85,6 +87,7 @@ class _PlanScreen extends StatelessWidget {
               going: vm.isGoing(plan),
               notification: vm.notificationFor(plan),
               photoUrls: vm.photoUrlsFor(plan),
+              pending: pending.contains(plan.id),
             ),
           )
           .toList(),
