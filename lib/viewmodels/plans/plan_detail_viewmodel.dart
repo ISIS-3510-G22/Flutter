@@ -13,9 +13,11 @@ import 'package:plansync/models/invite_suggestion.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/connectivity_service.dart';
+import 'package:plansync/services/pending_write_service.dart';
 
 class PlanDetailViewModel extends ChangeNotifier {
   PlanDetailViewModel(this.plan, this._uid) {
+    PendingWriteService.instance.addListener(_loadSaved);
     _onPlanUpdate(plan);
     _sub = _planRepository.planById(plan.id).listen(_onPlanUpdate);
     loadSuggestions();
@@ -45,6 +47,11 @@ class PlanDetailViewModel extends ChangeNotifier {
   void setShowInvitees(bool value) {
     showInvitees = value;
     notifyListeners();
+  }
+
+  Future<void> _loadSaved() async {
+    final saved = await _planRepository.savedPlan(_uid, plan.id);
+    if (saved != null) _onPlanUpdate(saved);
   }
 
   Future<void> _onPlanUpdate(Plan updated) async {
@@ -85,11 +92,13 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   Future<bool> respondRsvp(bool going) async {
     try {
-      await _planRepository.setRsvp(
-        plan.id,
-        _uid,
-        going ? RsvpStatus.going : RsvpStatus.notGoing,
-      );
+      await _planRepository
+          .setRsvp(
+            plan.id,
+            _uid,
+            going ? RsvpStatus.going : RsvpStatus.notGoing,
+          )
+          .timeout(const Duration(seconds: 8));
       return true;
     } catch (_) {
       return false;
@@ -138,6 +147,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub.cancel();
+    PendingWriteService.instance.removeListener(_loadSaved);
     super.dispose();
   }
 }

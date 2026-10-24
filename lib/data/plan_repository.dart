@@ -221,6 +221,14 @@ class PlanRepository {
       });
     });
   }
+
+  Future<Plan?> savedPlan(String uid, String id) async {
+    final plans = await _readPlans(_plansFile(uid)) ?? [];
+    for (final p in plans) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
 }
 
 List<Plan> decodePlans(String text) => [
