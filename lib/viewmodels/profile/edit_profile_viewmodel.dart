@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/data/user_repository.dart';
+import 'package:plansync/models/pending_write.dart';
 import 'package:plansync/models/reimbursement_method.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/pending_write_service.dart';
 
 class EditProfileViewModel extends ChangeNotifier {
   EditProfileViewModel(this.user)
@@ -17,6 +19,7 @@ class EditProfileViewModel extends ChangeNotifier {
   final List<ReimbursementMethod> reimbursementMethods;
   final _userRepository = UserRepository();
   bool isSaving = false;
+  bool queued = false;
 
   void addMethod(ReimbursementMethod method) {
     reimbursementMethods.add(method);
@@ -28,13 +31,25 @@ class EditProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _userRepository.updateProfile(
-        user.id,
+      final updated = User(
+        id: user.id,
         name: nameController.text.trim(),
         lastName: lastNameController.text.trim(),
+        username: user.username,
+        email: user.email,
         phone: phoneController.text.trim(),
+        photoUrl: user.photoUrl,
         reimbursementMethods: reimbursementMethods,
       );
+      await _userRepository.saveLocal(updated);
+      final sent = await PendingWriteService.instance.submit(
+        PendingWrite(
+          kind: WriteKind.profileUpdate,
+          docId: user.id,
+          payload: updated.toJson(),
+        ),
+      );
+      queued = !sent;
       return true;
     } finally {
       isSaving = false;

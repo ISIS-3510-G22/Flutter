@@ -123,18 +123,12 @@ class UserRepository {
     });
   }
 
-  Future<void> updateProfile(
-    String userId, {
-    required String name,
-    required String lastName,
-    required String phone,
-    required List<ReimbursementMethod> reimbursementMethods,
-  }) {
-    return _users.doc(userId).update({
-      'name': name,
-      'lastName': lastName,
-      'phone': phone,
-      'reimbursementMethods': reimbursementMethods
+  Future<void> updateProfile(User user) {
+    return _users.doc(user.id).update({
+      'name': user.name,
+      'lastName': user.lastName,
+      'phone': user.phone,
+      'reimbursementMethods': user.reimbursementMethods
           .map((m) => m.toJson())
           .toList(),
     });
