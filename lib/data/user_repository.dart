@@ -10,6 +10,38 @@ class UserRepository {
 
   final _files = JsonFileStore();
 
+  String _meFile(String uid) => 'me_$uid.json';
+
+  Future<void> saveLocal(User user) =>
+      _files.write(_meFile(user.id), jsonEncode(user.toJson()));
+
+  Future<User?> _readMe(String uid) async {
+    final text = await _files.read(_meFile(uid));
+    if (text == null) return null;
+    try {
+      return User.fromJson(jsonDecode(text) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<User?> currentUser(String uid) async {
+    try {
+      final doc = await _users
+          .doc(uid)
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 8));
+      if (!doc.exists) return null;
+      final user = _getUserFromDoc(uid, doc.data()!);
+      await saveLocal(user);
+      return user;
+    } catch (_) {
+      final saved = await _readMe(uid);
+      if (saved == null) rethrow;
+      return saved;
+    }
+  }
+
   Future<List<User>> _readPeople(String filename) async {
     final text = await _files.read(filename);
     if (text == null) return [];
