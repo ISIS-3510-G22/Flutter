@@ -4,16 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/models/activity.dart';
 import 'package:plansync/services/connectivity_service.dart';
+import 'package:plansync/services/pending_write_service.dart';
 
 enum ActivitiesTab { liked, private, recommended }
 
 class MyActivitiesViewmodel extends ChangeNotifier {
   final _repository = ActivityRepository();
-  late final StreamSubscription<List<Activity>> _ownedSub;
+
+  StreamSubscription<List<Activity>>? _ownedSub;
   List<Activity> _owned = [];
   ActivitiesTab currentTab = ActivitiesTab.private;
 
-  late final StreamSubscription<List<Activity>> _likedSub;
+  StreamSubscription<List<Activity>>? _likedSub;
   List<Activity> _liked = [];
   List<Activity> _recommended = [];
 
@@ -22,26 +24,30 @@ class MyActivitiesViewmodel extends ChangeNotifier {
 
   MyActivitiesViewmodel(this._uid) {
     ConnectivityService.instance.addListener(_onConnectivityChanged);
+    PendingWriteService.instance.addListener(_loadSaved);
 
-    _ownedSub = _repository.ownedActivities(_uid).listen((activities) {
-      _owned = activities;
-      notifyListeners();
-    });
-
-    _likedSub = _repository.likedActivities(_uid).listen((activities) {
-      _liked = activities;
-      notifyListeners();
-    });
+    _loadSaved();
 
     _loadRecommended();
-
-    _onConnectivityChanged();
   }
 
   void _loadRecommended() {
     _recommendedSub?.cancel();
     _recommendedSub = _repository.recommended(_uid).listen((activities) {
       _recommended = activities;
+      notifyListeners();
+    });
+  }
+
+  void _loadSaved() {
+    _ownedSub?.cancel();
+    _ownedSub = _repository.ownedActivities(_uid).listen((activities) {
+      _owned = activities;
+      notifyListeners();
+    });
+    _likedSub?.cancel();
+    _likedSub = _repository.likedActivities(_uid).listen((activities) {
+      _liked = activities;
       notifyListeners();
     });
   }
@@ -63,10 +69,11 @@ class MyActivitiesViewmodel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _ownedSub.cancel();
-    _likedSub.cancel();
+    _ownedSub?.cancel();
+    _likedSub?.cancel();
     _recommendedSub?.cancel();
     ConnectivityService.instance.removeListener(_onConnectivityChanged);
+    PendingWriteService.instance.removeListener(_loadSaved);
     super.dispose();
   }
 }

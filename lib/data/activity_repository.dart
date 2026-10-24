@@ -95,6 +95,9 @@ class ActivityRepository {
     _activities.where('likedBy', arrayContains: uid),
   );
 
+  Future<void> saveLocal(String uid, Activity activity) =>
+      _local.upsert(uid, activity);
+
   Future<void> create(Activity activity) {
     return _activities.doc(activity.id).set({
       'name': activity.name,
