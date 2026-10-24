@@ -1,9 +1,52 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/data/local/json_file_store.dart';
 import 'package:plansync/models/reimbursement_method.dart';
 import 'package:plansync/models/user.dart';
 
 class UserRepository {
   final _users = FirebaseFirestore.instance.collection('users');
+
+  final _files = JsonFileStore();
+
+  Future<List<User>> _readPeople(String filename) async {
+    final text = await _files.read(filename);
+    if (text == null) return [];
+    try {
+      return [
+        for (final data in jsonDecode(text) as List)
+          _getUserFromDoc(data['id'] as String, data as Map<String, dynamic>),
+      ];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<User>> planPeople(String planId, List<String> ids) async {
+    final file = 'plan_${planId}_people.json';
+    try {
+      final users = await getUsers(
+        ids,
+        source: Source.server,
+      ).timeout(const Duration(seconds: 8));
+      await _files.write(
+        file,
+        jsonEncode([
+          for (final u in users)
+            {
+              'id': u.id,
+              'name': u.name,
+              'lastName': u.lastName,
+              'photoUrl': u.photoUrl,
+            },
+        ]),
+      );
+      return users;
+    } catch (_) {
+      return _readPeople(file);
+    }
+  }
 
   User _getUserFromDoc(String docId, Map<String, dynamic> data) {
     return User(
@@ -69,11 +112,14 @@ class UserRepository {
     return _users.doc(userId).update({'photoUrl': photoUrl});
   }
 
-  Future<List<User>> getUsers(List<String> ids) async {
+  Future<List<User>> getUsers(
+    List<String> ids, {
+    Source source = Source.serverAndCache,
+  }) async {
     if (ids.isEmpty) return [];
     final snapshot = await _users
         .where(FieldPath.documentId, whereIn: ids)
-        .get();
+        .get(GetOptions(source: source));
     return snapshot.docs
         .map((doc) => _getUserFromDoc(doc.id, doc.data()))
         .toList();
