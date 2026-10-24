@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/data/user_repository.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/pending_write_service.dart';
 import 'package:plansync/services/storage_service.dart';
 
 class ProfileViewModel extends ChangeNotifier {
-  ProfileViewModel(this.user);
+  ProfileViewModel(this.user) {
+    PendingWriteService.instance.addListener(refreshUser);
+  }
 
   User user;
   final _userRepository = UserRepository();
@@ -16,7 +19,7 @@ class ProfileViewModel extends ChangeNotifier {
   bool isUploadingPhoto = false;
 
   Future<void> refreshUser() async {
-    final refreshedUser = await _userRepository.getUser(user.id);
+    final refreshedUser = await _userRepository.currentUser(user.id);
     if (refreshedUser == null) return;
     user = refreshedUser;
     notifyListeners();
@@ -49,5 +52,11 @@ class ProfileViewModel extends ChangeNotifier {
       isUploadingPhoto = false;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    PendingWriteService.instance.removeListener(refreshUser);
+    super.dispose();
   }
 }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
+import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/services/theme_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
 import 'package:plansync/views/profile/edit_profile_view.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
@@ -26,6 +28,7 @@ class _MyProfileBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ProfileViewModel>();
+    final online = context.watch<ConnectivityService>().isOnline;
     final themeService = context.watch<ThemeService>();
     return Scaffold(
       body: Column(
@@ -48,6 +51,10 @@ class _MyProfileBody extends StatelessWidget {
               const SizedBox(width: 4),
             ],
           ),
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing your saved profile.",
+            ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
