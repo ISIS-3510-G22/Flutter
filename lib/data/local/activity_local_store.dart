@@ -60,4 +60,52 @@ class ActivityLocalStore {
     }
     await batch.commit(noResult: true);
   }
+
+  Future<void> upsert(String uid, Activity activity) async {
+    final db = await LocalDatabase.instance;
+    final batch = db.batch();
+    batch.insert(
+      'activities',
+      _toRow(activity),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    _setMember(
+      batch,
+      uid,
+      ActivityList.owned,
+      activity.id,
+      activity.ownerId == uid,
+    );
+    _setMember(
+      batch,
+      uid,
+      ActivityList.liked,
+      activity.id,
+      activity.likedBy.contains(uid),
+    );
+    await batch.commit(noResult: true);
+  }
+
+  void _setMember(
+    Batch batch,
+    String uid,
+    ActivityList list,
+    String activityId,
+    bool member,
+  ) {
+    if (member) {
+      batch.insert('activity_lists', {
+        'uid': uid,
+        'list': list.name,
+        'activityId': activityId,
+        'position': -1,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    } else {
+      batch.delete(
+        'activity_lists',
+        where: 'uid = ? AND list = ? AND activityId = ?',
+        whereArgs: [uid, list.name, activityId],
+      );
+    }
+  }
 }
