@@ -67,7 +67,7 @@ class ActivityRepository {
 
     final map = output.docs.first['activity_ids'] as Map<String, dynamic>;
     final ids = List.generate(map.length, (i) => map['$i'] as String);
-    final activities = await getByIds(ids);
+    final activities = await getByIds(ids, source: Source.server);
     return activities
       ..sort((a, b) => ids.indexOf(a.id).compareTo(ids.indexOf(b.id)));
   }
@@ -147,11 +147,29 @@ class ActivityRepository {
     return snapshot.docs.map(_fromDoc).toList();
   }
 
-  Future<List<Activity>> getByIds(List<String> ids) async {
+  Future<List<Activity>> getByIds(
+    List<String> ids, {
+    Source source = Source.serverAndCache,
+  }) async {
     if (ids.isEmpty) return [];
     final snapshot = await _activities
         .where(FieldPath.documentId, whereIn: ids)
-        .get();
+        .get(GetOptions(source: source));
     return snapshot.docs.map(_fromDoc).toList();
+  }
+
+  Future<List<Activity>> planActivities(String uid, List<String> ids) async {
+    try {
+      final activities = await getByIds(
+        ids,
+        source: Source.server,
+      ).timeout(const Duration(seconds: 8));
+      for (final activity in activities) {
+        await _local.upsert(uid, activity);
+      }
+      return activities;
+    } catch (_) {
+      return _local.byIds(ids);
+    }
   }
 }
