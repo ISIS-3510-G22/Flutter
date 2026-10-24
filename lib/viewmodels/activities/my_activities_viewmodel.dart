@@ -24,6 +24,7 @@ class MyActivitiesViewmodel extends ChangeNotifier {
 
   MyActivitiesViewmodel(this._uid) {
     ConnectivityService.instance.addListener(_onConnectivityChanged);
+    PendingWriteService.instance.addListener(_loadSaved);
 
     _loadSaved();
 
