@@ -46,7 +46,21 @@ class _ActivityDetailBody extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(vm.isLiked ? Icons.star : Icons.star_border),
-            onPressed: vm.toggleLike,
+            onPressed: () {
+              final messenger = ScaffoldMessenger.of(context);
+              vm.toggleLike().then((queued) {
+                if (!queued) return;
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      vm.isLiked
+                          ? 'Like saved on your phone.'
+                          : 'Like removed on your phone.',
+                    ),
+                  ),
+                );
+              });
+            },
           ),
           if (vm.isOwner)
             PopupMenuButton<String>(
