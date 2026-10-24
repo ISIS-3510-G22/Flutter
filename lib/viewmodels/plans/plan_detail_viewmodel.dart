@@ -12,6 +12,7 @@ import 'package:plansync/models/invitations.dart';
 import 'package:plansync/models/invite_suggestion.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/connectivity_service.dart';
 
 class PlanDetailViewModel extends ChangeNotifier {
   PlanDetailViewModel(this.plan, this._uid) {
@@ -49,11 +50,15 @@ class PlanDetailViewModel extends ChangeNotifier {
   Future<void> _onPlanUpdate(Plan updated) async {
     plan = updated;
     final userIds = updated.invitations.map((i) => i.userId).toList();
-    activities = await _activityRepository.getByIds(updated.activityIds);
-    if (!setEquals(tags, updated.tags.toSet())) {
+    activities = await _activityRepository.planActivities(
+      _uid,
+      updated.activityIds,
+    );
+    if (ConnectivityService.instance.isOnline &&
+        !setEquals(tags, updated.tags.toSet())) {
       _planRepository.updateTags(updated.id, tags);
     }
-    invitees = await _userRepository.getUsers(userIds);
+    invitees = await _userRepository.planPeople(updated.id, userIds);
     isLoading = false;
     notifyListeners();
   }
@@ -61,9 +66,10 @@ class PlanDetailViewModel extends ChangeNotifier {
   Set<String> get tags => activities.expand((a) => a.tags).toSet();
 
   double get estimatedCostPerPerson {
-    if (activities.isEmpty || participants.isEmpty) return 0;
+    final going = plan.goingIds.length;
+    if (activities.isEmpty || going == 0) return 0;
     final total = activities.fold<double>(0, (sum, a) => sum + a.expectedPrice);
-    return total / participants.length;
+    return total / going;
   }
 
   int get isActive => plan.date.compareTo(DateTime.now());
