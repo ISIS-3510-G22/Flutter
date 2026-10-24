@@ -3,6 +3,7 @@ import 'package:plansync/models/activity.dart';
 import 'package:plansync/utils/text_format.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
+import 'package:plansync/views/widgets/waiting_to_sync.dart';
 
 class ActivityCard extends StatelessWidget {
   const ActivityCard({
@@ -80,22 +81,7 @@ class ActivityCard extends StatelessWidget {
                     ),
                     if (pending) ...[
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.cloud_upload_outlined,
-                            size: 14,
-                            color: colors.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Waiting to sync',
-                            style: text.bodySmall?.copyWith(
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
+                      const WaitingToSync(),
                     ],
                   ],
                 ),

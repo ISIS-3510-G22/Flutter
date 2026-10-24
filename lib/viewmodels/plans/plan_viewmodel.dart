@@ -6,11 +6,30 @@ import 'package:plansync/data/user_repository.dart';
 import 'package:plansync/models/app_notification.dart';
 import 'package:plansync/models/invitations.dart';
 import 'package:plansync/models/plan.dart';
+import 'package:plansync/services/pending_write_service.dart';
 
 enum PlanTab { upcoming, pendingInvite, past }
 
 class MyPlansViewModel extends ChangeNotifier {
   MyPlansViewModel(this._userId) {
+    PendingWriteService.instance.addListener(_loadPlans);
+    _loadPlans();
+  }
+
+  final String _userId;
+  final _planRepository = PlanRepository();
+  final _userRepository = UserRepository();
+
+  StreamSubscription<List<Plan>>? _sub;
+
+  bool isLoading = true;
+  PlanTab selectedTab = PlanTab.upcoming;
+  List<Plan> _plans = [];
+
+  Map<String, String?> _photoUrls = {};
+
+  void _loadPlans() {
+    _sub?.cancel();
     _sub = _planRepository.plansForUser(_userId).listen((plans) {
       _plans = plans;
       isLoading = false;
@@ -18,18 +37,6 @@ class MyPlansViewModel extends ChangeNotifier {
       notifyListeners();
     });
   }
-
-  final String _userId;
-  final _planRepository = PlanRepository();
-  final _userRepository = UserRepository();
-
-  late final StreamSubscription<List<Plan>> _sub;
-
-  bool isLoading = true;
-  PlanTab selectedTab = PlanTab.upcoming;
-  List<Plan> _plans = [];
-
-  Map<String, String?> _photoUrls = {};
 
   Future<void> _loadPhotos() async {
     final ids = _plans
@@ -51,12 +58,6 @@ class MyPlansViewModel extends ChangeNotifier {
   ];
 
   static const _lateAfter = Duration(days: 2);
-
-  @override
-  void dispose() {
-    _sub.cancel();
-    super.dispose();
-  }
 
   List<Plan> get visiblePlans =>
       _plans.where((p) => _tabFor(p) == selectedTab).toList();
@@ -84,5 +85,12 @@ class MyPlansViewModel extends ChangeNotifier {
     }
     if (DateTime.now().difference(invitedAt) < _lateAfter) return null;
     return AppNotification.rsvpReminder(invitedAt);
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    PendingWriteService.instance.removeListener(_loadPlans);
+    super.dispose();
   }
 }

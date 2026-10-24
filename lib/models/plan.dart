@@ -59,4 +59,15 @@ class Plan {
     ],
     isPublic: json['isPublic'] as bool,
   );
+
+  Plan withActivityIds(List<String> ids) => Plan(
+    id: id,
+    name: name,
+    date: date,
+    creatorId: creatorId,
+    tags: tags,
+    activityIds: ids,
+    invitations: invitations,
+    isPublic: isPublic,
+  );
 }

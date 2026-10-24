@@ -2,14 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:plansync/data/plan_repository.dart';
+import 'package:plansync/models/pending_write.dart';
 import 'package:plansync/models/plan.dart';
+import 'package:plansync/services/pending_write_service.dart';
 
 class AddToPlanViewModel extends ChangeNotifier {
-  AddToPlanViewModel(this.activityId, String uid) {
-    _sub = _planRepository.plansForUser(uid).listen((all) {
+  AddToPlanViewModel(this.activityId, this._uid) {
+    _sub = _planRepository.plansForUser(_uid).listen((all) {
       plans = all
           .where(
-            (p) => p.date.isAfter(DateTime.now()) && p.goingIds.contains(uid),
+            (p) => p.date.isAfter(DateTime.now()) && p.goingIds.contains(_uid),
           )
           .toList();
       isLoading = false;
@@ -17,6 +19,7 @@ class AddToPlanViewModel extends ChangeNotifier {
     });
   }
 
+  final String _uid;
   final String activityId;
   final _planRepository = PlanRepository();
   late final StreamSubscription<List<Plan>> _sub;
@@ -24,6 +27,7 @@ class AddToPlanViewModel extends ChangeNotifier {
   bool isLoading = true;
   List<Plan> plans = [];
   bool isSaving = false;
+  bool queued = false;
 
   String? selectedPlanId;
 
@@ -42,7 +46,19 @@ class AddToPlanViewModel extends ChangeNotifier {
     isSaving = true;
     notifyListeners();
     try {
-      await _planRepository.addActivity(selectedPlanId!, activityId);
+      final plan = plans.firstWhere((p) => p.id == selectedPlanId);
+      await _planRepository.saveLocal(
+        _uid,
+        plan.withActivityIds([...plan.activityIds, activityId]),
+      );
+      final sent = await PendingWriteService.instance.submit(
+        PendingWrite(
+          kind: WriteKind.planAddActivity,
+          docId: plan.id,
+          payload: {'activityId': activityId},
+        ),
+      );
+      queued = !sent;
       return true;
     } catch (_) {
       return false;

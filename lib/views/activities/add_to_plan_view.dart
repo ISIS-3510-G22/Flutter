@@ -120,9 +120,11 @@ class _AddToPlanBody extends StatelessWidget {
                   messenger.showSnackBar(
                     SnackBar(
                       content: Text(
-                        ok
-                            ? 'Added to plan'
-                            : 'Something went wrong. Try again.',
+                        !ok
+                            ? 'Something went wrong. Try again.'
+                            : vm.queued
+                            ? "Added on your phone. The plan updates when you're back online."
+                            : 'Added to plan',
                       ),
                     ),
                   );

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/data/plan_repository.dart';
 import 'package:plansync/models/invitations.dart';
+import 'package:plansync/models/pending_write.dart';
 import 'package:plansync/models/plan.dart';
+import 'package:plansync/services/pending_write_service.dart';
 
 class CreateEditPlanViewModel extends ChangeNotifier {
   CreateEditPlanViewModel(
@@ -25,6 +27,7 @@ class CreateEditPlanViewModel extends ChangeNotifier {
   DateTime? date;
   bool isLoading = false;
   String? errorMessage;
+  bool queued = false;
 
   bool isPublic = false;
   void setPublic(bool value) {
@@ -66,11 +69,15 @@ class CreateEditPlanViewModel extends ChangeNotifier {
         tags: editingPlan?.tags ?? const [],
         isPublic: isPublic,
       );
-      if (editingPlan == null) {
-        await _repository.create(plan);
-      } else {
-        await _repository.update(plan);
-      }
+      await _repository.saveLocal(_creatorId, plan);
+      final sent = await PendingWriteService.instance.submit(
+        PendingWrite(
+          kind: isEditing ? WriteKind.planUpdate : WriteKind.planCreate,
+          docId: plan.id,
+          payload: plan.toJson(),
+        ),
+      );
+      queued = !sent;
       return plan;
     } catch (_) {
       errorMessage = 'Something went wrong. Try again.';

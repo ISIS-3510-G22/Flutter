@@ -24,6 +24,8 @@ class PlanRepository {
 
   final _files = JsonFileStore();
 
+  String _plansFile(String uid) => 'plans_$uid.json';
+
   Future<List<Plan>?> _readPlans(String name) async {
     final text = await _files.read(name);
     if (text == null) return null;
@@ -56,7 +58,7 @@ class PlanRepository {
   }
 
   Stream<List<Plan>> plansForUser(String uid) async* {
-    final file = 'plans_$uid.json';
+    final file = _plansFile(uid);
     final saved = await _readPlans(file);
     if (saved != null) yield saved;
     yield* _plans
@@ -89,6 +91,19 @@ class PlanRepository {
     return _plans.doc(planId).update({
       'activityIds': FieldValue.arrayRemove([activityId]),
     });
+  }
+
+  Future<void> saveLocal(String uid, Plan plan) async {
+    final saved = await _readPlans(_plansFile(uid)) ?? [];
+    final plans = <Plan>[];
+    for (final p in saved) {
+      if (p.id != plan.id) plans.add(p);
+    }
+    plans.add(plan);
+    await _files.write(
+      _plansFile(uid),
+      jsonEncode([for (final p in plans) p.toJson()]),
+    );
   }
 
   Future<void> create(Plan plan) {
