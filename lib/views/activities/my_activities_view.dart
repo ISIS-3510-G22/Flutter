@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/connectivity_service.dart';
+import 'package:plansync/services/pending_write_service.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/activities/create_edit_activity_view.dart';
@@ -28,6 +29,7 @@ class _MyActivitiesBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = context.watch<MyActivitiesViewmodel>();
     final online = context.watch<ConnectivityService>().isOnline;
+    final pending = context.watch<PendingWriteService>().pendingDocIds;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -79,8 +81,13 @@ class _MyActivitiesBody extends StatelessWidget {
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: 88),
                     itemCount: vm.activities.length,
-                    itemBuilder: (context, index) =>
-                        ActivityCard(activity: vm.activities[index]),
+                    itemBuilder: (context, index) {
+                      final activity = vm.activities[index];
+                      return ActivityCard(
+                        activity: activity,
+                        pending: pending.contains(activity.id),
+                      );
+                    },
                   ),
           ),
         ],

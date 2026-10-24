@@ -9,12 +9,14 @@ class ActivityCard extends StatelessWidget {
     required this.activity,
     this.onTap,
     this.trailing,
+    this.pending = false,
     super.key,
   });
 
   final Activity activity;
   final VoidCallback? onTap;
   final Widget? trailing;
+  final bool pending;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +78,25 @@ class ActivityCard extends StatelessWidget {
                         color: colors.onSurfaceVariant,
                       ),
                     ),
+                    if (pending) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.cloud_upload_outlined,
+                            size: 14,
+                            color: colors.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Waiting to sync',
+                            style: text.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
