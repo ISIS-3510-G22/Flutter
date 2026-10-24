@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/data/local/json_file_store.dart';
 import 'package:plansync/models/review.dart';
 
 class ReviewRepository {
@@ -7,6 +10,26 @@ class ReviewRepository {
           .collection('plans')
           .doc(planId)
           .collection('reviews');
+
+  final _files = JsonFileStore();
+
+  String _reviewFile(String planId, String userId) =>
+      'review_${planId}_$userId.json';
+
+  Future<void> saveLocal(String planId, Review review) => _files.write(
+    _reviewFile(planId, review.userId),
+    jsonEncode(review.toJson()),
+  );
+
+  Future<Review?> _readReview(String name) async {
+    final text = await _files.read(name);
+    if (text == null) return null;
+    try {
+      return Review.fromJson(jsonDecode(text) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
 
   Review _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
     final data = d.data()!;
@@ -36,7 +59,18 @@ class ReviewRepository {
   }
 
   Future<Review?> reviewBy(String planId, String userId) async {
-    final doc = await _reviews(planId).doc(userId).get();
-    return doc.exists ? _fromDoc(doc) : null;
+    final file = _reviewFile(planId, userId);
+    try {
+      final doc = await _reviews(planId)
+          .doc(userId)
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 8));
+      if (!doc.exists) return _readReview(file);
+      final review = _fromDoc(doc);
+      await saveLocal(planId, review);
+      return review;
+    } catch (_) {
+      return _readReview(file);
+    }
   }
 }
