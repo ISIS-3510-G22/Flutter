@@ -4,6 +4,7 @@ import 'package:plansync/models/invitations.dart';
 import 'package:plansync/models/invite_suggestion.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/theme/app_theme.dart';
 import 'package:plansync/utils/avatar.dart';
 import 'package:plansync/utils/date_format.dart';
@@ -16,6 +17,7 @@ import 'package:plansync/views/plans/edit_plan_activities_view.dart';
 import 'package:plansync/views/plans/plan_expenses_view.dart';
 import 'package:plansync/views/plans/plan_route_view.dart';
 import 'package:plansync/views/widgets/decision_dialog.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:provider/provider.dart';
 
@@ -74,6 +76,7 @@ class _PlanDetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<PlanDetailViewModel>();
+    final online = context.watch<ConnectivityService>().isOnline;
 
     return Scaffold(
       appBar: AppBar(
@@ -91,182 +94,216 @@ class _PlanDetailBody extends StatelessWidget {
             ),
         ],
       ),
-      body: vm.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    vm.plan.name,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today_outlined, size: 16),
-                      const SizedBox(width: 4),
-                      Text(formatShortDate(vm.plan.date)),
-                      const SizedBox(width: 16),
-                      const Icon(Icons.payments_outlined, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Est. \$${vm.estimatedCostPerPerson.toStringAsFixed(0)}/pp',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.list_alt_outlined, size: 16),
-                      const SizedBox(width: 4),
-                      Text('${vm.activities.length} Activities'),
-                      if (vm.tags.isNotEmpty) ...[
-                        const SizedBox(width: 16),
-                        const Icon(Icons.sell_outlined, size: 16),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            vm.tags.map(capitalize).join(', '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+      body: Column(
+        children: [
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing this plan as last saved.",
+            ),
+          Expanded(
+            child: vm.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          vm.plan.name,
+                          style: Theme.of(context).textTheme.headlineSmall,
                         ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    spacing: 8,
-                    children: [
-                      if (vm.isActive > 0) ...[
-                        if (vm.myRsvp == RsvpStatus.going)
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      EditPlanActivitiesView(plan: vm.plan),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_today_outlined, size: 16),
+                            const SizedBox(width: 4),
+                            Text(formatShortDate(vm.plan.date)),
+                            const SizedBox(width: 16),
+                            const Icon(Icons.payments_outlined, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Est. \$${vm.estimatedCostPerPerson.toStringAsFixed(0)}/pp',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.list_alt_outlined, size: 16),
+                            const SizedBox(width: 4),
+                            Text('${vm.activities.length} Activities'),
+                            if (vm.tags.isNotEmpty) ...[
+                              const SizedBox(width: 16),
+                              const Icon(Icons.sell_outlined, size: 16),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  vm.tags.map(capitalize).join(', '),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Edit Activities'),
-                            ),
-                          ),
-                        if (vm.isCreator) ...[
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: () => _inviteFriends(context, vm),
-                              icon: const Icon(Icons.person_add_alt),
-                              label: const Text('Invite Friends'),
-                            ),
-                          ),
-                        ] else ...[
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: () => _rsvp(context, vm),
-                              icon: const Icon(Icons.event_available),
-                              label: Text(switch (vm.myRsvp) {
-                                RsvpStatus.going => "You're going",
-                                RsvpStatus.notGoing => 'Not going',
-                                _ => 'RSVP',
-                              }),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    spacing: 8,
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PlanRouteView(
-                                plan: vm.plan,
-                                activities: vm.activities,
-                              ),
-                            ),
-                          ),
-                          icon: const Icon(Icons.map_outlined),
-                          label: const Text('View Map'),
+                            ],
+                          ],
                         ),
-                      ),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PlanExpensesView(
-                                planId: vm.plan.id,
-                                participants: vm.participants,
-                              ),
-                            ),
-                          ),
-                          icon: const Icon(Icons.receipt_long_outlined),
-                          label: const Text('Expenses'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TabTrack(
-                    children: [
-                      TabButton(
-                        label: 'Activities',
-                        selected: !vm.showInvitees,
-                        onPressed: () => vm.setShowInvitees(false),
-                      ),
-                      TabButton(
-                        label:
-                            'Invitees (${vm.participants.length}/${vm.invitees.length})',
-                        selected: vm.showInvitees,
-                        onPressed: () => vm.setShowInvitees(true),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        if (vm.showInvitees)
-                          for (final p in vm.invitees)
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: UserAvatar(photoUrl: p.photoUrl),
-                              title: Text('${p.name} ${p.lastName}'),
-                              trailing: Text(switch (vm.plan.rsvpFor(p.id)) {
-                                RsvpStatus.going => 'Going',
-                                RsvpStatus.notGoing => 'Not going',
-                                _ => 'Pending',
-                              }),
-                            )
-                        else
-                          for (final activity in vm.activities)
-                            ActivityCard(
-                              activity: activity,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ActivityDetailView(
-                                    activity: activity,
-                                    showAddToPlan: false,
+                        const SizedBox(height: 4),
+                        Row(
+                          spacing: 8,
+                          children: [
+                            if (vm.isActive > 0) ...[
+                              if (vm.myRsvp == RsvpStatus.going)
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => EditPlanActivitiesView(
+                                          plan: vm.plan,
+                                        ),
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Edit Activities'),
                                   ),
                                 ),
+                              if (vm.isCreator) ...[
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    onPressed: () =>
+                                        _inviteFriends(context, vm),
+                                    icon: const Icon(Icons.person_add_alt),
+                                    label: const Text('Invite Friends'),
+                                  ),
+                                ),
+                              ],
+                              if (!online && !vm.isCreator && vm.isActive > 0)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Answering needs a connection so everyone seesthe same guest list.',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                )
+                              else ...[
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    onPressed: online
+                                        ? () => _rsvp(context, vm)
+                                        : null,
+                                    icon: const Icon(Icons.event_available),
+                                    label: Text(switch (vm.myRsvp) {
+                                      RsvpStatus.going => "You're going",
+                                      RsvpStatus.notGoing => 'Not going',
+                                      _ => 'RSVP',
+                                    }),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          spacing: 8,
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PlanRouteView(
+                                      plan: vm.plan,
+                                      activities: vm.activities,
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.map_outlined),
+                                label: const Text('View Map'),
                               ),
                             ),
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PlanExpensesView(
+                                      planId: vm.plan.id,
+                                      participants: vm.participants,
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.receipt_long_outlined),
+                                label: const Text('Expenses'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        TabTrack(
+                          children: [
+                            TabButton(
+                              label: 'Activities',
+                              selected: !vm.showInvitees,
+                              onPressed: () => vm.setShowInvitees(false),
+                            ),
+                            TabButton(
+                              label:
+                                  'Invitees (${vm.plan.goingIds.length}/${vm.plan.invitations.length})',
+                              selected: vm.showInvitees,
+                              onPressed: () => vm.setShowInvitees(true),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: ListView(
+                            children: [
+                              if (vm.showInvitees && vm.invitees.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 16),
+                                  child: Center(
+                                    child: Text("Connect to see who's invited"),
+                                  ),
+                                ),
+                              if (vm.showInvitees)
+                                for (final p in vm.invitees)
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: UserAvatar(photoUrl: p.photoUrl),
+                                    title: Text('${p.name} ${p.lastName}'),
+                                    trailing: Text(switch (vm.plan.rsvpFor(
+                                      p.id,
+                                    )) {
+                                      RsvpStatus.going => 'Going',
+                                      RsvpStatus.notGoing => 'Not going',
+                                      _ => 'Pending',
+                                    }),
+                                  )
+                              else
+                                for (final activity in vm.activities)
+                                  ActivityCard(
+                                    activity: activity,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ActivityDetailView(
+                                          activity: activity,
+                                          showAddToPlan: false,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
+          ),
+        ],
+      ),
     );
   }
 }
