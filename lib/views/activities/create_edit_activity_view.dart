@@ -215,10 +215,23 @@ class _CreateEditActivityForm extends StatelessWidget {
                           onPressed: vm.isLoading
                               ? null
                               : () async {
+                                  final messenger = ScaffoldMessenger.of(
+                                    context,
+                                  );
                                   final saved = await vm.save();
-                                  if (saved != null && context.mounted) {
-                                    Navigator.pop(context, saved);
+                                  if (saved == null || !context.mounted) return;
+                                  if (vm.queued) {
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          vm.isEditing
+                                              ? "Changes saved on your phone. They'll sync when you're back online."
+                                              : "Activity saved on your phone. It'll be published when you're back online.",
+                                        ),
+                                      ),
+                                    );
                                   }
+                                  Navigator.pop(context, saved);
                                 },
                           child: vm.isLoading
                               ? const SizedBox(

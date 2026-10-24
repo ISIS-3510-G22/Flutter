@@ -6,8 +6,10 @@ import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/data/place_repository.dart';
 import 'package:plansync/data/tag_repository.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/models/pending_write.dart';
 import 'package:plansync/models/place.dart';
 import 'package:plansync/models/tag.dart';
+import 'package:plansync/services/pending_write_service.dart';
 import 'package:plansync/services/storage_service.dart';
 import 'package:plansync/utils/validators.dart';
 
@@ -60,6 +62,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
 
   bool isLoading = false;
   String? errorMessage;
+  bool queued = false;
 
   bool isLoadingTags = true;
   bool searchFailed = false;
@@ -170,17 +173,30 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
         lng: place?.lng,
       );
 
-      if (_editingActivity == null) {
-        await _repository.create(activity);
-      } else {
-        await _repository.update(activity);
-      }
+      await _repository.saveLocal(_ownerId, activity);
+
+      final queue = PendingWriteService.instance;
+      final sent = await queue.submit(
+        PendingWrite(
+          kind: isEditing ? WriteKind.activityUpdate : WriteKind.activityCreate,
+          docId: id,
+          payload: activity.toJson(),
+        ),
+      );
+      queued = !sent;
 
       final before = _editingActivity?.tags.toSet() ?? <String>{};
-      await _tagRepository.updateCounts(
-        tags.difference(before).toList(),
-        before.difference(tags).toList(),
-      );
+      final added = tags.difference(before).toList();
+      final removed = before.difference(tags).toList();
+      if (added.isNotEmpty || removed.isNotEmpty) {
+        await queue.submit(
+          PendingWrite(
+            kind: WriteKind.tagCounts,
+            docId: id,
+            payload: {'added': added, 'removed': removed},
+          ),
+        );
+      }
 
       return activity;
     } catch (_) {
