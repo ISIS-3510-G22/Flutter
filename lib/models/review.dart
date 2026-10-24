@@ -12,4 +12,20 @@ class Review {
     required this.comment,
     required this.createdAt,
   });
+
+  Map<String, dynamic> toJson() => {
+    'userId': userId,
+    'userName': userName,
+    'rating': rating,
+    'comment': comment,
+    'createdAt': createdAt.microsecondsSinceEpoch,
+  };
+
+  factory Review.fromJson(Map<String, dynamic> json) => Review(
+    userId: json['userId'] as String,
+    userName: json['userName'] as String,
+    rating: json['rating'] as int,
+    comment: json['comment'] as String,
+    createdAt: DateTime.fromMicrosecondsSinceEpoch(json['createdAt'] as int),
+  );
 }

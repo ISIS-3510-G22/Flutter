@@ -78,7 +78,11 @@ class PlanRepository {
   }
 
   Stream<Plan> planById(String id) {
-    return _plans.doc(id).snapshots().map((d) => _fromData(d.id, d.data()!));
+    return _plans
+        .doc(id)
+        .snapshots(includeMetadataChanges: true)
+        .where((d) => !d.metadata.isFromCache)
+        .map((d) => _fromData(d.id, d.data()!));
   }
 
   Future<void> addActivity(String planId, String activityId) {
