@@ -95,18 +95,29 @@ class _CreateEditPlanForm extends StatelessWidget {
             onPressed: vm.isLoading
                 ? null
                 : () async {
+                    final messenger = ScaffoldMessenger.of(context);
                     final plan = await vm.save();
-                    if (plan != null && context.mounted) {
-                      if (vm.isEditing) {
-                        Navigator.pop(context);
-                      } else {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PlanDetailView(plan: plan),
+                    if (plan == null || !context.mounted) return;
+                    if (vm.queued) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            vm.isEditing
+                                ? "Changes saved on your phone. Others will see them when you're back online."
+                                : "Plan saved on your phone. Others will see it when you're back online.",
                           ),
-                        );
-                      }
+                        ),
+                      );
+                    }
+                    if (vm.isEditing || vm.queued) {
+                      Navigator.pop(context);
+                    } else {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PlanDetailView(plan: plan),
+                        ),
+                      );
                     }
                   },
             child: Text(vm.isEditing ? 'Save Changes' : 'Create Plan'),
