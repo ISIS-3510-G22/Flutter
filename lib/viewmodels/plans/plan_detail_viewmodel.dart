@@ -65,10 +65,6 @@ class PlanDetailViewModel extends ChangeNotifier {
     return total / participants.length;
   }
 
-  Future<void> addActivity(String activityId) {
-    return _planRepository.addActivity(plan.id, activityId);
-  }
-
   int get isActive => plan.date.compareTo(DateTime.now());
 
   Future<List<User>> invitableFriends() async {

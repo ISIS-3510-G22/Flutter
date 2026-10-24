@@ -147,10 +147,8 @@ class _PlanDetailBody extends StatelessWidget {
                               onPressed: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => EditPlanActivitiesView(
-                                    planId: vm.plan.id,
-                                    existingActivityIds: vm.plan.activityIds,
-                                  ),
+                                  builder: (_) =>
+                                      EditPlanActivitiesView(plan: vm.plan),
                                 ),
                               ),
                               icon: const Icon(Icons.add),

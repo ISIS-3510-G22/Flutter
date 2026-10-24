@@ -4,22 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/data/plan_repository.dart';
 import 'package:plansync/models/activity.dart';
+import 'package:plansync/models/pending_write.dart';
+import 'package:plansync/models/plan.dart';
+import 'package:plansync/services/pending_write_service.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 
 class EditPlanActivitiesViewModel extends ChangeNotifier {
-  EditPlanActivitiesViewModel(this._planId, this._addedIds, String uid) {
-    _subOwned = _activityRepository.ownedActivities(uid).listen((activities) {
+  EditPlanActivitiesViewModel(this._plan, this._uid) {
+    _subOwned = _activityRepository.ownedActivities(_uid).listen((activities) {
       ownedActivities = activities;
       notifyListeners();
     });
-    _subLiked = _activityRepository.likedActivities(uid).listen((activities) {
+    _subLiked = _activityRepository.likedActivities(_uid).listen((activities) {
       likedActivities = activities;
       notifyListeners();
     });
   }
 
-  final String _planId;
-  final List<String> _addedIds;
+  Plan _plan;
+  final String _uid;
   final _activityRepository = ActivityRepository();
   final _planRepository = PlanRepository();
   late final StreamSubscription<List<Activity>> _subOwned;
@@ -38,17 +41,37 @@ class EditPlanActivitiesViewModel extends ChangeNotifier {
   List<Activity> get activities =>
       currentTab == ActivitiesTab.liked ? likedActivities : ownedActivities;
 
-  bool isAdded(Activity activity) => _addedIds.contains(activity.id);
+  bool isAdded(Activity activity) => _plan.activityIds.contains(activity.id);
 
-  Future<void> toggleActivity(Activity activity) {
-    if (isAdded(activity)) {
-      _addedIds.remove(activity.id);
-      notifyListeners();
-      return _planRepository.removeActivity(_planId, activity.id);
-    }
-    _addedIds.add(activity.id);
+  Future<bool> toggleActivity(Activity activity) {
+    final adding = !isAdded(activity);
+    final before = _plan;
+    _plan = _plan.withActivityIds([
+      for (final id in _plan.activityIds)
+        if (id != activity.id) id,
+      if (adding) activity.id,
+    ]);
     notifyListeners();
-    return _planRepository.addActivity(_planId, activity.id);
+
+    return _planRepository
+        .saveLocal(_uid, _plan)
+        .then(
+          (_) => PendingWriteService.instance.submit(
+            PendingWrite(
+              kind: adding
+                  ? WriteKind.planAddActivity
+                  : WriteKind.planRemoveActivity,
+              docId: _plan.id,
+              payload: {'activityId': activity.id},
+            ),
+          ),
+        )
+        .then((sent) => !sent)
+        .catchError((_) {
+          _plan = before;
+          notifyListeners();
+          return false;
+        });
   }
 
   @override
