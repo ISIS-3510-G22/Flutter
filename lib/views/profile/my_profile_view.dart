@@ -110,28 +110,17 @@ class _MyProfileBody extends StatelessWidget {
                         ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Container(
-                        width: 96,
-                        height: 96,
-                        clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: vm.isUploadingPhoto
-                            ? const Center(child: CircularProgressIndicator())
-                            : vm.user.photoUrl == null
-                            ? placeholder
-                            : Image(
-                                image: CachedNetworkImageProvider(
-                                  vm.user.photoUrl!,
-                                ),
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => placeholder,
+                      child: vm.isUploadingPhoto
+                          ? const Center(child: CircularProgressIndicator())
+                          : vm.user.photoUrl == null
+                          ? placeholder
+                          : Image(
+                              image: CachedNetworkImageProvider(
+                                vm.user.photoUrl!,
                               ),
-                      ),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => placeholder,
+                            ),
                     ),
                   ),
                   const SizedBox(height: 16),
