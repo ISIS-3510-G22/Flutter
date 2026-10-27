@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/data/local/crew_local_store.dart';
 import 'package:plansync/models/friend_request.dart';
 import 'package:plansync/models/reimbursement_method.dart';
 import 'package:plansync/models/user.dart';
 
 class FriendRepository {
   final _db = FirebaseFirestore.instance;
+  final _local = CrewLocalStore();
   CollectionReference<Map<String, dynamic>> get _requests =>
       _db.collection('friendRequests');
   CollectionReference<Map<String, dynamic>> get _users =>
@@ -89,15 +91,20 @@ class FriendRepository {
     });
   }
 
-  Stream<List<User>> friendsForUser(String uid) {
+  Stream<List<User>> friendsForUser(String uid) async* {
+    yield await _local.friends();
+    yield* _serverFriendsForUser(uid);
+  }
+
+  Stream<List<User>> _serverFriendsForUser(String uid) {
     final sent = _requests
         .where('fromUserId', isEqualTo: uid)
         .where('status', isEqualTo: FriendRequestStatus.accepted.name)
-        .snapshots();
+        .snapshots(includeMetadataChanges: true);
     final received = _requests
         .where('toUserId', isEqualTo: uid)
         .where('status', isEqualTo: FriendRequestStatus.accepted.name)
-        .snapshots();
+        .snapshots(includeMetadataChanges: true);
 
     var sentDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
     var receivedDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
@@ -105,6 +112,7 @@ class FriendRepository {
     var receivedInitialized = false;
 
     final controller = StreamController<List<User>>();
+    var pendingEmission = Future<void>.value();
 
     Future<void> emit() async {
       final friendIds = <String>{
@@ -112,29 +120,45 @@ class FriendRepository {
         ...receivedDocs.map((d) => d.data()['fromUserId'] as String),
       };
       final docs = await Future.wait(
-        friendIds.map((id) => _users.doc(id).get()),
+        friendIds.map(
+          (id) => _users.doc(id).get(const GetOptions(source: Source.server)),
+        ),
       );
       final friends = docs
           .where((d) => d.exists)
           .map((d) => _userFromData(d.id, d.data()!))
           .toList();
-      controller.add(friends);
+      await _local.saveFriends(friends);
+      if (!controller.isClosed) controller.add(friends);
     }
 
-    final sentSub = sent.listen((snap) {
-      sentDocs = snap.docs;
-      sentInitialized = true;
-      if (sentInitialized && receivedInitialized && controller.hasListener) {
-        emit();
+    void handleServerSnapshot(
+      QuerySnapshot<Map<String, dynamic>> snapshot, {
+      required bool isSent,
+    }) {
+      if (snapshot.metadata.isFromCache) return;
+      if (isSent) {
+        sentDocs = snapshot.docs;
+        sentInitialized = true;
+      } else {
+        receivedDocs = snapshot.docs;
+        receivedInitialized = true;
       }
-    });
-    final receivedSub = received.listen((snap) {
-      receivedDocs = snap.docs;
-      receivedInitialized = true;
       if (sentInitialized && receivedInitialized && controller.hasListener) {
-        emit();
+        pendingEmission = pendingEmission
+            .then((_) => emit())
+            .catchError((Object _) {});
       }
-    });
+    }
+
+    final sentSub = sent.listen(
+      (snapshot) => handleServerSnapshot(snapshot, isSent: true),
+      onError: (Object _) {},
+    );
+    final receivedSub = received.listen(
+      (snapshot) => handleServerSnapshot(snapshot, isSent: false),
+      onError: (Object _) {},
+    );
 
     controller.onCancel = () {
       sentSub.cancel();
