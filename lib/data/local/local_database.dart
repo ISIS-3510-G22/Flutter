@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -63,6 +63,14 @@ class LocalDatabase {
     if (oldVersion < 2) {
       await _createCrewTables(db);
     }
+    // Version 1 databases get the current crew schema from _createCrewTables.
+    // Version 2 already has the crew tables and needs only these two columns.
+    if (oldVersion >= 2 && oldVersion < 3) {
+      await db.execute('ALTER TABLE people ADD COLUMN methods TEXT');
+      await db.execute(
+        'ALTER TABLE people ADD COLUMN synced_at INTEGER NOT NULL DEFAULT 0',
+      );
+    }
   }
 
   static Future<void> _createCrewTables(Database db) async {
@@ -75,7 +83,9 @@ class LocalDatabase {
         email TEXT,
         phone TEXT,
         photoUrl TEXT,
-        is_friend INTEGER NOT NULL DEFAULT 0
+        methods TEXT,
+        is_friend INTEGER NOT NULL DEFAULT 0,
+        synced_at INTEGER NOT NULL DEFAULT 0
       )
     ''');
     await db.execute('''
