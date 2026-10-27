@@ -67,17 +67,22 @@ class GroupRepository {
     return controller.stream;
   }
 
-  Future<int> memberCount(String groupId) async {
-    final result = await _members
-        .where('groupId', isEqualTo: groupId)
-        .count()
-        .get();
-    return result.count ?? 0;
-  }
+  Future<Map<String, int>> memberCounts() => _local.memberCounts();
 
   Future<List<String>> memberIdsForGroup(String groupId) async {
-    final snapshot = await _members.where('groupId', isEqualTo: groupId).get();
-    return snapshot.docs.map((doc) => doc.data()['userId'] as String).toList();
+    final localIds = await _local.memberIds(groupId);
+    try {
+      final snapshot = await _members
+          .where('groupId', isEqualTo: groupId)
+          .get(const GetOptions(source: Source.server));
+      final memberIds = snapshot.docs
+          .map((doc) => doc.data()['userId'] as String)
+          .toList();
+      await _local.saveMemberIds(groupId, memberIds);
+      return memberIds;
+    } catch (_) {
+      return localIds;
+    }
   }
 
   Future<Group> createGroup({

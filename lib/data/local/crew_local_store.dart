@@ -22,7 +22,12 @@ class CrewLocalStore {
   Future<void> saveFriends(List<User> friends) async {
     final db = await _db;
     await db.transaction((txn) async {
-      await txn.update('people', {'is_friend': 0});
+      await txn.update('people', {
+        'is_friend': 0,
+        'email': null,
+        'phone': null,
+        'methods': null,
+      });
       for (final friend in friends) {
         await _saveUser(txn, friend, isFriend: true, includePrivateFields: true);
       }
@@ -94,6 +99,24 @@ class CrewLocalStore {
     });
   }
 
+  Future<void> saveMemberIds(String groupId, List<String> memberIds) async {
+    final db = await _db;
+    await db.transaction((txn) async {
+      await txn.delete(
+        'group_members',
+        where: "groupId = ? AND status = 'member'",
+        whereArgs: [groupId],
+      );
+      for (final userId in memberIds) {
+        await txn.insert('group_members', {
+          'groupId': groupId,
+          'userId': userId,
+          'status': 'member',
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+  }
+
   Future<Map<String, int>> memberCounts() async {
     final db = await _db;
     final rows = await db.rawQuery('''
@@ -106,6 +129,18 @@ class CrewLocalStore {
       for (final row in rows)
         row['groupId'] as String: row['memberCount'] as int,
     };
+  }
+
+  Future<List<String>> memberIds(String groupId) async {
+    final db = await _db;
+    final rows = await db.query(
+      'group_members',
+      columns: ['userId'],
+      where: "groupId = ? AND status = 'member'",
+      whereArgs: [groupId],
+      orderBy: 'userId',
+    );
+    return rows.map((row) => row['userId'] as String).toList();
   }
 
   Future<List<User>> members(String groupId) async {
