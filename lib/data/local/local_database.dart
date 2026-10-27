@@ -10,7 +10,12 @@ class LocalDatabase {
 
   static Future<Database> _open() async {
     final path = join(await getDatabasesPath(), 'plansync.db');
-    return openDatabase(path, version: 1, onCreate: _onCreate);
+    return openDatabase(
+      path,
+      version: 2,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   static Future<void> _onCreate(Database db, int version) async {
@@ -45,6 +50,47 @@ class LocalDatabase {
         kind TEXT NOT NULL,
         docId TEXT NOT NULL,
         payload TEXT NOT NULL
+      )
+    ''');
+    await _createCrewTables(db);
+  }
+
+  static Future<void> _onUpgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      await _createCrewTables(db);
+    }
+  }
+
+  static Future<void> _createCrewTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE people (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        lastName TEXT NOT NULL,
+        username TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        photoUrl TEXT,
+        is_friend INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE crew_groups (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE group_members (
+        groupId TEXT NOT NULL REFERENCES crew_groups(id),
+        userId TEXT NOT NULL REFERENCES people(id),
+        status TEXT NOT NULL CHECK (status IN ('member', 'invited')),
+        PRIMARY KEY (groupId, userId)
       )
     ''');
   }
