@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 
 class EditPlanActivitiesViewModel extends ChangeNotifier {
@@ -56,7 +56,7 @@ class EditPlanActivitiesViewModel extends ChangeNotifier {
     return _planRepository
         .saveLocal(_uid, _plan)
         .then(
-          (_) => PendingWriteService.instance.submit(
+          (_) => PendingWriteRepository.instance.submit(
             PendingWrite(
               kind: adding
                   ? WriteKind.planAddActivity

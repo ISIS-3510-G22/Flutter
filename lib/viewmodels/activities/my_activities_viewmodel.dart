@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/activity_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 
 enum ActivitiesTab { liked, private, recommended }
 
@@ -13,6 +13,7 @@ class MyActivitiesViewmodel extends ChangeNotifier {
 
   StreamSubscription<List<Activity>>? _ownedSub;
   late final StreamSubscription<bool> _connectivitySub;
+  late final StreamSubscription<void> _queueSub;
   List<Activity> _owned = [];
   ActivitiesTab currentTab = ActivitiesTab.private;
 
@@ -27,12 +28,16 @@ class MyActivitiesViewmodel extends ChangeNotifier {
     _connectivitySub = ConnectivityRepository.instance.changes.listen(
       _onConnectivityChanged,
     );
-    PendingWriteService.instance.addListener(_loadSaved);
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => _loadSaved(),
+    );
 
     _loadSaved();
 
     _loadRecommended();
   }
+
+  Set<String> get pendingIds => PendingWriteRepository.instance.pendingDocIds;
 
   void _loadRecommended() {
     _recommendedSub?.cancel();
@@ -76,7 +81,7 @@ class MyActivitiesViewmodel extends ChangeNotifier {
     _likedSub?.cancel();
     _recommendedSub?.cancel();
     _connectivitySub.cancel();
-    PendingWriteService.instance.removeListener(_loadSaved);
+    _queueSub.cancel();
     super.dispose();
   }
 }

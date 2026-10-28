@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/activities/create_edit_activity_view.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
@@ -29,7 +28,7 @@ class _MyActivitiesBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = context.watch<MyActivitiesViewmodel>();
     final online = context.watch<ConnectivityViewModel>().isOnline;
-    final pending = context.watch<PendingWriteService>().pendingDocIds;
+    final pending = vm.pendingIds;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(

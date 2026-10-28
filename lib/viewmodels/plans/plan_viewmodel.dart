@@ -1,18 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/app_notification.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/plan.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 
 enum PlanTab { upcoming, pendingInvite, past }
 
 class MyPlansViewModel extends ChangeNotifier {
   MyPlansViewModel(this._userId) {
-    PendingWriteService.instance.addListener(_loadPlans);
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => _loadPlans(),
+    );
     _loadPlans();
   }
 
@@ -21,12 +23,15 @@ class MyPlansViewModel extends ChangeNotifier {
   final _userRepository = UserRepository();
 
   StreamSubscription<List<Plan>>? _sub;
+  late final StreamSubscription<void> _queueSub;
 
   bool isLoading = true;
   PlanTab selectedTab = PlanTab.upcoming;
   List<Plan> _plans = [];
 
   Map<String, String?> _photoUrls = {};
+
+  Set<String> get pendingIds => PendingWriteRepository.instance.pendingDocIds;
 
   void _loadPlans() {
     _sub?.cancel();
@@ -90,7 +95,7 @@ class MyPlansViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
-    PendingWriteService.instance.removeListener(_loadPlans);
+    _queueSub.cancel();
     super.dispose();
   }
 }

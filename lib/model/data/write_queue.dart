@@ -1,18 +1,18 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/write_queue_store.dart';
 import 'package:plansync/model/models/pending_write.dart';
 
-abstract class WriteQueue<K extends Enum> extends ChangeNotifier {
+abstract class WriteQueue<K extends Enum> {
   WriteQueue(String table, List<K> kinds)
     : _store = WriteQueueStore(table, kinds);
 
   final WriteQueueStore<K> _store;
   final _connectivity = ConnectivityRepository.instance;
   List<PendingWrite<K>> _pending = [];
+  final _changes = StreamController<void>.broadcast();
 
   bool _flushing = false;
   String? _dropped;
@@ -20,6 +20,8 @@ abstract class WriteQueue<K extends Enum> extends ChangeNotifier {
 
   Set<String> get pendingDocIds => {for (final w in _pending) w.docId};
   bool get hasPending => _pending.isNotEmpty;
+
+  Stream<void> get changes => _changes.stream;
 
   Future<void> start() async {
     if (_started) return;
@@ -38,7 +40,7 @@ abstract class WriteQueue<K extends Enum> extends ChangeNotifier {
 
   Future<void> _reload() async {
     _pending = await _store.all();
-    notifyListeners();
+    _changes.add(null);
   }
 
   Future<bool> submit(PendingWrite<K> write) {

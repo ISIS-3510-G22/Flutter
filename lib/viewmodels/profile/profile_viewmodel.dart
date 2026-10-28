@@ -1,17 +1,20 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/model/data/auth_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   ProfileViewModel(this.user) {
-    PendingWriteService.instance.addListener(refreshUser);
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => refreshUser(),
+    );
     _loadLocalPhoto();
   }
 
@@ -20,9 +23,10 @@ class ProfileViewModel extends ChangeNotifier {
   final _picker = ImagePicker();
   bool isUploadingPhoto = false;
   String? localPhotoPath;
+  late final StreamSubscription<void> _queueSub;
 
   String? get signOutWarning {
-    if (PendingWriteService.instance.hasPending) {
+    if (PendingWriteRepository.instance.hasPending) {
       return "You have changes that haven't synced yet. If you log out now, they'll be lost.";
     }
     if (!ConnectivityRepository.instance.isOnline) {
@@ -31,14 +35,17 @@ class ProfileViewModel extends ChangeNotifier {
     return null;
   }
 
+  bool get isPending =>
+      PendingWriteRepository.instance.pendingDocIds.contains(user.id);
+
   Future<void> _loadLocalPhoto() async {
     localPhotoPath = await _userRepository.pendingPhoto(user.id);
     notifyListeners();
   }
 
   Future<void> signOut() async {
-    PendingWriteService.instance.removeListener(refreshUser);
-    await PendingWriteService.instance.clear();
+    _queueSub.cancel();
+    await PendingWriteRepository.instance.clear();
     await AuthRepository().signOut();
   }
 
@@ -64,7 +71,7 @@ class ProfileViewModel extends ChangeNotifier {
     try {
       final path = await _userRepository.savePhotoLocal(user.id, picked.path);
       await FileImage(File(path)).evict();
-      final sent = await PendingWriteService.instance.submit(
+      final sent = await PendingWriteRepository.instance.submit(
         PendingWrite(
           kind: WriteKind.profilePhoto,
           docId: user.id,
@@ -83,7 +90,7 @@ class ProfileViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    PendingWriteService.instance.removeListener(refreshUser);
+    _queueSub.cancel();
     super.dispose();
   }
 }

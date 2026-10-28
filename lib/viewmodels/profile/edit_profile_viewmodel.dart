@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 
 class EditProfileViewModel extends ChangeNotifier {
   EditProfileViewModel(this.user)
@@ -42,7 +42,7 @@ class EditProfileViewModel extends ChangeNotifier {
         reimbursementMethods: reimbursementMethods,
       );
       await _userRepository.saveLocal(updated);
-      final sent = await PendingWriteService.instance.submit(
+      final sent = await PendingWriteRepository.instance.submit(
         PendingWrite(
           kind: WriteKind.profileUpdate,
           docId: user.id,
