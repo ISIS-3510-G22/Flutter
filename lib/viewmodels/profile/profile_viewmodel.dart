@@ -7,7 +7,6 @@ import 'package:plansync/model/data/auth_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
-import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/user.dart';
 
 class ProfileViewModel extends ChangeNotifier {
@@ -69,15 +68,9 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final path = await _userRepository.savePhotoLocal(user.id, picked.path);
-      await FileImage(File(path)).evict();
-      final sent = await PendingWriteRepository.instance.submit(
-        PendingWrite(
-          kind: WriteKind.profilePhoto,
-          docId: user.id,
-          payload: {'path': path},
-        ),
-      );
+      final sent = await _userRepository.savePhoto(user.id, picked.path);
+      final path = await _userRepository.pendingPhoto(user.id);
+      if (path != null) await FileImage(File(path)).evict();
       await refreshUser();
       return !sent;
     } catch (_) {
