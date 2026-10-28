@@ -49,21 +49,4 @@ class ActivityDetailViewmodel extends ChangeNotifier {
           return false;
         });
   }
-
-  Future<bool> delete() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
-    try {
-      await _repository.delete(activity.id);
-      return true;
-    } catch (_) {
-      errorMessage = 'Something went wrong. Try again.';
-      return false;
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
 }
