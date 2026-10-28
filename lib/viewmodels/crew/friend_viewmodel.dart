@@ -47,6 +47,7 @@ class FriendsViewModel extends ChangeNotifier {
             } catch (error) {
               this.error = 'Could not load requesters: $error';
             }
+            await _saveRequestsToFile();
             _requestsLoaded = true;
             _notify();
           },
@@ -61,9 +62,11 @@ class FriendsViewModel extends ChangeNotifier {
         .outgoingPendingRequestsForUser(_uid)
         .listen(
           (requests) {
+            _outgoingRequests = requests;
             _outgoingRequestUserIds = requests
                 .map((request) => request.toUserId)
                 .toSet();
+            _saveRequestsToFile();
             _outgoingLoaded = true;
             _notify();
           },
@@ -85,6 +88,7 @@ class FriendsViewModel extends ChangeNotifier {
 
   List<User> _friends = [];
   List<FriendRequest> _requests = [];
+  List<FriendRequest> _outgoingRequests = [];
   Map<String, User> _requesters = {};
   List<User> _searchResults = [];
   List<User>? _searchableUsers;
@@ -122,6 +126,20 @@ class FriendsViewModel extends ChangeNotifier {
   String? get searchMessage => _searchMessage;
 
   User? requesterFor(FriendRequest request) => _requesters[request.fromUserId];
+
+  Future<void> _saveRequestsToFile() async {
+    try {
+      await _repository.saveRequestsForUser(
+        _uid,
+        incoming: _requests,
+        requesters: _requesters,
+        outgoing: _outgoingRequests,
+      );
+    } catch (error) {
+      this.error = 'Could not save friend requests: $error';
+    }
+  }
+
   bool isBusy(String id) => _busyIds.contains(id);
   bool hasSentRequestTo(String userId) =>
       _outgoingRequestUserIds.contains(userId);
