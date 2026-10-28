@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/connectivity_service.dart';
@@ -54,6 +55,13 @@ class _MyProfileBody extends StatelessWidget {
     final vm = context.watch<ProfileViewModel>();
     final online = context.watch<ConnectivityService>().isOnline;
     final themeService = context.watch<ThemeService>();
+
+    final placeholder = Icon(
+      Icons.person_outline,
+      size: 48,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,21 +103,24 @@ class _MyProfileBody extends StatelessWidget {
                     child: Container(
                       width: 96,
                       height: 96,
+                      clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
                         color: Theme.of(
                           context,
                         ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
-                        image: vm.user.photoUrl != null
-                            ? DecorationImage(
-                                image: NetworkImage(vm.user.photoUrl!),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
                       ),
                       child: vm.isUploadingPhoto
                           ? const Center(child: CircularProgressIndicator())
-                          : null,
+                          : vm.user.photoUrl == null
+                          ? placeholder
+                          : Image(
+                              image: CachedNetworkImageProvider(
+                                vm.user.photoUrl!,
+                              ),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => placeholder,
+                            ),
                     ),
                   ),
                   const SizedBox(height: 16),

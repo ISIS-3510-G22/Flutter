@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 class AvatarRow extends StatelessWidget {
@@ -51,7 +52,9 @@ class UserAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: 16,
       backgroundColor: colors.surfaceContainerHighest,
-      foregroundImage: photoUrl == null ? null : NetworkImage(photoUrl!),
+      foregroundImage: photoUrl == null
+          ? null
+          : CachedNetworkImageProvider(photoUrl!),
       child: Icon(
         Icons.person_outline,
         size: 18,
