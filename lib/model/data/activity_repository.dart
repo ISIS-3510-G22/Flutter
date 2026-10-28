@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/activity_local_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
@@ -8,6 +9,7 @@ class ActivityRepository {
   final _activities = FirebaseFirestore.instance.collection("activities");
 
   final _local = ActivityLocalStore();
+  final _connectivity = ConnectivityRepository.instance;
 
   final _recommendationRuns = FirebaseFirestore.instance
       .collection('transferConfigs')
@@ -121,6 +123,7 @@ class ActivityRepository {
   Stream<List<Activity>> recommended(String uid) async* {
     yield await _local.list(uid, ActivityList.recommended);
     try {
+      _connectivity.ensureOnline();
       final activities = await _recommendedFromServer(
         uid,
       ).timeout(const Duration(seconds: 8));
@@ -206,6 +209,7 @@ class ActivityRepository {
 
   Future<List<Activity>> planActivities(String uid, List<String> ids) async {
     try {
+      _connectivity.ensureOnline();
       final activities = await getByIds(
         ids,
         source: Source.server,
