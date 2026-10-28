@@ -22,11 +22,16 @@ class CrewViewmodel extends ChangeNotifier {
   final Map<String, Group> _invitedGroups = {};
 
   bool _groupsLoaded = false;
+  int _groupStreamEmissions = 0;
+  bool _hasSavedGroups = false;
+  bool _hasServerGroupResult = false;
   bool _invitationsLoaded = false;
   bool _disposed = false;
   String? error;
 
   List<Group> get groups => _groups;
+  bool get areGroupsLoading => !_groupsLoaded;
+  bool get hasSavedGroups => _hasSavedGroups || _hasServerGroupResult;
   List<GroupInvitation> get invitations => _invitations;
   bool get isLoading => !(_groupsLoaded && _invitationsLoaded);
 
@@ -66,6 +71,13 @@ class CrewViewmodel extends ChangeNotifier {
         .listen(
           (groups) async {
             _groups = groups;
+            if (_groupStreamEmissions++ == 0) {
+              _hasSavedGroups =
+                  _hasSavedGroups || await _repository.hasSavedGroups();
+            } else {
+              _hasServerGroupResult = true;
+              _hasSavedGroups = true;
+            }
             for (final group in groups) {
               _memberCounts.remove(group.id);
             }

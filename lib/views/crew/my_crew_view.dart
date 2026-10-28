@@ -139,6 +139,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
   Widget build(BuildContext context) {
     final vm = context.watch<CrewViewmodel>();
     final colors = Theme.of(context).colorScheme;
+    final online = context.watch<ConnectivityService>().isOnline;
 
     return ColoredBox(
       color: colors.surface,
@@ -165,15 +166,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
           ),
           Expanded(
             child: _showGroups
-                ? vm.isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : vm.error != null
-                      ? Center(child: Text(vm.error!))
-                      : _GroupsList(
-                          groups: vm.groups,
-                          memberCountFor: vm.memberCountFor,
-                          onGroupTap: (group) => _openGroup(vm, group),
-                        )
+                ? _groupsContent(vm, online)
                 : const _FriendsList(),
           ),
           _showGroups
@@ -267,6 +260,26 @@ class _MyCrewContentState extends State<_MyCrewContent> {
                 ),
         ],
       ),
+    );
+  }
+
+  Widget _groupsContent(CrewViewmodel vm, bool online) {
+    if (vm.areGroupsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (vm.groups.isEmpty && !vm.hasSavedGroups) {
+      return Center(
+        child: online
+            ? const CircularProgressIndicator()
+            : const Text('Connect to load your crew'),
+      );
+    }
+
+    return _GroupsList(
+      groups: vm.groups,
+      memberCountFor: vm.memberCountFor,
+      onGroupTap: (group) => _openGroup(vm, group),
     );
   }
 }
