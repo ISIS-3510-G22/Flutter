@@ -96,6 +96,8 @@ class FriendRepository {
     yield* _serverFriendsForUser(uid);
   }
 
+  Future<bool> hasSavedFriends() => _local.hasSavedFriends();
+
   Stream<List<User>> _serverFriendsForUser(String uid) {
     final sent = _requests
         .where('fromUserId', isEqualTo: uid)

@@ -16,6 +16,7 @@ import 'package:plansync/views/widgets/crew_group_card.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:plansync/views/widgets/view_header.dart';
 import 'package:plansync/viewmodels/nearby_friends_viewmodel.dart';
+import 'package:plansync/services/connectivity_service.dart';
 import 'package:provider/provider.dart';
 
 class MyCrewView extends StatelessWidget {
@@ -319,8 +320,17 @@ class _FriendsList extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = context.watch<FriendsViewModel>();
 
-    if (vm.isLoading) {
+    if (vm.areFriendsLoading) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (vm.friends.isEmpty && !vm.hasSavedFriends) {
+      final online = context.watch<ConnectivityService>().isOnline;
+      return Center(
+        child: online
+            ? const CircularProgressIndicator()
+            : const Text('Connect to load your crew'),
+      );
     }
 
     if (vm.error != null) {
@@ -351,7 +361,7 @@ class _FriendsList extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.only(top: 32),
             child: Center(
-              child: Text('Add friends to start building your crew.'),
+              child: Text('No friends yet'),
             ),
           )
         else

@@ -11,8 +11,15 @@ class FriendsViewModel extends ChangeNotifier {
     _friendsSub = _repository
         .friendsForUser(_uid)
         .listen(
-          (friends) {
+          (friends) async {
             _friends = friends;
+            if (_friendsStreamEmissions++ == 0) {
+              _hasSavedFriends =
+                  _hasSavedFriends || await _repository.hasSavedFriends();
+            } else {
+              _hasServerFriendResult = true;
+              _hasSavedFriends = true;
+            }
             _friendsLoaded = true;
             _notify();
           },
@@ -83,6 +90,9 @@ class FriendsViewModel extends ChangeNotifier {
   final Set<String> _busyIds = {};
 
   bool _friendsLoaded = false;
+  int _friendsStreamEmissions = 0;
+  bool _hasSavedFriends = false;
+  bool _hasServerFriendResult = false;
   bool _requestsLoaded = false;
   bool _outgoingLoaded = false;
   bool _searching = false;
@@ -91,6 +101,8 @@ class FriendsViewModel extends ChangeNotifier {
   String? error;
 
   List<User> get friends => _friends;
+  bool get hasSavedFriends => _hasSavedFriends || _hasServerFriendResult;
+  bool get areFriendsLoading => !_friendsLoaded;
   List<User> get searchResults => _searchResults;
   List<FriendRequest> get pendingRequests => _requests;
   bool get isLoading => !_friendsLoaded || !_requestsLoaded || !_outgoingLoaded;

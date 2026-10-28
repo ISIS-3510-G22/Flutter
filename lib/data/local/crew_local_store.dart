@@ -19,6 +19,18 @@ class CrewLocalStore {
     return rows.map(_userFromRow).toList();
   }
 
+  Future<bool> hasSavedFriends() async {
+    final db = await _db;
+    final rows = await db.query(
+      'crew_cache_state',
+      columns: ['value'],
+      where: 'cacheKey = ?',
+      whereArgs: ['friends_saved'],
+      limit: 1,
+    );
+    return rows.isNotEmpty && rows.first['value'] == 1;
+  }
+
   Future<void> saveFriends(List<User> friends) async {
     final db = await _db;
     await db.transaction((txn) async {
@@ -31,6 +43,11 @@ class CrewLocalStore {
       for (final friend in friends) {
         await _saveUser(txn, friend, isFriend: true, includePrivateFields: true);
       }
+      await txn.insert(
+        'crew_cache_state',
+        {'cacheKey': 'friends_saved', 'value': 1},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     });
   }
 

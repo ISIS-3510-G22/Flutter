@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -71,6 +71,16 @@ class LocalDatabase {
         'ALTER TABLE people ADD COLUMN synced_at INTEGER NOT NULL DEFAULT 0',
       );
     }
+    if (oldVersion < 4) {
+      await _createCrewCacheState(db);
+      await db.execute('''
+        INSERT OR IGNORE INTO crew_cache_state (cacheKey, value)
+        SELECT 'friends_saved', CASE
+          WHEN EXISTS (SELECT 1 FROM people WHERE is_friend = 1) THEN 1
+          ELSE 0
+        END
+      ''');
+    }
   }
 
   static Future<void> _createCrewTables(Database db) async {
@@ -101,6 +111,16 @@ class LocalDatabase {
         userId TEXT NOT NULL REFERENCES people(id),
         status TEXT NOT NULL CHECK (status IN ('member', 'invited')),
         PRIMARY KEY (groupId, userId)
+      )
+    ''');
+    await _createCrewCacheState(db);
+  }
+
+  static Future<void> _createCrewCacheState(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS crew_cache_state (
+        cacheKey TEXT PRIMARY KEY,
+        value INTEGER NOT NULL
       )
     ''');
   }
