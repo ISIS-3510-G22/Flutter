@@ -12,9 +12,13 @@ import 'package:plansync/models/invitations.dart';
 import 'package:plansync/models/invite_suggestion.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/connectivity_service.dart';
+import 'package:plansync/services/pending_write_service.dart';
 
 class PlanDetailViewModel extends ChangeNotifier {
   PlanDetailViewModel(this.plan, this._uid) {
+    PendingWriteService.instance.addListener(_loadSaved);
+    _onPlanUpdate(plan);
     _sub = _planRepository.planById(plan.id).listen(_onPlanUpdate);
     loadSuggestions();
   }
@@ -37,6 +41,8 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   RsvpStatus? get myRsvp => plan.rsvpFor(_uid);
 
+  Future<void> refresh() => _onPlanUpdate(plan);
+
   List<User> get participants =>
       invitees.where((u) => plan.rsvpFor(u.id) == RsvpStatus.going).toList();
 
@@ -45,14 +51,23 @@ class PlanDetailViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _loadSaved() async {
+    final saved = await _planRepository.savedPlan(_uid, plan.id);
+    if (saved != null) _onPlanUpdate(saved);
+  }
+
   Future<void> _onPlanUpdate(Plan updated) async {
     plan = updated;
     final userIds = updated.invitations.map((i) => i.userId).toList();
-    activities = await _activityRepository.getByIds(updated.activityIds);
-    if (!setEquals(tags, updated.tags.toSet())) {
+    activities = await _activityRepository.planActivities(
+      _uid,
+      updated.activityIds,
+    );
+    if (ConnectivityService.instance.isOnline &&
+        !setEquals(tags, updated.tags.toSet())) {
       _planRepository.updateTags(updated.id, tags);
     }
-    invitees = await _userRepository.getUsers(userIds);
+    invitees = await _userRepository.planPeople(updated.id, userIds);
     isLoading = false;
     notifyListeners();
   }
@@ -60,9 +75,10 @@ class PlanDetailViewModel extends ChangeNotifier {
   Set<String> get tags => activities.expand((a) => a.tags).toSet();
 
   double get estimatedCostPerPerson {
-    if (activities.isEmpty || participants.isEmpty) return 0;
+    final going = plan.goingIds.length;
+    if (activities.isEmpty || going == 0) return 0;
     final total = activities.fold<double>(0, (sum, a) => sum + a.expectedPrice);
-    return total / participants.length;
+    return total / going;
   }
 
   int get isActive => plan.date.compareTo(DateTime.now());
@@ -78,11 +94,13 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   Future<bool> respondRsvp(bool going) async {
     try {
-      await _planRepository.setRsvp(
-        plan.id,
-        _uid,
-        going ? RsvpStatus.going : RsvpStatus.notGoing,
-      );
+      await _planRepository
+          .setRsvp(
+            plan.id,
+            _uid,
+            going ? RsvpStatus.going : RsvpStatus.notGoing,
+          )
+          .timeout(const Duration(seconds: 8));
       return true;
     } catch (_) {
       return false;
@@ -131,6 +149,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub.cancel();
+    PendingWriteService.instance.removeListener(_loadSaved);
     super.dispose();
   }
 }

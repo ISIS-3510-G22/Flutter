@@ -108,4 +108,15 @@ class ActivityLocalStore {
       );
     }
   }
+
+  Future<List<Activity>> byIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+    final db = await LocalDatabase.instance;
+    final rows = await db.query(
+      'activities',
+      where: 'id IN (${List.filled(ids.length, '?').join(', ')})',
+      whereArgs: ids,
+    );
+    return rows.map(_fromRow).toList();
+  }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/data/review_repository.dart';
+import 'package:plansync/models/pending_write.dart';
 import 'package:plansync/models/review.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/pending_write_service.dart';
 
 class LeaveReviewViewModel extends ChangeNotifier {
   LeaveReviewViewModel(this._planId, this._user) {
@@ -18,6 +20,7 @@ class LeaveReviewViewModel extends ChangeNotifier {
   final commentController = TextEditingController();
   int rating = 0;
   String? errorMessage;
+  bool queued = false;
 
   Future<void> _loadExisting() async {
     try {
@@ -52,19 +55,26 @@ class LeaveReviewViewModel extends ChangeNotifier {
 
     isLoading = true;
     errorMessage = null;
+
     notifyListeners();
 
     try {
-      await _repository.submit(
-        _planId,
-        Review(
-          userId: _user.id,
-          userName: '${_user.name} ${_user.lastName}',
-          rating: rating,
-          comment: commentController.text.trim(),
-          createdAt: DateTime.now(),
+      final review = Review(
+        userId: _user.id,
+        userName: '${_user.name} ${_user.lastName}',
+        rating: rating,
+        comment: commentController.text.trim(),
+        createdAt: DateTime.now(),
+      );
+      await _repository.saveLocal(_planId, review);
+      final sent = await PendingWriteService.instance.submit(
+        PendingWrite(
+          kind: WriteKind.reviewSubmit,
+          docId: _planId,
+          payload: review.toJson(),
         ),
       );
+      queued = !sent;
       return true;
     } catch (_) {
       errorMessage = 'Something went wrong. Try again.';
