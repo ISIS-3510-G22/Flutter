@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:isolate';
 
 import 'package:flutter/material.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/friend_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/logic/user_search.dart';
 import 'package:plansync/model/models/friend_request.dart';
 import 'package:plansync/model/models/user.dart';
 
@@ -96,6 +99,8 @@ class FriendsViewModel extends ChangeNotifier {
   bool _requestsLoaded = false;
   bool _outgoingLoaded = false;
   bool _searching = false;
+  bool _searchDirectoryNeverStored = false;
+  String? _searchMessage;
   int _searchGeneration = 0;
   bool _disposed = false;
   String? error;
@@ -113,6 +118,8 @@ class FriendsViewModel extends ChangeNotifier {
       ? error
       : null;
   bool get isSearching => _searching;
+  bool get searchDirectoryNeverStored => _searchDirectoryNeverStored;
+  String? get searchMessage => _searchMessage;
 
   User? requesterFor(FriendRequest request) => _requesters[request.fromUserId];
   bool isBusy(String id) => _busyIds.contains(id);
@@ -129,6 +136,8 @@ class FriendsViewModel extends ChangeNotifier {
     if (normalized.isEmpty) {
       _searchResults = [];
       _searching = false;
+      _searchMessage = null;
+      _searchDirectoryNeverStored = false;
       error = null;
       _notify();
       return;
@@ -136,23 +145,60 @@ class FriendsViewModel extends ChangeNotifier {
 
     _searching = true;
     error = null;
+    _searchMessage = null;
+    _searchDirectoryNeverStored = false;
     _notify();
     try {
-      final users = _searchableUsers ??= await (_searchableUsersFuture ??=
-          _userRepository.getUsersForSearch(excludingId: _uid));
+      final bool online = ConnectivityRepository.instance.isOnline;
+      if (!online) {
+        final hasSavedDirectory = await _userRepository
+            .hasSavedSearchDirectory();
+        if (generation != _searchGeneration) return;
+        if (!hasSavedDirectory) {
+          _searchDirectoryNeverStored = true;
+          _searchMessage = 'Search needs a connection the first time.';
+          _searchResults = [];
+          return;
+        }
+        final users = await _userRepository.storedSearchDirectory();
+        _searchableUsers = users;
+        _searchMessage =
+            'Offline: searching people saved on your phone. New users won\'t show up.';
+        if (generation != _searchGeneration) return;
+        _searchResults = await Isolate.run(() => rankUsers(users, normalized));
+      } else {
+        final users = _searchableUsers ??= await (_searchableUsersFuture ??=
+            _userRepository.getUsersForSearch(excludingId: _uid));
+        if (generation != _searchGeneration) return;
+        _searchResults = await Isolate.run(() => rankUsers(users, normalized));
+      }
       if (generation != _searchGeneration) return;
-      _searchResults = users.where((user) {
-        final fullName = '${user.name} ${user.lastName}'.trim().toLowerCase();
-        return user.name.toLowerCase().contains(normalized) ||
-            user.lastName.toLowerCase().contains(normalized) ||
-            fullName.contains(normalized) ||
-            user.username.toLowerCase().contains(normalized);
-      }).toList();
-    } catch (error) {
+    } catch (_) {
       if (generation != _searchGeneration) return;
-      if (_searchableUsers == null) _searchableUsersFuture = null;
-      this.error = 'Could not search users: $error';
-      _searchResults = [];
+      _searchableUsersFuture = null;
+      try {
+        final hasSavedDirectory = await _userRepository
+            .hasSavedSearchDirectory();
+        if (generation != _searchGeneration) return;
+        if (!hasSavedDirectory) {
+          _searchDirectoryNeverStored = true;
+          _searchMessage = 'Search needs a connection the first time.';
+          _searchResults = [];
+        } else {
+          final users = await _userRepository.storedSearchDirectory();
+          if (generation != _searchGeneration) return;
+          _searchableUsers = users;
+          _searchResults = await Isolate.run(
+            () => rankUsers(users, normalized),
+          );
+          _searchMessage =
+              'Offline: searching people saved on your phone. New users won\'t show up.';
+        }
+      } catch (localError) {
+        if (generation != _searchGeneration) return;
+        this.error = 'Could not search users: $localError';
+        _searchResults = [];
+      }
     } finally {
       if (generation != _searchGeneration) return;
       _searching = false;

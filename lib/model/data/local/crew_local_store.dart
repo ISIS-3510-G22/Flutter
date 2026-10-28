@@ -76,6 +76,18 @@ class CrewLocalStore {
     return rows.map(_userFromRow).toList();
   }
 
+  Future<bool> hasSavedDirectory() async {
+    final db = await _db;
+    final rows = await db.query(
+      'crew_cache_state',
+      columns: ['value'],
+      where: 'cacheKey = ?',
+      whereArgs: ['user_directory_saved'],
+      limit: 1,
+    );
+    return rows.isNotEmpty && rows.first['value'] == 1;
+  }
+
   Future<void> saveDirectory(List<User> users) async {
     final db = await _db;
     await db.transaction((txn) async {
@@ -87,6 +99,10 @@ class CrewLocalStore {
           includePrivateFields: false,
         );
       }
+      await txn.insert('crew_cache_state', {
+        'cacheKey': 'user_directory_saved',
+        'value': 1,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     });
   }
 
