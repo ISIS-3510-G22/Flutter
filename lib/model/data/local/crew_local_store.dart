@@ -76,6 +76,37 @@ class CrewLocalStore {
     return rows.map(_userFromRow).toList();
   }
 
+  Future<List<User>> peopleByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+    final db = await _db;
+    final placeholders = List.filled(ids.length, '?').join(', ');
+    final rows = await db.rawQuery(
+      'SELECT * FROM people WHERE id IN ($placeholders)',
+      ids,
+    );
+    return rows.map(_userFromRow).toList();
+  }
+
+  Future<List<Group>> groupsByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+    final db = await _db;
+    final placeholders = List.filled(ids.length, '?').join(', ');
+    final rows = await db.rawQuery(
+      'SELECT id, name, description FROM crew_groups '
+      'WHERE id IN ($placeholders)',
+      ids,
+    );
+    return rows
+        .map(
+          (row) => Group(
+            id: row['id'] as String,
+            name: row['name'] as String,
+            description: row['description'] as String,
+          ),
+        )
+        .toList();
+  }
+
   Future<bool> hasSavedDirectory() async {
     final db = await _db;
     final rows = await db.query(

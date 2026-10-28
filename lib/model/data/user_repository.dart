@@ -220,4 +220,7 @@ class UserRepository {
   Future<bool> hasSavedSearchDirectory() => _crewLocalStore.hasSavedDirectory();
 
   Future<List<User>> storedSearchDirectory() => _crewLocalStore.directory();
+
+  Future<List<User>> cachedUsersByIds(List<String> ids) =>
+      _crewLocalStore.peopleByIds(ids);
 }

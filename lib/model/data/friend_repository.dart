@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/crew_local_store.dart';
+import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/models/friend_request.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
@@ -10,6 +12,8 @@ import 'package:plansync/model/models/user.dart';
 class FriendRepository {
   final _db = FirebaseFirestore.instance;
   final _local = CrewLocalStore();
+  final _files = JsonFileStore();
+  Future<void> _requestFileWrite = Future<void>.value();
   CollectionReference<Map<String, dynamic>> get _requests =>
       _db.collection('friendRequests');
   CollectionReference<Map<String, dynamic>> get _users =>
@@ -29,6 +33,44 @@ class FriendRepository {
     'fromUserId': request.fromUserId,
     'toUserId': request.toUserId,
     'sentOn': Timestamp.fromDate(request.sentOn),
+    'status': request.status.name,
+  };
+
+  Future<void> saveRequestsForUser(
+    String uid, {
+    required List<FriendRequest> incoming,
+    required Map<String, User> requesters,
+    required List<FriendRequest> outgoing,
+  }) {
+    final contents = jsonEncode({
+      'incoming': incoming.map((request) {
+        final requester = requesters[request.fromUserId];
+        return {
+          ..._requestToJson(request),
+          'requester': requester == null
+              ? null
+              : {
+                  'id': requester.id,
+                  'name': requester.name,
+                  'lastName': requester.lastName,
+                  'username': requester.username,
+                  'photoUrl': requester.photoUrl,
+                },
+        };
+      }).toList(),
+      'outgoing': outgoing.map(_requestToJson).toList(),
+    });
+    _requestFileWrite = _requestFileWrite
+        .catchError((Object _) {})
+        .then((_) => _files.write('friend_requests_$uid.json', contents));
+    return _requestFileWrite;
+  }
+
+  Map<String, dynamic> _requestToJson(FriendRequest request) => {
+    'id': request.id,
+    'fromUserId': request.fromUserId,
+    'toUserId': request.toUserId,
+    'sentOn': request.sentOn.toIso8601String(),
     'status': request.status.name,
   };
 

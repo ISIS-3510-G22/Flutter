@@ -343,6 +343,10 @@ class _FriendPickerState extends State<_FriendPicker> {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (vm.suggestionsNeedConnection) ...[
+              const Text('Suggestions need a connection.'),
+              const SizedBox(height: 12),
+            ],
             if (showSuggested) ...[
               Text(
                 'SUGGESTED',

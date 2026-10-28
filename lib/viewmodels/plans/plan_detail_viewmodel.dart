@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/friend_repository.dart';
 import 'package:plansync/model/data/group_repository.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
@@ -11,6 +13,7 @@ import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/invite_suggestion.dart';
+import 'package:plansync/model/models/invite_suggestion_ids.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/user.dart';
 
@@ -110,6 +113,7 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   List<InviteSuggestion> _allSuggestedPeople = [];
   List<Group> suggestedGroups = [];
+  bool suggestionsNeedConnection = false;
 
   List<InviteSuggestion> get suggestedPeople {
     final invited = plan.invitations.map((i) => i.userId).toSet();
@@ -120,9 +124,46 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   Future<void> loadSuggestions() async {
     try {
-      final ids = await _planRepository.inviteSuggestions(_uid);
-      final users = await _userRepository.getUsers(ids.userIds);
-      final groups = await _groupRepository.groupsByIds(ids.groupIds);
+      final online = ConnectivityRepository.instance.isOnline;
+      var useLocalData = !online;
+      InviteSuggestionIds? ids;
+      if (online) {
+        try {
+          ids = await _planRepository.inviteSuggestions(_uid);
+          await _planRepository.saveInviteSuggestions(_uid, ids);
+        } catch (_) {
+          ids = await _planRepository.cachedInviteSuggestions(_uid);
+          useLocalData = true;
+        }
+      } else {
+        ids = await _planRepository.cachedInviteSuggestions(_uid);
+      }
+
+      if (ids == null) {
+        suggestionsNeedConnection = true;
+        _allSuggestedPeople = [];
+        suggestedGroups = [];
+        notifyListeners();
+        return;
+      }
+
+      suggestionsNeedConnection = false;
+      List<User> users;
+      if (useLocalData) {
+        users = await _userRepository.cachedUsersByIds(ids.userIds);
+      } else {
+        try {
+          users = await _userRepository.getUsers(
+            ids.userIds,
+            source: Source.server,
+          );
+        } catch (_) {
+          users = await _userRepository.cachedUsersByIds(ids.userIds);
+        }
+      }
+      final groups = useLocalData
+          ? await _groupRepository.cachedGroupsByIds(ids.groupIds)
+          : await _groupRepository.groupsByIds(ids.groupIds);
       final userById = {for (final u in users) u.id: u};
 
       _allSuggestedPeople = [
@@ -130,14 +171,18 @@ class PlanDetailViewModel extends ChangeNotifier {
           if (userById[ids.userIds[i]] != null)
             InviteSuggestion(
               userById[ids.userIds[i]]!,
-              ids.invitesSent[i],
-              ids.sharedPlans[i],
+              i < ids.invitesSent.length ? ids.invitesSent[i] : 0,
+              i < ids.sharedPlans.length ? ids.sharedPlans[i] : 0,
             ),
       ];
       suggestedGroups = groups;
       notifyListeners();
     } catch (e) {
       debugPrint('Invite suggestions failed: $e');
+      suggestionsNeedConnection = true;
+      _allSuggestedPeople = [];
+      suggestedGroups = [];
+      notifyListeners();
     }
   }
 
