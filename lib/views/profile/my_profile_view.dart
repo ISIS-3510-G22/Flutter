@@ -1,11 +1,17 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
-import 'package:plansync/services/auth_service.dart';
+import 'package:plansync/services/connectivity_service.dart';
+import 'package:plansync/services/pending_write_service.dart';
 import 'package:plansync/services/theme_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
 import 'package:plansync/views/profile/edit_profile_view.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/view_header.dart';
+import 'package:plansync/views/widgets/waiting_to_sync.dart';
 import 'package:provider/provider.dart';
 
 class MyProfileView extends StatelessWidget {
@@ -23,10 +29,47 @@ class MyProfileView extends StatelessWidget {
 class _MyProfileBody extends StatelessWidget {
   const _MyProfileBody();
 
+  Future<void> _signOut(BuildContext context, ProfileViewModel vm) async {
+    final warning = vm.signOutWarning;
+    if (warning != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Log out?'),
+          content: Text(warning),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Log out'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    await vm.signOut();
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ProfileViewModel>();
+    final online = context.watch<ConnectivityService>().isOnline;
+    final pending = context.watch<PendingWriteService>().pendingDocIds.contains(
+      vm.user.id,
+    );
     final themeService = context.watch<ThemeService>();
+    final colors = Theme.of(context).colorScheme;
+
+    final placeholder = Icon(
+      Icons.person_outline,
+      size: 48,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,6 +91,10 @@ class _MyProfileBody extends StatelessWidget {
               const SizedBox(width: 4),
             ],
           ),
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing your saved profile.",
+            ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -58,29 +105,78 @@ class _MyProfileBody extends StatelessWidget {
                     onTap: vm.isUploadingPhoto
                         ? null
                         : () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             final source = await showImageSourceSheet(context);
-                            if (source != null) vm.pickAndUploadPhoto(source);
+                            if (source == null) return;
+                            final queued = await vm.pickAndUploadPhoto(source);
+                            if (!queued) return;
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Photo saved on your phone. Friends will see it when you're back online.",
+                                ),
+                              ),
+                            );
                           },
-                    child: Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16),
-                        image: vm.user.photoUrl != null
-                            ? DecorationImage(
-                                image: NetworkImage(vm.user.photoUrl!),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: vm.isUploadingPhoto
-                          ? const Center(child: CircularProgressIndicator())
-                          : null,
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 96,
+                          height: 96,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: vm.isUploadingPhoto
+                              ? const Center(child: CircularProgressIndicator())
+                              : vm.localPhotoPath != null
+                              ? Image.file(
+                                  File(vm.localPhotoPath!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => placeholder,
+                                )
+                              : vm.user.photoUrl == null
+                              ? placeholder
+                              : Image(
+                                  image: CachedNetworkImageProvider(
+                                    vm.user.photoUrl!,
+                                  ),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => placeholder,
+                                ),
+                        ),
+                        if (!vm.isUploadingPhoto)
+                          Positioned(
+                            right: 4,
+                            bottom: 4,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: colors.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: colors.surface,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.photo_camera_outlined,
+                                size: 14,
+                                color: colors.onPrimary,
+                                semanticLabel: 'Change photo',
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+                  if (pending) ...[
+                    const SizedBox(height: 8),
+                    const WaitingToSync(),
+                  ],
                   const SizedBox(height: 16),
                   Text(
                     '${vm.user.name} ${vm.user.lastName}',
@@ -122,7 +218,7 @@ class _MyProfileBody extends StatelessWidget {
                     width: double.infinity,
                     height: 52,
                     child: FilledButton(
-                      onPressed: AuthService().signOut,
+                      onPressed: () => _signOut(context, vm),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

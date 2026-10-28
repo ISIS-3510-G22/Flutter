@@ -14,9 +14,7 @@ class AuthService {
         .withInitialTimeout(const Duration(seconds: 20))
         .asyncMap((fbUser) async {
           if (fbUser == null) return null;
-          return _userRepository
-              .getUser(fbUser.uid)
-              .timeout(const Duration(seconds: 20));
+          return _userRepository.currentUser(fbUser.uid);
         });
   }
 

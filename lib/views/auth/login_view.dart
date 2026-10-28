@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/viewmodels/login_viewmodel.dart';
 import 'package:plansync/views/auth/reset_password_view.dart';
 import 'package:plansync/views/auth/sign_up_view.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class LoginView extends StatelessWidget {
@@ -22,6 +24,7 @@ class _LoginForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<LoginViewModel>();
+    final online = context.watch<ConnectivityService>().isOnline;
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -36,6 +39,11 @@ class _LoginForm extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Image.asset('assets/images/banner_login.png'),
+                  if (!online)
+                    const OfflineBanner(
+                      message:
+                          'Signing in needs a connection. Your email will stay here.',
+                    ),
                   Padding(
                     padding: const EdgeInsets.all(24),
                     child: Column(
@@ -102,7 +110,9 @@ class _LoginForm extends StatelessWidget {
                           width: double.infinity,
                           height: 52,
                           child: FilledButton(
-                            onPressed: vm.isLoading ? null : vm.login,
+                            onPressed: vm.isLoading || !online
+                                ? null
+                                : vm.login,
                             child: vm.isLoading
                                 ? const SizedBox(
                                     width: 24,

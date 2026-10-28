@@ -1,9 +1,104 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:plansync/data/local/json_file_store.dart';
 import 'package:plansync/models/reimbursement_method.dart';
 import 'package:plansync/models/user.dart';
 
 class UserRepository {
   final _users = FirebaseFirestore.instance.collection('users');
+
+  final _files = JsonFileStore();
+
+  Future<File> _photoFile(String uid) async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File(join(dir.path, 'uploads', 'profile_$uid.jpg'));
+  }
+
+  Future<String?> pendingPhoto(String uid) async {
+    final file = await _photoFile(uid);
+    return await file.exists() ? file.path : null;
+  }
+
+  Future<String> savePhotoLocal(String uid, String pickedPath) async {
+    final file = await _photoFile(uid);
+    await file.parent.create(recursive: true);
+    await File(pickedPath).copy(file.path);
+    return file.path;
+  }
+
+  String _meFile(String uid) => 'me_$uid.json';
+
+  Future<void> saveLocal(User user) =>
+      _files.write(_meFile(user.id), jsonEncode(user.toJson()));
+
+  Future<User?> _readMe(String uid) async {
+    final text = await _files.read(_meFile(uid));
+    if (text == null) return null;
+    try {
+      return User.fromJson(jsonDecode(text) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<User?> currentUser(String uid) async {
+    try {
+      final doc = await _users
+          .doc(uid)
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 8));
+      if (!doc.exists) return null;
+      final user = _getUserFromDoc(uid, doc.data()!);
+      await saveLocal(user);
+      return user;
+    } catch (_) {
+      final saved = await _readMe(uid);
+      if (saved == null) rethrow;
+      return saved;
+    }
+  }
+
+  Future<List<User>> _readPeople(String filename) async {
+    final text = await _files.read(filename);
+    if (text == null) return [];
+    try {
+      return [
+        for (final data in jsonDecode(text) as List)
+          _getUserFromDoc(data['id'] as String, data as Map<String, dynamic>),
+      ];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<User>> planPeople(String planId, List<String> ids) async {
+    final file = 'plan_${planId}_people.json';
+    try {
+      final users = await getUsers(
+        ids,
+        source: Source.server,
+      ).timeout(const Duration(seconds: 8));
+      await _files.write(
+        file,
+        jsonEncode([
+          for (final u in users)
+            {
+              'id': u.id,
+              'name': u.name,
+              'lastName': u.lastName,
+              'photoUrl': u.photoUrl,
+            },
+        ]),
+      );
+      return users;
+    } catch (_) {
+      return _readPeople(file);
+    }
+  }
 
   User _getUserFromDoc(String docId, Map<String, dynamic> data) {
     return User(
@@ -48,19 +143,13 @@ class UserRepository {
     });
   }
 
-  Future<void> updateProfile(
-    String userId, {
-    required String name,
-    required String lastName,
-    required String phone,
-    required List<ReimbursementMethod> reimbursementMethods,
-  }) {
-    return _users.doc(userId).update({
-      'name': name,
-      'lastName': lastName,
-      'phone': phone,
-      'reimbursementMethods': reimbursementMethods
-          .map((m) => {'id': m.id, 'type': m.type, 'account': m.account})
+  Future<void> updateProfile(User user) {
+    return _users.doc(user.id).update({
+      'name': user.name,
+      'lastName': user.lastName,
+      'phone': user.phone,
+      'reimbursementMethods': user.reimbursementMethods
+          .map((m) => m.toJson())
           .toList(),
     });
   }
@@ -69,11 +158,14 @@ class UserRepository {
     return _users.doc(userId).update({'photoUrl': photoUrl});
   }
 
-  Future<List<User>> getUsers(List<String> ids) async {
+  Future<List<User>> getUsers(
+    List<String> ids, {
+    Source source = Source.serverAndCache,
+  }) async {
     if (ids.isEmpty) return [];
     final snapshot = await _users
         .where(FieldPath.documentId, whereIn: ids)
-        .get();
+        .get(GetOptions(source: source));
     return snapshot.docs
         .map((doc) => _getUserFromDoc(doc.id, doc.data()))
         .toList();
