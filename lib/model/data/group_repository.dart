@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/crew_local_store.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/group_invitation.dart';
@@ -32,6 +33,7 @@ class GroupRepository {
     var pendingEmission = Future<void>.value();
 
     Future<void> emit(QuerySnapshot<Map<String, dynamic>> snapshot) async {
+      ConnectivityRepository.instance.ensureOnline();
       final groupIds = snapshot.docs
           .map((doc) => doc.data()['groupId'] as String)
           .toSet();
@@ -74,6 +76,7 @@ class GroupRepository {
   Future<List<String>> memberIdsForGroup(String groupId) async {
     final localIds = await _local.memberIds(groupId);
     try {
+      ConnectivityRepository.instance.ensureOnline();
       final snapshot = await _members
           .where('groupId', isEqualTo: groupId)
           .get(const GetOptions(source: Source.server));
