@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/activities/add_to_plan_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/formatters/date_format.dart';
@@ -33,7 +33,7 @@ class _AddToPlanBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<AddToPlanViewModel>();
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 

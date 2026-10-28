@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/leave_review_viewmodel.dart';
 import 'package:plansync/views/formatters/date_format.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
@@ -31,7 +31,7 @@ class _LeaveReviewBody extends StatelessWidget {
     final vm = context.watch<LeaveReviewViewModel>();
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Leave a Review')),

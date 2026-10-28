@@ -4,14 +4,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:plansync/firebase_options.dart';
 import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
 import 'package:plansync/model/services/notification_service.dart';
 import 'package:plansync/model/services/pending_write_service.dart';
 import 'package:plansync/model/services/theme_service.dart';
 import 'package:plansync/model/services/write_queue.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/views/auth/login_view.dart';
 import 'package:plansync/views/crew/friend_request_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
@@ -27,14 +28,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final savedTheme = await ThemeService.loadSaved();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await ConnectivityService.instance.init();
+  await ConnectivityRepository.instance.init();
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
           create: (_) => ThemeService()..setPreference(savedTheme),
         ),
-        ChangeNotifierProvider.value(value: ConnectivityService.instance),
+        ChangeNotifierProvider(create: (_) => ConnectivityViewModel()),
         ChangeNotifierProvider.value(value: PendingWriteService.instance),
       ],
       child: const AuthGate(),
@@ -60,11 +61,14 @@ class _AuthGateState extends State<AuthGate> {
 
   bool _loadFailed = false;
 
+  late final ConnectivityViewModel _connectivity;
+
   @override
   void initState() {
     super.initState();
     _listenForDropped(PendingWriteService.instance);
-    ConnectivityService.instance.addListener(_retryWhenOnline);
+    _connectivity = context.read<ConnectivityViewModel>()
+      ..addListener(_retryWhenOnline);
     _authStateChanges = _authRepository.authStateChanges;
     unawaited(
       _notificationService.initialize(onTap: _handleNotificationTap).catchError(
@@ -87,7 +91,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   void _retryWhenOnline() {
-    if (_loadFailed && ConnectivityService.instance.isOnline) _retryAuthState();
+    if (_loadFailed && _connectivity.isOnline) _retryAuthState();
   }
 
   void _scheduleNotificationRoute() {
@@ -157,7 +161,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void dispose() {
     unawaited(_notificationService.dispose());
-    ConnectivityService.instance.removeListener(_retryWhenOnline);
+    _connectivity.removeListener(_retryWhenOnline);
     super.dispose();
   }
 

@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
 import 'package:plansync/model/services/pending_write_service.dart';
 
 class ProfileViewModel extends ChangeNotifier {
@@ -25,7 +25,7 @@ class ProfileViewModel extends ChangeNotifier {
     if (PendingWriteService.instance.hasPending) {
       return "You have changes that haven't synced yet. If you log out now, they'll be lost.";
     }
-    if (!ConnectivityService.instance.isOnline) {
+    if (!ConnectivityRepository.instance.isOnline) {
       return "You can't log back in until you're online. Log out anyway?";
     }
     return null;

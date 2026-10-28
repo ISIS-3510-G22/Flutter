@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/model/services/pending_write_service.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
@@ -28,7 +28,7 @@ class _MyActivitiesBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<MyActivitiesViewmodel>();
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final pending = context.watch<PendingWriteService>().pendingDocIds;
 
     return Scaffold(

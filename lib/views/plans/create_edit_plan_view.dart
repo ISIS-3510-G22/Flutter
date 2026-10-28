@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/create_edit_plan_viewmodel.dart';
 import 'package:plansync/views/formatters/date_format.dart';
 import 'package:plansync/views/plans/plan_detail_view.dart';
@@ -53,7 +53,7 @@ class _CreateEditPlanForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CreateEditPlanViewModel>();
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return Scaffold(
       appBar: AppBar(title: Text(vm.isEditing ? 'Edit Plan' : 'Create Plan')),
