@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -11,7 +12,9 @@ import 'package:plansync/model/models/user.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   ProfileViewModel(this.user) {
-    PendingWriteRepository.instance.addListener(refreshUser);
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => refreshUser(),
+    );
     _loadLocalPhoto();
   }
 
@@ -20,6 +23,7 @@ class ProfileViewModel extends ChangeNotifier {
   final _picker = ImagePicker();
   bool isUploadingPhoto = false;
   String? localPhotoPath;
+  late final StreamSubscription<void> _queueSub;
 
   String? get signOutWarning {
     if (PendingWriteRepository.instance.hasPending) {
@@ -37,7 +41,7 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    PendingWriteRepository.instance.removeListener(refreshUser);
+    _queueSub.cancel();
     await PendingWriteRepository.instance.clear();
     await AuthRepository().signOut();
   }
@@ -83,7 +87,7 @@ class ProfileViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    PendingWriteRepository.instance.removeListener(refreshUser);
+    _queueSub.cancel();
     super.dispose();
   }
 }

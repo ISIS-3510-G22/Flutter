@@ -16,7 +16,9 @@ import 'package:plansync/model/models/user.dart';
 
 class PlanDetailViewModel extends ChangeNotifier {
   PlanDetailViewModel(this.plan, this._uid) {
-    PendingWriteRepository.instance.addListener(_loadSaved);
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => _loadSaved(),
+    );
     _onPlanUpdate(plan);
     _sub = _planRepository.planById(plan.id).listen(_onPlanUpdate);
     loadSuggestions();
@@ -28,6 +30,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   final _friendRepository = FriendRepository();
   final _groupRepository = GroupRepository();
   late final StreamSubscription<Plan> _sub;
+  late final StreamSubscription<void> _queueSub;
 
   final String _uid;
   Plan plan;
@@ -147,7 +150,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub.cancel();
-    PendingWriteRepository.instance.removeListener(_loadSaved);
+    _queueSub.cancel();
     super.dispose();
   }
 }

@@ -13,6 +13,7 @@ class MyActivitiesViewmodel extends ChangeNotifier {
 
   StreamSubscription<List<Activity>>? _ownedSub;
   late final StreamSubscription<bool> _connectivitySub;
+  late final StreamSubscription<void> _queueSub;
   List<Activity> _owned = [];
   ActivitiesTab currentTab = ActivitiesTab.private;
 
@@ -27,7 +28,9 @@ class MyActivitiesViewmodel extends ChangeNotifier {
     _connectivitySub = ConnectivityRepository.instance.changes.listen(
       _onConnectivityChanged,
     );
-    PendingWriteRepository.instance.addListener(_loadSaved);
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => _loadSaved(),
+    );
 
     _loadSaved();
 
@@ -76,7 +79,7 @@ class MyActivitiesViewmodel extends ChangeNotifier {
     _likedSub?.cancel();
     _recommendedSub?.cancel();
     _connectivitySub.cancel();
-    PendingWriteRepository.instance.removeListener(_loadSaved);
+    _queueSub.cancel();
     super.dispose();
   }
 }

@@ -12,8 +12,9 @@ enum PlanTab { upcoming, pendingInvite, past }
 
 class MyPlansViewModel extends ChangeNotifier {
   MyPlansViewModel(this._userId) {
-    PendingWriteRepository.instance.addListener(_loadPlans);
-    _loadPlans();
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => _loadPlans(),
+    );
   }
 
   final String _userId;
@@ -21,12 +22,15 @@ class MyPlansViewModel extends ChangeNotifier {
   final _userRepository = UserRepository();
 
   StreamSubscription<List<Plan>>? _sub;
+  late final StreamSubscription<void> _queueSub;
 
   bool isLoading = true;
   PlanTab selectedTab = PlanTab.upcoming;
   List<Plan> _plans = [];
 
   Map<String, String?> _photoUrls = {};
+
+  Set<String> get pendingIds => PendingWriteRepository.instance.pendingDocIds;
 
   void _loadPlans() {
     _sub?.cancel();
@@ -90,7 +94,7 @@ class MyPlansViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
-    PendingWriteRepository.instance.removeListener(_loadPlans);
+    _queueSub.cancel();
     super.dispose();
   }
 }
