@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/services/location_service.dart';
-import 'package:plansync/viewmodels/nearby_friends_viewmodel.dart';
+import 'package:plansync/model/services/location_service.dart';
+import 'package:plansync/viewmodels/crew/nearby_friends_viewmodel.dart';
 import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:provider/provider.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:plansync/models/reimbursement_method.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/plans/manage_splits_viewmodel.dart';
 import 'package:provider/provider.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/group.dart';
-import 'package:plansync/models/group_invitation.dart';
+import 'package:plansync/model/models/group.dart';
+import 'package:plansync/model/models/group_invitation.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
 import 'package:provider/provider.dart';

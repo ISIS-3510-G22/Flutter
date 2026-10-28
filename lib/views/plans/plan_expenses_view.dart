@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/plans/plan_expenses_viewmodel.dart';
 import 'package:plansync/views/plans/create_edit_expense_view.dart';
 import 'package:plansync/views/plans/manage_splits_view.dart';

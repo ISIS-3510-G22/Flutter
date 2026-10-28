@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/connectivity_service.dart';
-import 'package:plansync/services/pending_write_service.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/activities/create_edit_activity_view.dart';

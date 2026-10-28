@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:plansync/data/activity_repository.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/services/connectivity_service.dart';
-import 'package:plansync/services/pending_write_service.dart';
+import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
 
 enum ActivitiesTab { liked, private, recommended }
 

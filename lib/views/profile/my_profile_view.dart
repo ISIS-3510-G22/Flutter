@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/connectivity_service.dart';
-import 'package:plansync/services/pending_write_service.dart';
-import 'package:plansync/services/theme_service.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
+import 'package:plansync/model/services/theme_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
 import 'package:plansync/views/profile/edit_profile_view.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';

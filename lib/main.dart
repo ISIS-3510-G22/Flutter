@@ -3,20 +3,20 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:plansync/firebase_options.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/auth_service.dart';
-import 'package:plansync/services/connectivity_service.dart';
-import 'package:plansync/services/notification_service.dart';
-import 'package:plansync/services/pending_write_service.dart';
-import 'package:plansync/services/theme_service.dart';
-import 'package:plansync/services/write_queue.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/model/services/notification_service.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
+import 'package:plansync/model/services/theme_service.dart';
+import 'package:plansync/model/services/write_queue.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/auth/login_view.dart';
 import 'package:plansync/views/crew/friend_request_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
 import 'package:plansync/views/home_shell.dart';
+import 'package:plansync/views/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 final _appNavigatorKey = GlobalKey<NavigatorState>();
@@ -50,7 +50,7 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  final AuthService _authService = AuthService();
+  final AuthRepository _authRepository = AuthRepository();
   late Stream<User?> _authStateChanges;
   final NotificationService _notificationService = NotificationService();
   String? _notificationRegistrationUserId;
@@ -65,7 +65,7 @@ class _AuthGateState extends State<AuthGate> {
     super.initState();
     _listenForDropped(PendingWriteService.instance);
     ConnectivityService.instance.addListener(_retryWhenOnline);
-    _authStateChanges = _authService.authStateChanges;
+    _authStateChanges = _authRepository.authStateChanges;
     unawaited(
       _notificationService.initialize(onTap: _handleNotificationTap).catchError(
         (Object error) {
@@ -82,7 +82,7 @@ class _AuthGateState extends State<AuthGate> {
 
   void _retryAuthState() {
     setState(() {
-      _authStateChanges = _authService.authStateChanges;
+      _authStateChanges = _authRepository.authStateChanges;
     });
   }
 

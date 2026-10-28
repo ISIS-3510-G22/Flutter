@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/location_service.dart';
-import 'package:plansync/viewmodels/nearby_map_viewmodel.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/location_service.dart';
+import 'package:plansync/viewmodels/explore/nearby_map_viewmodel.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/explore/public_plan_detail_view.dart';
 import 'package:plansync/views/widgets/circle_back_button.dart';

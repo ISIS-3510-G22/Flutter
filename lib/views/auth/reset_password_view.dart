@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/viewmodels/reset_password_viewmodel.dart';
+import 'package:plansync/viewmodels/auth/reset_password_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 class ResetPasswordView extends StatelessWidget {

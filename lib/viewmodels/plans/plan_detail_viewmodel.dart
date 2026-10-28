@@ -1,19 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:plansync/data/activity_repository.dart';
-import 'package:plansync/data/friend_repository.dart';
-import 'package:plansync/data/group_repository.dart';
-import 'package:plansync/data/plan_repository.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/models/group.dart';
-import 'package:plansync/models/invitations.dart';
-import 'package:plansync/models/invite_suggestion.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/connectivity_service.dart';
-import 'package:plansync/services/pending_write_service.dart';
+import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/data/friend_repository.dart';
+import 'package:plansync/model/data/group_repository.dart';
+import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/group.dart';
+import 'package:plansync/model/models/invitations.dart';
+import 'package:plansync/model/models/invite_suggestion.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
 
 class PlanDetailViewModel extends ChangeNotifier {
   PlanDetailViewModel(this.plan, this._uid) {
