@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:isolate';
 
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/friend_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/logic/user_search.dart';
 import 'package:plansync/model/models/friend_request.dart';
 import 'package:plansync/model/models/user.dart';
 
@@ -141,13 +143,7 @@ class FriendsViewModel extends ChangeNotifier {
       final users = _searchableUsers ??= await (_searchableUsersFuture ??=
           _userRepository.getUsersForSearch(excludingId: _uid));
       if (generation != _searchGeneration) return;
-      _searchResults = users.where((user) {
-        final fullName = '${user.name} ${user.lastName}'.trim().toLowerCase();
-        return user.name.toLowerCase().contains(normalized) ||
-            user.lastName.toLowerCase().contains(normalized) ||
-            fullName.contains(normalized) ||
-            user.username.toLowerCase().contains(normalized);
-      }).toList();
+      _searchResults = await Isolate.run(() => rankUsers(users, normalized));
     } catch (error) {
       if (generation != _searchGeneration) return;
       if (_searchableUsers == null) _searchableUsersFuture = null;
