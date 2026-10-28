@@ -1,15 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/models/tag.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TagRepository {
   final _tags = FirebaseFirestore.instance.collection('tags');
+  final _connectivity = ConnectivityRepository.instance;
 
   static const _prefsKey = 'top_tags';
 
   Future<List<Tag>> allTags() async {
     final prefs = SharedPreferencesAsync();
     try {
+      _connectivity.ensureOnline();
       final snapshot = await _tags
           .orderBy('count', descending: true)
           .limit(20)
