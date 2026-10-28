@@ -176,9 +176,9 @@ class UserRepository {
 
   Future<List<User>> getUsersForSearch({String? excludingId}) async {
     ConnectivityRepository.instance.ensureOnline();
-    final snapshot = await _users.get(
-      const GetOptions(source: Source.server),
-    );
+    final snapshot = await _users
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     final users = snapshot.docs
         .where((doc) => doc.id != excludingId)
         .map((doc) => _getUserFromDoc(doc.id, doc.data()))
@@ -186,4 +186,8 @@ class UserRepository {
     await _crewLocalStore.saveDirectory(users);
     return users;
   }
+
+  Future<bool> hasSavedSearchDirectory() => _crewLocalStore.hasSavedDirectory();
+
+  Future<List<User>> storedSearchDirectory() => _crewLocalStore.directory();
 }

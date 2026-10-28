@@ -142,6 +142,16 @@ class _AddFriendViewState extends State<AddFriendView> {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  if (vm.searchMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        vm.searchMessage!,
+                        style: text.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   if (_searchController.text.trim().isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
@@ -159,6 +169,8 @@ class _AddFriendViewState extends State<AddFriendView> {
                     )
                   else if (vm.error != null)
                     Text(vm.error!, style: text.bodyMedium)
+                  else if (vm.searchDirectoryNeverStored)
+                    const SizedBox.shrink()
                   else if (vm.searchResults.isEmpty)
                     Text(
                       'No users found.',
