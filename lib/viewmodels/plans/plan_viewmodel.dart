@@ -15,6 +15,7 @@ class MyPlansViewModel extends ChangeNotifier {
     _queueSub = PendingWriteRepository.instance.changes.listen(
       (_) => _loadPlans(),
     );
+    _loadPlans();
   }
 
   final String _userId;
