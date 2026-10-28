@@ -142,12 +142,18 @@ class PlanRepository {
   }
 
   Future<List<Plan>> publicPlans() async {
-    final snapshot = await _plans.where('isPublic', isEqualTo: true).get();
+    final snapshot = await _plans
+        .where('isPublic', isEqualTo: true)
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     return snapshot.docs.map((d) => _fromData(d.id, d.data())).toList();
   }
 
   Future<List<String>> recommendedPlanIds(String uid) async {
-    final latest = await _planRecommendationRuns.doc('latest').get();
+    final latest = await _planRecommendationRuns
+        .doc('latest')
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     final latestData = latest.data();
     if (latestData == null) return [];
     final runId = latestData['latestRunId'];
@@ -158,7 +164,8 @@ class PlanRepository {
         .collection('output')
         .where('uid', isEqualTo: uid)
         .limit(1)
-        .get();
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     if (output.docs.isEmpty) return [];
 
     final map = output.docs.first['plan_ids'] as Map<String, dynamic>;

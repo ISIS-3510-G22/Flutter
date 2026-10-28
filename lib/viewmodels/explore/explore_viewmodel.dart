@@ -1,12 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/explore_repository.dart';
 import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/explore_filters.dart';
+import 'package:plansync/model/models/explore_plan.dart';
+import 'package:plansync/model/models/explore_snapshot.dart';
 
 class ExploreViewModel extends ChangeNotifier {
-  ExploreViewModel(this._userId);
+  ExploreViewModel(this._userId) {
+    _connectivitySub = ConnectivityRepository.instance.changes.listen((online) {
+      if (online) _loadSnapshot();
+    });
+    _load();
+  }
 
   final String _userId;
   final _repository = ExploreRepository();
+  late final StreamSubscription<bool> _connectivitySub;
+  StreamSubscription<ExploreSnapshot>? _snapshotSub;
 
   static const allTags = 'All';
   static const whenOptions = ['Week', 'Month', 'Later'];
@@ -31,38 +44,51 @@ class ExploreViewModel extends ChangeNotifier {
   List<Activity> filteredActivities = [];
 
   Set<String> recommendedIds = {};
-  bool isLoading = false;
-  String? errorMessage;
+  bool isLoading = true;
+
+  /// False until a snapshot arrives, from the file or the server. Offline
+  /// and still false means Explore was never loaded on this phone.
+  bool hasSnapshot = false;
+
+  bool get hasPlans => _plans.isNotEmpty;
 
   bool isRecommended(ExplorePlan item) => recommendedIds.contains(item.plan.id);
 
-  Future<void> load() async {
+  Future<void> _load() async {
+    _restoreFilters(await _repository.savedFilters());
+    _loadSnapshot();
+  }
+
+  void _restoreFilters(ExploreFilters saved) {
+    selectedTag = saved.tag ?? allTags;
+    if (whenOptions.contains(saved.when)) selectedWhen = saved.when;
+    if (priceOptions.contains(saved.price)) selectedPrice = saved.price;
+    if (ratingOptions.contains(saved.rating)) selectedRating = saved.rating!;
+  }
+
+  void _loadSnapshot() {
     isLoading = true;
-    errorMessage = null;
     notifyListeners();
+    _snapshotSub?.cancel();
+    _snapshotSub = _repository
+        .snapshot(_userId)
+        .listen(
+          _show,
+          onDone: () {
+            isLoading = false;
+            notifyListeners();
+          },
+        );
+  }
 
-    try {
-      final results = await Future.wait([
-        _repository.getPlans(),
-        _repository.getActivities(),
-        _repository.recommendedPlanIds(_userId),
-      ]);
-      final plans = results[0] as List<ExplorePlan>;
-      _activities = results[1] as List<Activity>;
-      final recommended = results[2] as List<String>;
-
-      recommendedIds = recommended.toSet();
-      _plans = _recommendedFirst(plans, recommended);
-      tagOptions = [allTags, ..._tagsByPopularity()];
-      if (!tagOptions.contains(selectedTag)) selectedTag = allTags;
-      filteredPlans = _filterPlans();
-      filteredActivities = _filterActivities();
-    } catch (_) {
-      errorMessage = 'Could not load plans. Try again.';
-    }
-
-    isLoading = false;
-    notifyListeners();
+  void _show(ExploreSnapshot snapshot) {
+    hasSnapshot = true;
+    _activities = snapshot.activities;
+    recommendedIds = snapshot.recommendedIds.toSet();
+    _plans = _recommendedFirst(snapshot.plans, snapshot.recommendedIds);
+    tagOptions = [allTags, ..._tagsByPopularity()];
+    if (!tagOptions.contains(selectedTag)) selectedTag = allTags;
+    _applyFilters();
   }
 
   List<ExplorePlan> _recommendedFirst(
@@ -86,6 +112,7 @@ class ExploreViewModel extends ChangeNotifier {
   void onTagSelect(String tag) {
     selectedTag = tag;
     _applyFilters();
+    _saveFilters();
   }
 
   void onWhenSelect(String when) {
@@ -95,6 +122,7 @@ class ExploreViewModel extends ChangeNotifier {
       selectedWhen = when;
     }
     _applyFilters();
+    _saveFilters();
   }
 
   void onPriceSelect(String price) {
@@ -104,6 +132,7 @@ class ExploreViewModel extends ChangeNotifier {
       selectedPrice = price;
     }
     _applyFilters();
+    _saveFilters();
   }
 
   void onRatingSelect(String rating) {
@@ -113,6 +142,7 @@ class ExploreViewModel extends ChangeNotifier {
       selectedRating = rating;
     }
     _applyFilters();
+    _saveFilters();
   }
 
   void _applyFilters() {
@@ -121,8 +151,23 @@ class ExploreViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _saveFilters() {
+    unawaited(
+      _repository.saveFilters(
+        ExploreFilters(
+          tag: selectedTag,
+          when: selectedWhen,
+          price: selectedPrice,
+          rating: selectedRating,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _connectivitySub.cancel();
+    _snapshotSub?.cancel();
     searchController.dispose();
     super.dispose();
   }

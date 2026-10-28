@@ -52,9 +52,10 @@ class ReviewRepository {
   }
 
   Future<List<Review>> reviewsForPlan(String planId) async {
-    final snapshot = await _reviews(
-      planId,
-    ).orderBy('createdAt', descending: true).get();
+    final snapshot = await _reviews(planId)
+        .orderBy('createdAt', descending: true)
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     return snapshot.docs.map(_fromDoc).toList();
   }
 

@@ -1,12 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:plansync/model/data/activity_repository.dart';
-import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/explore_repository.dart';
 import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/explore_snapshot.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/services/location_service.dart';
 
-enum NearbyStatus { loading, locationError, error, ready }
+enum NearbyStatus { loading, locationError, neverSaved, ready }
 
 class NearbyItem {
   final Plan? plan;
@@ -34,21 +37,26 @@ class NearbyItem {
 
 class NearbyMapViewModel extends ChangeNotifier {
   NearbyMapViewModel(this._userId) {
+    _connectivitySub = ConnectivityRepository.instance.changes.listen((online) {
+      if (online && position != null) _loadSnapshot();
+    });
     load();
   }
 
   static const radiusOptions = [2.0, 5.0, 10.0];
+  static const _defaultRadiusKm = 5.0;
 
   final String _userId;
   final _locationService = LocationService();
-  final _planRepository = PlanRepository();
-  final _activityRepository = ActivityRepository();
+  final _repository = ExploreRepository();
   final _distance = const Distance();
+  late final StreamSubscription<bool> _connectivitySub;
+  StreamSubscription<ExploreSnapshot>? _snapshotSub;
 
   NearbyStatus status = NearbyStatus.loading;
   LocationError? locationError;
   LatLng? position;
-  double radiusKm = 5;
+  double radiusKm = _defaultRadiusKm;
 
   List<NearbyItem> _allItems = [];
   Map<String, int> _recommendedRank = {};
@@ -62,6 +70,9 @@ class NearbyMapViewModel extends ChangeNotifier {
     locationError = null;
     notifyListeners();
 
+    final savedRadius = await _repository.savedRadiusKm();
+    if (radiusOptions.contains(savedRadius)) radiusKm = savedRadius!;
+
     try {
       final location = await _locationService.currentPosition();
       if (location.error != null) {
@@ -71,31 +82,41 @@ class NearbyMapViewModel extends ChangeNotifier {
         return;
       }
       position = location.position;
-
-      final results = await Future.wait([
-        _planRepository.publicPlans(),
-        _activityRepository.publicActivities(),
-        _recommendedPlanIds(),
-      ]);
-      final publicPlans = results[0] as List<Plan>;
-      final publicActivities = results[1] as List<Activity>;
-      final recommended = results[2] as List<String>;
-      _recommendedRank = {
-        for (var i = 0; i < recommended.length; i++) recommended[i]: i,
-      };
-
-      final upcomingPlans = publicPlans.where(_isUpcoming).toList();
-      final planActivities = await _activitiesOf(upcomingPlans);
-
-      _allItems = [
-        for (final plan in upcomingPlans) ?_planItem(plan, planActivities),
-        for (final activity in publicActivities) ?_activityItem(activity),
-      ];
-      _applyRadius();
-      status = NearbyStatus.ready;
     } catch (_) {
-      status = NearbyStatus.error;
+      status = NearbyStatus.locationError;
+      notifyListeners();
+      return;
     }
+    _loadSnapshot();
+  }
+
+  void _loadSnapshot() {
+    _snapshotSub?.cancel();
+    _snapshotSub = _repository
+        .snapshot(_userId)
+        .listen(
+          _show,
+          onDone: () {
+            if (status == NearbyStatus.loading) {
+              status = NearbyStatus.neverSaved;
+            }
+            notifyListeners();
+          },
+        );
+  }
+
+  void _show(ExploreSnapshot snapshot) {
+    _recommendedRank = {
+      for (var i = 0; i < snapshot.recommendedIds.length; i++)
+        snapshot.recommendedIds[i]: i,
+    };
+    _allItems = [
+      for (final item in snapshot.plans)
+        ?_planItem(item.plan, snapshot.planActivities),
+      for (final activity in snapshot.activities) ?_activityItem(activity),
+    ];
+    _applyRadius();
+    status = NearbyStatus.ready;
     notifyListeners();
   }
 
@@ -103,6 +124,7 @@ class NearbyMapViewModel extends ChangeNotifier {
     radiusKm = km;
     _applyRadius();
     notifyListeners();
+    unawaited(_repository.saveRadiusKm(km));
   }
 
   Future<void> openSettings() {
@@ -112,12 +134,11 @@ class NearbyMapViewModel extends ChangeNotifier {
     return _locationService.openSettings();
   }
 
-  Future<List<String>> _recommendedPlanIds() async {
-    try {
-      return await _planRepository.recommendedPlanIds(_userId);
-    } catch (_) {
-      return [];
-    }
+  @override
+  void dispose() {
+    _connectivitySub.cancel();
+    _snapshotSub?.cancel();
+    super.dispose();
   }
 
   void _applyRadius() {
@@ -131,26 +152,6 @@ class NearbyMapViewModel extends ChangeNotifier {
       if (rankB != null) return 1;
       return a.distanceKm.compareTo(b.distanceKm);
     });
-  }
-
-  bool _isUpcoming(Plan plan) {
-    final today = DateTime.now();
-    final startOfToday = DateTime(today.year, today.month, today.day);
-    return !plan.date.isBefore(startOfToday);
-  }
-
-  Future<Map<String, Activity>> _activitiesOf(List<Plan> plans) async {
-    final ids = plans.expand((p) => p.activityIds).toSet().toList();
-    final byId = <String, Activity>{};
-    for (var i = 0; i < ids.length; i += 30) {
-      var end = i + 30;
-      if (end > ids.length) end = ids.length;
-      final chunk = await _activityRepository.getByIds(ids.sublist(i, end));
-      for (final a in chunk) {
-        byId[a.id] = a;
-      }
-    }
-    return byId;
   }
 
   LatLng? _pointOf(Activity activity) {
