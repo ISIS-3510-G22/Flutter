@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/local/activity_local_store.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
 
 class ActivityRepository {
@@ -13,6 +14,8 @@ class ActivityRepository {
       .collection('runs');
 
   String newId() => _activities.doc().id;
+
+  PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
   Activity _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();

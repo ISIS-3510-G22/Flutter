@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
 
@@ -12,6 +13,8 @@ class UserRepository {
   final _users = FirebaseFirestore.instance.collection('users');
 
   final _files = JsonFileStore();
+
+  PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
   Future<File> _photoFile(String uid) async {
     final dir = await getApplicationDocumentsDirectory();

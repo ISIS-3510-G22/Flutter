@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/review.dart';
 
 class ReviewRepository {
@@ -12,6 +13,8 @@ class ReviewRepository {
           .collection('reviews');
 
   final _files = JsonFileStore();
+
+  PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
   String _reviewFile(String planId, String userId) =>
       'review_${planId}_$userId.json';
