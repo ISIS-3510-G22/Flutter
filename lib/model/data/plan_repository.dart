@@ -30,6 +30,7 @@ class PlanRepository {
   final _files = JsonFileStore();
 
   String _plansFile(String uid) => 'plans_$uid.json';
+  String _inviteSuggestionsFile(String uid) => 'invite_suggestions_$uid.json';
 
   PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
@@ -225,7 +226,11 @@ class PlanRepository {
   }
 
   Future<InviteSuggestionIds> inviteSuggestions(String uid) async {
-    final latest = await _inviteSuggestionRuns.doc('latest').get();
+    _connectivity.ensureOnline();
+    final latest = await _inviteSuggestionRuns
+        .doc('latest')
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     final runId = latest.data()?['latestRunId'] as String?;
     if (runId == null) return InviteSuggestionIds.empty;
 
@@ -234,7 +239,8 @@ class PlanRepository {
         .collection('output')
         .where('uid', isEqualTo: uid)
         .limit(1)
-        .get();
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     if (output.docs.isEmpty) return InviteSuggestionIds.empty;
 
     final data = output.docs.first.data();
@@ -248,6 +254,26 @@ class PlanRepository {
       ).map((e) => (e as num).toInt()).toList(),
       groupIds: _listFromFirestore(data['group_ids']).cast<String>(),
     );
+  }
+
+  Future<void> saveInviteSuggestions(
+    String uid,
+    InviteSuggestionIds suggestions,
+  ) => _files.write(
+    _inviteSuggestionsFile(uid),
+    jsonEncode(suggestions.toJson()),
+  );
+
+  Future<InviteSuggestionIds?> cachedInviteSuggestions(String uid) async {
+    final contents = await _files.read(_inviteSuggestionsFile(uid));
+    if (contents == null) return null;
+    try {
+      return InviteSuggestionIds.fromJson(
+        jsonDecode(contents) as Map<String, dynamic>,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> setRsvp(String planId, String userId, RsvpStatus rsvp) {

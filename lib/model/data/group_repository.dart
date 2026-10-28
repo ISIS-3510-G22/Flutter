@@ -213,12 +213,24 @@ class GroupRepository {
 
   Future<List<Group>> groupsByIds(List<String> ids) async {
     if (ids.isEmpty) return [];
-    final docs = await Future.wait(ids.map((id) => _groups.doc(id).get()));
-    return docs
-        .where((d) => d.exists)
-        .map((d) => Group.fromFirestore(d.id, d.data()!))
-        .toList();
+    try {
+      ConnectivityRepository.instance.ensureOnline();
+      final docs = await Future.wait(
+        ids.map(
+          (id) => _groups.doc(id).get(const GetOptions(source: Source.server)),
+        ),
+      );
+      return docs
+          .where((d) => d.exists)
+          .map((d) => Group.fromFirestore(d.id, d.data()!))
+          .toList();
+    } catch (_) {
+      return _local.groupsByIds(ids);
+    }
   }
+
+  Future<List<Group>> cachedGroupsByIds(List<String> ids) =>
+      _local.groupsByIds(ids);
 
   Future<void> acceptInvitation(GroupInvitation invitation) {
     final batch = _db.batch();
