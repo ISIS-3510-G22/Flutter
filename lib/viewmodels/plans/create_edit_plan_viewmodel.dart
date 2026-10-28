@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/models/invitations.dart';
-import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
 
 class CreateEditPlanViewModel extends ChangeNotifier {
@@ -69,14 +67,7 @@ class CreateEditPlanViewModel extends ChangeNotifier {
         tags: editingPlan?.tags ?? const [],
         isPublic: isPublic,
       );
-      await _repository.saveLocal(_creatorId, plan);
-      final sent = await PendingWriteRepository.instance.submit(
-        PendingWrite(
-          kind: isEditing ? WriteKind.planUpdate : WriteKind.planCreate,
-          docId: plan.id,
-          payload: plan.toJson(),
-        ),
-      );
+      final sent = await _repository.save(_creatorId, plan, isNew: !isEditing);
       queued = !sent;
       return plan;
     } catch (_) {

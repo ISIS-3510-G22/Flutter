@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/review.dart';
 
 class ReviewRepository {
@@ -13,10 +15,23 @@ class ReviewRepository {
 
   final _files = JsonFileStore();
 
+  PendingWriteRepository get _queue => PendingWriteRepository.instance;
+
+  Future<bool> post(String planId, Review review) async {
+    await _saveLocal(planId, review);
+    return _queue.submit(
+      PendingWrite(
+        kind: WriteKind.reviewSubmit,
+        docId: planId,
+        payload: review.toJson(),
+      ),
+    );
+  }
+
   String _reviewFile(String planId, String userId) =>
       'review_${planId}_$userId.json';
 
-  Future<void> saveLocal(String planId, Review review) => _files.write(
+  Future<void> _saveLocal(String planId, Review review) => _files.write(
     _reviewFile(planId, review.userId),
     jsonEncode(review.toJson()),
   );
@@ -68,7 +83,7 @@ class ReviewRepository {
           .timeout(const Duration(seconds: 8));
       if (!doc.exists) return _readReview(file);
       final review = _fromDoc(doc);
-      await saveLocal(planId, review);
+      await _saveLocal(planId, review);
       return review;
     } catch (_) {
       return _readReview(file);

@@ -4,8 +4,10 @@ import 'dart:isolate';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/invite_suggestion_ids.dart';
+import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
 
 class PlanRepository {
@@ -28,6 +30,8 @@ class PlanRepository {
   final _files = JsonFileStore();
 
   String _plansFile(String uid) => 'plans_$uid.json';
+
+  PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
   Future<List<Plan>?> _readPlans(String name) async {
     final text = await _files.read(name);
@@ -105,7 +109,7 @@ class PlanRepository {
     });
   }
 
-  Future<void> saveLocal(String uid, Plan plan) async {
+  Future<void> _saveLocal(String uid, Plan plan) async {
     final saved = await _readPlans(_plansFile(uid)) ?? [];
     final plans = <Plan>[];
     for (final p in saved) {
@@ -115,6 +119,33 @@ class PlanRepository {
     await _files.write(
       _plansFile(uid),
       jsonEncode([for (final p in plans) p.toJson()]),
+    );
+  }
+
+  Future<bool> save(String uid, Plan plan, {required bool isNew}) async {
+    await _saveLocal(uid, plan);
+    return _queue.submit(
+      PendingWrite(
+        kind: isNew ? WriteKind.planCreate : WriteKind.planUpdate,
+        docId: plan.id,
+        payload: plan.toJson(),
+      ),
+    );
+  }
+
+  Future<bool> setActivity(
+    String uid,
+    Plan plan,
+    String activityId, {
+    required bool added,
+  }) async {
+    await _saveLocal(uid, plan);
+    return _queue.submit(
+      PendingWrite(
+        kind: added ? WriteKind.planAddActivity : WriteKind.planRemoveActivity,
+        docId: plan.id,
+        payload: {'activityId': activityId},
+      ),
     );
   }
 

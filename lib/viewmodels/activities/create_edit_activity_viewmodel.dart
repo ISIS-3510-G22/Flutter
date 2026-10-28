@@ -3,12 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/model/data/activity_repository.dart';
-import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/place_repository.dart';
 import 'package:plansync/model/data/tag_repository.dart';
 import 'package:plansync/model/logic/validators.dart';
 import 'package:plansync/model/models/activity.dart';
-import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/place.dart';
 import 'package:plansync/model/models/tag.dart';
 import 'package:plansync/model/services/storage_service.dart';
@@ -173,30 +171,12 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
         lng: place?.lng,
       );
 
-      await _repository.saveLocal(_ownerId, activity);
-
-      final queue = PendingWriteRepository.instance;
-      final sent = await queue.submit(
-        PendingWrite(
-          kind: isEditing ? WriteKind.activityUpdate : WriteKind.activityCreate,
-          docId: id,
-          payload: activity.toJson(),
-        ),
+      final sent = await _repository.save(
+        _ownerId,
+        activity,
+        previous: _editingActivity,
       );
       queued = !sent;
-
-      final before = _editingActivity?.tags.toSet() ?? <String>{};
-      final added = tags.difference(before).toList();
-      final removed = before.difference(tags).toList();
-      if (added.isNotEmpty || removed.isNotEmpty) {
-        await queue.submit(
-          PendingWrite(
-            kind: WriteKind.tagCounts,
-            docId: id,
-            payload: {'added': added, 'removed': removed},
-          ),
-        );
-      }
 
       return activity;
     } catch (_) {

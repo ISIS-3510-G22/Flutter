@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/crew_local_store.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
 
@@ -15,6 +17,8 @@ class UserRepository {
 
   final _files = JsonFileStore();
   final _crewLocalStore = CrewLocalStore();
+
+  PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
   Future<File> _photoFile(String uid) async {
     final dir = await getApplicationDocumentsDirectory();
@@ -26,16 +30,38 @@ class UserRepository {
     return await file.exists() ? file.path : null;
   }
 
-  Future<String> savePhotoLocal(String uid, String pickedPath) async {
+  Future<String> _savePhotoLocal(String uid, String pickedPath) async {
     final file = await _photoFile(uid);
     await file.parent.create(recursive: true);
     await File(pickedPath).copy(file.path);
     return file.path;
   }
 
+  Future<bool> saveProfile(User user) async {
+    await _saveLocal(user);
+    return _queue.submit(
+      PendingWrite(
+        kind: WriteKind.profileUpdate,
+        docId: user.id,
+        payload: user.toJson(),
+      ),
+    );
+  }
+
+  Future<bool> savePhoto(String uid, String pickedPath) async {
+    final path = await _savePhotoLocal(uid, pickedPath);
+    return _queue.submit(
+      PendingWrite(
+        kind: WriteKind.profilePhoto,
+        docId: uid,
+        payload: {'path': path},
+      ),
+    );
+  }
+
   String _meFile(String uid) => 'me_$uid.json';
 
-  Future<void> saveLocal(User user) =>
+  Future<void> _saveLocal(User user) =>
       _files.write(_meFile(user.id), jsonEncode(user.toJson()));
 
   Future<User?> _readMe(String uid) async {
@@ -56,7 +82,7 @@ class UserRepository {
           .timeout(const Duration(seconds: 8));
       if (!doc.exists) return null;
       final user = _getUserFromDoc(uid, doc.data()!);
-      await saveLocal(user);
+      await _saveLocal(user);
       return user;
     } catch (_) {
       final saved = await _readMe(uid);

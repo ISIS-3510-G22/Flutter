@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/activity_repository.dart';
-import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
-import 'package:plansync/model/models/pending_write.dart';
 
 class ActivityDetailViewmodel extends ChangeNotifier {
   ActivityDetailViewmodel(this.activity, this._uid);
@@ -43,16 +41,7 @@ class ActivityDetailViewmodel extends ChangeNotifier {
     notifyListeners();
 
     return _repository
-        .saveLocal(_uid, activity)
-        .then(
-          (_) => PendingWriteRepository.instance.submit(
-            PendingWrite(
-              kind: WriteKind.activityLike,
-              docId: activity.id,
-              payload: {'uid': _uid, 'liked': liked},
-            ),
-          ),
-        )
+        .setLiked(_uid, activity, liked: liked)
         .then((sent) => !sent)
         .catchError((_) {
           activity = before;

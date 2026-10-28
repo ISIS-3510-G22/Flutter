@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/local/activity_local_store.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/pending_write.dart';
 
 class ActivityRepository {
   final _activities = FirebaseFirestore.instance.collection("activities");
@@ -13,6 +15,8 @@ class ActivityRepository {
       .collection('runs');
 
   String newId() => _activities.doc().id;
+
+  PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
   Activity _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
@@ -31,6 +35,48 @@ class ActivityRepository {
       photoUrl: data['photoUrl'] as String?,
       lat: (data['lat'] as num?)?.toDouble(),
       lng: (data['lng'] as num?)?.toDouble(),
+    );
+  }
+
+  Future<bool> save(String uid, Activity activity, {Activity? previous}) async {
+    await _saveLocal(uid, activity);
+    final sent = await _queue.submit(
+      PendingWrite(
+        kind: previous == null
+            ? WriteKind.activityCreate
+            : WriteKind.activityUpdate,
+        docId: activity.id,
+        payload: activity.toJson(),
+      ),
+    );
+    final before = previous?.tags.toSet() ?? <String>{};
+    final after = activity.tags.toSet();
+    final added = after.difference(before).toList();
+    final removed = before.difference(after).toList();
+    if (added.isNotEmpty || removed.isNotEmpty) {
+      await _queue.submit(
+        PendingWrite(
+          kind: WriteKind.tagCounts,
+          docId: activity.id,
+          payload: {'added': added, 'removed': removed},
+        ),
+      );
+    }
+    return sent;
+  }
+
+  Future<bool> setLiked(
+    String uid,
+    Activity activity, {
+    required bool liked,
+  }) async {
+    await _saveLocal(uid, activity);
+    return _queue.submit(
+      PendingWrite(
+        kind: WriteKind.activityLike,
+        docId: activity.id,
+        payload: {'uid': uid, 'liked': liked},
+      ),
     );
   }
 
@@ -95,7 +141,7 @@ class ActivityRepository {
     _activities.where('likedBy', arrayContains: uid),
   );
 
-  Future<void> saveLocal(String uid, Activity activity) =>
+  Future<void> _saveLocal(String uid, Activity activity) =>
       _local.upsert(uid, activity);
 
   Future<void> create(Activity activity) {
