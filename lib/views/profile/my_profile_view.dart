@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/models/user.dart';
-import 'package:plansync/services/auth_service.dart';
+import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/services/theme_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
 import 'package:plansync/views/profile/edit_profile_view.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
 
@@ -23,9 +24,35 @@ class MyProfileView extends StatelessWidget {
 class _MyProfileBody extends StatelessWidget {
   const _MyProfileBody();
 
+  Future<void> _signOut(BuildContext context, ProfileViewModel vm) async {
+    final warning = vm.signOutWarning;
+    if (warning != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Log out?'),
+          content: Text(warning),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Log out'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    await vm.signOut();
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ProfileViewModel>();
+    final online = context.watch<ConnectivityService>().isOnline;
     final themeService = context.watch<ThemeService>();
     return Scaffold(
       body: Column(
@@ -48,6 +75,10 @@ class _MyProfileBody extends StatelessWidget {
               const SizedBox(width: 4),
             ],
           ),
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing your saved profile.",
+            ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -122,7 +153,7 @@ class _MyProfileBody extends StatelessWidget {
                     width: double.infinity,
                     height: 52,
                     child: FilledButton(
-                      onPressed: AuthService().signOut,
+                      onPressed: () => _signOut(context, vm),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

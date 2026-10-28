@@ -58,10 +58,13 @@ class _AuthGateState extends State<AuthGate> {
   String? _pendingNotificationType;
   bool _notificationRouteScheduled = false;
 
+  bool _loadFailed = false;
+
   @override
   void initState() {
     super.initState();
     _listenForDropped(PendingWriteService.instance);
+    ConnectivityService.instance.addListener(_retryWhenOnline);
     _authStateChanges = _authService.authStateChanges;
     unawaited(
       _notificationService.initialize(onTap: _handleNotificationTap).catchError(
@@ -81,6 +84,10 @@ class _AuthGateState extends State<AuthGate> {
     setState(() {
       _authStateChanges = _authService.authStateChanges;
     });
+  }
+
+  void _retryWhenOnline() {
+    if (_loadFailed && ConnectivityService.instance.isOnline) _retryAuthState();
   }
 
   void _scheduleNotificationRoute() {
@@ -150,6 +157,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void dispose() {
     unawaited(_notificationService.dispose());
+    ConnectivityService.instance.removeListener(_retryWhenOnline);
     super.dispose();
   }
 
@@ -177,6 +185,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Widget _home(AsyncSnapshot<User?> snapshot) {
+    _loadFailed = snapshot.hasError;
     if (snapshot.hasError) {
       debugPrint(
         'Could not load the signed-in user profile: ${snapshot.error}',
@@ -190,7 +199,7 @@ class _AuthGateState extends State<AuthGate> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Could not load your account. Check your internet connection and try again.',
+                    'We need a connection once to finish loading your account.',
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
