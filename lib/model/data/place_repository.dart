@@ -37,8 +37,8 @@ class PlaceRepository {
   Future<List<Place>> search(String query) async {
     final key = query.trim().toLowerCase();
     final cached = _cache.get(key);
-    _connectivity.ensureOnline();
     if (cached != null) return cached;
+    _connectivity.ensureOnline();
     final places = await _fetch(key).timeout(const Duration(seconds: 8));
     _cache.put(key, places);
     return places;
