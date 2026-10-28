@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:plansync/model/data/activity_repository.dart';
 import 'package:plansync/model/data/friend_repository.dart';
 import 'package:plansync/model/data/group_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/activity.dart';
@@ -12,11 +13,10 @@ import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/invite_suggestion.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 
 class PlanDetailViewModel extends ChangeNotifier {
   PlanDetailViewModel(this.plan, this._uid) {
-    PendingWriteService.instance.addListener(_loadSaved);
+    PendingWriteRepository.instance.addListener(_loadSaved);
     _onPlanUpdate(plan);
     _sub = _planRepository.planById(plan.id).listen(_onPlanUpdate);
     loadSuggestions();
@@ -147,7 +147,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub.cancel();
-    PendingWriteService.instance.removeListener(_loadSaved);
+    PendingWriteRepository.instance.removeListener(_loadSaved);
     super.dispose();
   }
 }

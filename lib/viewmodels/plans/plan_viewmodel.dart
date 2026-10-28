@@ -1,18 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/app_notification.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/plan.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 
 enum PlanTab { upcoming, pendingInvite, past }
 
 class MyPlansViewModel extends ChangeNotifier {
   MyPlansViewModel(this._userId) {
-    PendingWriteService.instance.addListener(_loadPlans);
+    PendingWriteRepository.instance.addListener(_loadPlans);
     _loadPlans();
   }
 
@@ -90,7 +90,7 @@ class MyPlansViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
-    PendingWriteService.instance.removeListener(_loadPlans);
+    PendingWriteRepository.instance.removeListener(_loadPlans);
     super.dispose();
   }
 }

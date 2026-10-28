@@ -5,13 +5,13 @@ import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/review_repository.dart';
 import 'package:plansync/model/data/tag_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/data/write_queue.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/review.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:plansync/model/services/storage_service.dart';
-import 'package:plansync/model/services/write_queue.dart';
 
 enum WriteKind {
   activityCreate,
@@ -28,10 +28,11 @@ enum WriteKind {
   profilePhoto,
 }
 
-class PendingWriteService extends WriteQueue<WriteKind> {
-  PendingWriteService._internal() : super('pending_writes', WriteKind.values);
+class PendingWriteRepository extends WriteQueue<WriteKind> {
+  PendingWriteRepository._internal()
+    : super('pending_writes', WriteKind.values);
 
-  static final instance = PendingWriteService._internal();
+  static final instance = PendingWriteRepository._internal();
 
   final _activities = ActivityRepository();
   final _plans = PlanRepository();

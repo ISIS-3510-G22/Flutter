@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 
 class CreateEditPlanViewModel extends ChangeNotifier {
   CreateEditPlanViewModel(
@@ -70,7 +70,7 @@ class CreateEditPlanViewModel extends ChangeNotifier {
         isPublic: isPublic,
       );
       await _repository.saveLocal(_creatorId, plan);
-      final sent = await PendingWriteService.instance.submit(
+      final sent = await PendingWriteRepository.instance.submit(
         PendingWrite(
           kind: isEditing ? WriteKind.planUpdate : WriteKind.planCreate,
           docId: plan.id,

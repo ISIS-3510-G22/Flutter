@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/activity_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 
 enum ActivitiesTab { liked, private, recommended }
 
@@ -27,7 +27,7 @@ class MyActivitiesViewmodel extends ChangeNotifier {
     _connectivitySub = ConnectivityRepository.instance.changes.listen(
       _onConnectivityChanged,
     );
-    PendingWriteService.instance.addListener(_loadSaved);
+    PendingWriteRepository.instance.addListener(_loadSaved);
 
     _loadSaved();
 
@@ -76,7 +76,7 @@ class MyActivitiesViewmodel extends ChangeNotifier {
     _likedSub?.cancel();
     _recommendedSub?.cancel();
     _connectivitySub.cancel();
-    PendingWriteService.instance.removeListener(_loadSaved);
+    PendingWriteRepository.instance.removeListener(_loadSaved);
     super.dispose();
   }
 }

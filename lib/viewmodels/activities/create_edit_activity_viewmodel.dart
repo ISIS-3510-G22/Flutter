@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/place_repository.dart';
 import 'package:plansync/model/data/tag_repository.dart';
 import 'package:plansync/model/logic/validators.dart';
@@ -10,7 +11,6 @@ import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/place.dart';
 import 'package:plansync/model/models/tag.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 import 'package:plansync/model/services/storage_service.dart';
 
 class CreateEditActivityViewmodel extends ChangeNotifier {
@@ -175,7 +175,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
 
       await _repository.saveLocal(_ownerId, activity);
 
-      final queue = PendingWriteService.instance;
+      final queue = PendingWriteRepository.instance;
       final sent = await queue.submit(
         PendingWrite(
           kind: isEditing ? WriteKind.activityUpdate : WriteKind.activityCreate,

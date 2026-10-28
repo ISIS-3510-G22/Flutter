@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 
 class AddToPlanViewModel extends ChangeNotifier {
   AddToPlanViewModel(this.activityId, this._uid) {
@@ -51,7 +51,7 @@ class AddToPlanViewModel extends ChangeNotifier {
         _uid,
         plan.withActivityIds([...plan.activityIds, activityId]),
       );
-      final sent = await PendingWriteService.instance.submit(
+      final sent = await PendingWriteRepository.instance.submit(
         PendingWrite(
           kind: WriteKind.planAddActivity,
           docId: plan.id,

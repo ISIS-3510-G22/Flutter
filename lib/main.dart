@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:plansync/firebase_options.dart';
 import 'package:plansync/model/data/auth_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/data/write_queue.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:plansync/model/services/notification_service.dart';
-import 'package:plansync/model/services/pending_write_service.dart';
 import 'package:plansync/model/services/theme_service.dart';
-import 'package:plansync/model/services/write_queue.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
@@ -36,7 +36,7 @@ void main() async {
           create: (_) => ThemeService()..setPreference(savedTheme),
         ),
         ChangeNotifierProvider(create: (_) => ConnectivityViewModel()),
-        ChangeNotifierProvider.value(value: PendingWriteService.instance),
+        ChangeNotifierProvider.value(value: PendingWriteRepository.instance),
       ],
       child: const AuthGate(),
     ),
@@ -66,7 +66,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    _listenForDropped(PendingWriteService.instance);
+    _listenForDropped(PendingWriteRepository.instance);
     _connectivity = context.read<ConnectivityViewModel>()
       ..addListener(_retryWhenOnline);
     _authStateChanges = _authRepository.authStateChanges;
@@ -230,7 +230,7 @@ class _AuthGateState extends State<AuthGate> {
     }
     _activeUserId = user.id;
     _registerNotificationsOnce(user);
-    unawaited(PendingWriteService.instance.start());
+    unawaited(PendingWriteRepository.instance.start());
     if (_pendingNotificationType != null) _scheduleNotificationRoute();
     return HomeShell(
       key: _homeShellKey,
