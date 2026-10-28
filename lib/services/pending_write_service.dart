@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:plansync/data/activity_repository.dart';
 import 'package:plansync/data/plan_repository.dart';
 import 'package:plansync/data/review_repository.dart';
@@ -8,6 +10,7 @@ import 'package:plansync/models/pending_write.dart';
 import 'package:plansync/models/plan.dart';
 import 'package:plansync/models/review.dart';
 import 'package:plansync/models/user.dart';
+import 'package:plansync/services/storage_service.dart';
 import 'package:plansync/services/write_queue.dart';
 
 enum WriteKind {
@@ -22,6 +25,7 @@ enum WriteKind {
   planRemoveActivity,
   reviewSubmit,
   profileUpdate,
+  profilePhoto,
 }
 
 class PendingWriteService extends WriteQueue<WriteKind> {
@@ -34,6 +38,18 @@ class PendingWriteService extends WriteQueue<WriteKind> {
   final _tags = TagRepository();
   final _reviews = ReviewRepository();
   final _users = UserRepository();
+  final _storage = StorageService();
+
+  Future<void> _uploadProfilePhoto(String uid, String path) async {
+    final file = File(path);
+    if (!await file.exists()) return;
+    final modified = await file.lastModified();
+    final url = await _storage.upload('profile_pictures/$uid.jpg', file);
+    await _users.updatePhotoUrl(uid, url);
+    if (await file.exists() && await file.lastModified() == modified) {
+      await file.delete();
+    }
+  }
 
   @override
   Future<void> send(PendingWrite<WriteKind> write) async {
@@ -70,6 +86,10 @@ class PendingWriteService extends WriteQueue<WriteKind> {
         Review.fromJson(payload),
       ),
       WriteKind.profileUpdate => _users.updateProfile(User.fromJson(payload)),
+      WriteKind.profilePhoto => _uploadProfilePhoto(
+        write.docId,
+        payload['path'] as String,
+      ),
     };
   }
 
@@ -91,6 +111,7 @@ class PendingWriteService extends WriteQueue<WriteKind> {
         "A plan you edited was deleted, so its activity changes couldn't sync.",
       WriteKind.reviewSubmit => "We couldn't post your review.",
       WriteKind.profileUpdate => "We couldn't save your profile changes.",
+      WriteKind.profilePhoto => "We couldn't upload your profile photo.",
     };
   }
 }

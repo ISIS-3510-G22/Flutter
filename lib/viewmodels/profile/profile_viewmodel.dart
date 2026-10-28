@@ -3,22 +3,23 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/data/user_repository.dart';
+import 'package:plansync/models/pending_write.dart';
 import 'package:plansync/models/user.dart';
 import 'package:plansync/services/auth_service.dart';
 import 'package:plansync/services/connectivity_service.dart';
 import 'package:plansync/services/pending_write_service.dart';
-import 'package:plansync/services/storage_service.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   ProfileViewModel(this.user) {
     PendingWriteService.instance.addListener(refreshUser);
+    _loadLocalPhoto();
   }
 
   User user;
   final _userRepository = UserRepository();
-  final _storageService = StorageService();
   final _picker = ImagePicker();
   bool isUploadingPhoto = false;
+  String? localPhotoPath;
 
   String? get signOutWarning {
     if (PendingWriteService.instance.hasPending) {
@@ -30,6 +31,11 @@ class ProfileViewModel extends ChangeNotifier {
     return null;
   }
 
+  Future<void> _loadLocalPhoto() async {
+    localPhotoPath = await _userRepository.pendingPhoto(user.id);
+    notifyListeners();
+  }
+
   Future<void> signOut() async {
     PendingWriteService.instance.removeListener(refreshUser);
     await PendingWriteService.instance.clear();
@@ -37,35 +43,38 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshUser() async {
+    await _loadLocalPhoto();
     final refreshedUser = await _userRepository.currentUser(user.id);
     if (refreshedUser == null) return;
     user = refreshedUser;
     notifyListeners();
   }
 
-  Future<void> pickAndUploadPhoto(ImageSource source) async {
-    final picked = await _picker.pickImage(source: source);
-    if (picked == null) return;
+  Future<bool> pickAndUploadPhoto(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 1080,
+      imageQuality: 80,
+    );
+    if (picked == null) return false;
 
     isUploadingPhoto = true;
     notifyListeners();
 
     try {
-      final url = await _storageService.upload(
-        "profile_pictures/${user.id}.jpg",
-        File(picked.path),
+      final path = await _userRepository.savePhotoLocal(user.id, picked.path);
+      await FileImage(File(path)).evict();
+      final sent = await PendingWriteService.instance.submit(
+        PendingWrite(
+          kind: WriteKind.profilePhoto,
+          docId: user.id,
+          payload: {'path': path},
+        ),
       );
-      await _userRepository.updatePhotoUrl(user.id, url);
-      user = User(
-        id: user.id,
-        name: user.name,
-        lastName: user.lastName,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        photoUrl: url,
-        reimbursementMethods: user.reimbursementMethods,
-      );
+      await refreshUser();
+      return !sent;
+    } catch (_) {
+      return false;
     } finally {
       isUploadingPhoto = false;
       notifyListeners();

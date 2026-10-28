@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:plansync/data/local/json_file_store.dart';
 import 'package:plansync/models/reimbursement_method.dart';
 import 'package:plansync/models/user.dart';
@@ -9,6 +12,23 @@ class UserRepository {
   final _users = FirebaseFirestore.instance.collection('users');
 
   final _files = JsonFileStore();
+
+  Future<File> _photoFile(String uid) async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File(join(dir.path, 'uploads', 'profile_$uid.jpg'));
+  }
+
+  Future<String?> pendingPhoto(String uid) async {
+    final file = await _photoFile(uid);
+    return await file.exists() ? file.path : null;
+  }
+
+  Future<String> savePhotoLocal(String uid, String pickedPath) async {
+    final file = await _photoFile(uid);
+    await file.parent.create(recursive: true);
+    await File(pickedPath).copy(file.path);
+    return file.path;
+  }
 
   String _meFile(String uid) => 'me_$uid.json';
 
