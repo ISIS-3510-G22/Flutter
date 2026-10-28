@@ -1,11 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:plansync/model/services/auth_service.dart';
+import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/models/auth_failure.dart';
 
 class LoginViewModel extends ChangeNotifier {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final _authService = AuthService();
+  final _authRepository = AuthRepository();
 
   bool obscurePassword = true;
   bool isLoading = false;
@@ -22,16 +22,16 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.signIn(
+      await _authRepository.signIn(
         email: emailController.text.trim(),
         password: passwordController.text,
       );
-    } on FirebaseAuthException catch (e) {
-      errorMessage = switch (e.code) {
-        'user-not-found' || 'wrong-password' || 'invalid-credential' =>
-          'Incorrect email or password.',
-        'invalid-email' => 'Enter a valid email address.',
-        'network-request-failed' => 'No internet connection.',
+    } on AuthFailure catch (e) {
+      errorMessage = switch (e.error) {
+        AuthError.userNotFound ||
+        AuthError.invalidCredentials => 'Incorrect email or password.',
+        AuthError.invalidEmail => 'Enter a valid email address.',
+        AuthError.network => 'No internet connection.',
         _ => 'Something went wrong. Try again.',
       };
     }

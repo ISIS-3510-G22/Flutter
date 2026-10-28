@@ -1,21 +1,14 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart' as fb;
-import 'package:plansync/model/data/user_repository.dart';
-import 'package:plansync/model/models/user.dart';
 
 class AuthService {
   final _firebaseAuth = fb.FirebaseAuth.instance;
-  final _userRepository = UserRepository();
 
-  Stream<User?> get authStateChanges {
-    return _firebaseAuth
-        .authStateChanges()
-        .withInitialTimeout(const Duration(seconds: 20))
-        .asyncMap((fbUser) async {
-          if (fbUser == null) return null;
-          return _userRepository.currentUser(fbUser.uid);
-        });
+  Stream<fb.User?> get authStateChanges {
+    return _firebaseAuth.authStateChanges().withInitialTimeout(
+      const Duration(seconds: 20),
+    );
   }
 
   Future<void> signIn({required String email, required String password}) {

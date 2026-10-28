@@ -1,10 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:plansync/model/services/auth_service.dart';
+import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/models/auth_failure.dart';
 
 class ResetPasswordViewModel extends ChangeNotifier {
   final emailController = TextEditingController();
-  final _authService = AuthService();
+  final _authRepository = AuthRepository();
 
   bool isLoading = false;
   String? errorMessage;
@@ -16,15 +16,15 @@ class ResetPasswordViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.sendPasswordResetEmail(
+      await _authRepository.sendPasswordResetEmail(
         email: emailController.text.trim(),
       );
       emailSent = true;
-    } on FirebaseAuthException catch (e) {
-      errorMessage = switch (e.code) {
-        'user-not-found' => 'No account found with that email.',
-        'invalid-email' => 'Enter a valid email address.',
-        'network-request-failed' => 'No internet connection.',
+    } on AuthFailure catch (e) {
+      errorMessage = switch (e.error) {
+        AuthError.userNotFound => 'No account found with that email.',
+        AuthError.invalidEmail => 'Enter a valid email address.',
+        AuthError.network => 'No internet connection.',
         _ => 'Something went wrong. Try again.',
       };
     }

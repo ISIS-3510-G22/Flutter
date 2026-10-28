@@ -1,8 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:flutter/material.dart';
+import 'package:plansync/model/data/auth_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/auth_failure.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/auth_service.dart';
 
 class SignUpViewModel extends ChangeNotifier {
   final nameController = TextEditingController();
@@ -12,7 +12,7 @@ class SignUpViewModel extends ChangeNotifier {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  final _authService = AuthService();
+  final _authRepository = AuthRepository();
   final _userRepository = UserRepository();
   bool isLoading = false;
   String? errorMessage;
@@ -23,7 +23,7 @@ class SignUpViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final userId = await _authService.signUp(
+      final userId = await _authRepository.signUp(
         email: emailController.text.trim(),
         password: passwordController.text,
       );
@@ -38,12 +38,13 @@ class SignUpViewModel extends ChangeNotifier {
         ),
       );
       return true;
-    } on FirebaseAuthException catch (e) {
-      errorMessage = switch (e.code) {
-        'email-already-in-use' => 'An account already uses this email address.',
-        'invalid-email' => 'Enter a valid email address.',
-        'weak-password' => 'Use a password with at least 8 characters.',
-        'network-request-failed' => 'No internet connection.',
+    } on AuthFailure catch (e) {
+      errorMessage = switch (e.error) {
+        AuthError.emailAlreadyInUse =>
+          'An account already uses this email address.',
+        AuthError.invalidEmail => 'Enter a valid email address.',
+        AuthError.weakPassword => 'Use a password with at least 8 characters.',
+        AuthError.network => 'No internet connection.',
         _ => 'Could not create your profile. Try again.',
       };
       return false;

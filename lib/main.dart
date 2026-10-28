@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:plansync/firebase_options.dart';
+import 'package:plansync/model/data/auth_repository.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/auth_service.dart';
 import 'package:plansync/model/services/connectivity_service.dart';
 import 'package:plansync/model/services/notification_service.dart';
 import 'package:plansync/model/services/pending_write_service.dart';
@@ -50,7 +50,7 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  final AuthService _authService = AuthService();
+  final AuthRepository _authRepository = AuthRepository();
   late Stream<User?> _authStateChanges;
   final NotificationService _notificationService = NotificationService();
   String? _notificationRegistrationUserId;
@@ -65,7 +65,7 @@ class _AuthGateState extends State<AuthGate> {
     super.initState();
     _listenForDropped(PendingWriteService.instance);
     ConnectivityService.instance.addListener(_retryWhenOnline);
-    _authStateChanges = _authService.authStateChanges;
+    _authStateChanges = _authRepository.authStateChanges;
     unawaited(
       _notificationService.initialize(onTap: _handleNotificationTap).catchError(
         (Object error) {
@@ -82,7 +82,7 @@ class _AuthGateState extends State<AuthGate> {
 
   void _retryAuthState() {
     setState(() {
-      _authStateChanges = _authService.authStateChanges;
+      _authStateChanges = _authRepository.authStateChanges;
     });
   }
 
