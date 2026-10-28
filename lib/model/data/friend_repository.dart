@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/crew_local_store.dart';
 import 'package:plansync/model/models/friend_request.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
@@ -117,6 +118,7 @@ class FriendRepository {
     var pendingEmission = Future<void>.value();
 
     Future<void> emit() async {
+      ConnectivityRepository.instance.ensureOnline();
       final friendIds = <String>{
         ...sentDocs.map((d) => d.data()['toUserId'] as String),
         ...receivedDocs.map((d) => d.data()['fromUserId'] as String),
