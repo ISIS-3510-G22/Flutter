@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:plansync/data/expense_repository.dart';
-import 'package:plansync/data/plan_payment_repository.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/expense.dart';
-import 'package:plansync/models/reimbursement_method.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/data/expense_repository.dart';
+import 'package:plansync/model/data/plan_payment_repository.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/model/models/user.dart';
 
 class PlanExpensesViewModel extends ChangeNotifier {
   PlanExpensesViewModel(this.planId, this.participants, this._currentUserId) {

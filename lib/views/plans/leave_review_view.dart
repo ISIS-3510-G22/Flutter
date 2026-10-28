@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/connectivity_service.dart';
-import 'package:plansync/utils/date_format.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
 import 'package:plansync/viewmodels/plans/leave_review_viewmodel.dart';
+import 'package:plansync/views/formatters/date_format.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/expense.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/plans/create_edit_expense_viewmodel.dart';
 import 'package:provider/provider.dart';
 

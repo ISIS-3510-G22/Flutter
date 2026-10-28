@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/reimbursement_method.dart';
-import 'package:plansync/services/connectivity_service.dart';
+import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/group.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/model/models/group.dart';
+import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/crew/invite_friends_view.dart';
+import 'package:plansync/views/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 class GroupDetailView extends StatefulWidget {

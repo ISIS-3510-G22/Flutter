@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/pending_write.dart';
-import 'package:plansync/models/reimbursement_method.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/pending_write_service.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
 
 class EditProfileViewModel extends ChangeNotifier {
   EditProfileViewModel(this.user)

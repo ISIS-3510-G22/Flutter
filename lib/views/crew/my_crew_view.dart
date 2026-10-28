@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/group.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/model/models/group.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/viewmodels/crew/nearby_friends_viewmodel.dart';
 import 'package:plansync/views/crew/add_friend_view.dart';
 import 'package:plansync/views/crew/create_group_view.dart';
 import 'package:plansync/views/crew/friend_detail_view.dart';
@@ -11,12 +12,11 @@ import 'package:plansync/views/crew/friend_request_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
 import 'package:plansync/views/crew/nearby_friends_view.dart';
+import 'package:plansync/views/theme/app_theme.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:plansync/views/widgets/view_header.dart';
-import 'package:plansync/viewmodels/nearby_friends_viewmodel.dart';
-import 'package:plansync/services/connectivity_service.dart';
 import 'package:provider/provider.dart';
 
 class MyCrewView extends StatelessWidget {

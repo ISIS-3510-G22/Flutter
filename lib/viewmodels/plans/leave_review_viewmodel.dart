@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/data/review_repository.dart';
-import 'package:plansync/models/pending_write.dart';
-import 'package:plansync/models/review.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/pending_write_service.dart';
+import 'package:plansync/model/data/review_repository.dart';
+import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/review.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
 
 class LeaveReviewViewModel extends ChangeNotifier {
   LeaveReviewViewModel(this._planId, this._user) {

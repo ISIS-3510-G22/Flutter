@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:plansync/data/plan_repository.dart';
-import 'package:plansync/models/pending_write.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/services/pending_write_service.dart';
+import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
 
 class AddToPlanViewModel extends ChangeNotifier {
   AddToPlanViewModel(this.activityId, this._uid) {

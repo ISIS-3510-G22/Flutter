@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:plansync/data/route_repository.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/models/plan.dart';
+import 'package:plansync/model/data/route_repository.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/viewmodels/plans/plan_route_viewmodel.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/widgets/circle_back_button.dart';

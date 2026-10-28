@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/app_notification.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/utils/avatar.dart';
-import 'package:plansync/utils/date_format.dart';
+import 'package:plansync/model/models/app_notification.dart';
+import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
+import 'package:plansync/views/formatters/date_format.dart';
 import 'package:plansync/views/plans/leave_review_view.dart';
 import 'package:plansync/views/plans/manage_splits_view.dart';
 import 'package:plansync/views/plans/plan_detail_view.dart';
+import 'package:plansync/views/widgets/avatar.dart';
 import 'package:plansync/views/widgets/waiting_to_sync.dart';
 
 class PlanCard extends StatelessWidget {

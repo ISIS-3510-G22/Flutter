@@ -1,19 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:plansync/data/expense_repository.dart';
-import 'package:plansync/data/overdue_debt_repository.dart';
-import 'package:plansync/data/plan_payment_repository.dart';
-import 'package:plansync/data/plan_repository.dart';
-import 'package:plansync/data/settlement_repository.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/expense.dart';
-import 'package:plansync/models/overdue_debt.dart';
-import 'package:plansync/models/reimbursement_method.dart';
-import 'package:plansync/models/settlement.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/utils/debt_simplifier.dart';
-import 'package:plansync/utils/overdue.dart';
+import 'package:plansync/model/data/expense_repository.dart';
+import 'package:plansync/model/data/overdue_debt_repository.dart';
+import 'package:plansync/model/data/plan_payment_repository.dart';
+import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/data/settlement_repository.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/logic/debt_simplifier.dart';
+import 'package:plansync/model/logic/overdue.dart';
+import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/overdue_debt.dart';
+import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/model/models/settlement.dart';
+import 'package:plansync/model/models/user.dart';
 
 class SplitRow {
   final String userId;

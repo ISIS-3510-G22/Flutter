@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/connectivity_service.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/edit_plan_activities_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';

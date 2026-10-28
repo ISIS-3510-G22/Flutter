@@ -2,16 +2,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:plansync/data/activity_repository.dart';
-import 'package:plansync/data/place_repository.dart';
-import 'package:plansync/data/tag_repository.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/models/pending_write.dart';
-import 'package:plansync/models/place.dart';
-import 'package:plansync/models/tag.dart';
-import 'package:plansync/services/pending_write_service.dart';
-import 'package:plansync/services/storage_service.dart';
-import 'package:plansync/utils/validators.dart';
+import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/data/place_repository.dart';
+import 'package:plansync/model/data/tag_repository.dart';
+import 'package:plansync/model/logic/validators.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/place.dart';
+import 'package:plansync/model/models/tag.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
+import 'package:plansync/model/services/storage_service.dart';
 
 class CreateEditActivityViewmodel extends ChangeNotifier {
   CreateEditActivityViewmodel(this._ownerId, [this._editingActivity]) {

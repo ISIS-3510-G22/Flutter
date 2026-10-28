@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/pending_write.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/auth_service.dart';
-import 'package:plansync/services/connectivity_service.dart';
-import 'package:plansync/services/pending_write_service.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/auth_service.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   ProfileViewModel(this.user) {

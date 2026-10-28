@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:plansync/data/friend_repository.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/friend_request.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/data/friend_repository.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/friend_request.dart';
+import 'package:plansync/model/models/user.dart';
 
 class FriendsViewModel extends ChangeNotifier {
   FriendsViewModel(this._uid) {

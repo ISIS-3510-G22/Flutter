@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/friend_request.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/model/models/friend_request.dart';
+import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
+import 'package:plansync/views/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 class FriendRequestView extends StatelessWidget {
