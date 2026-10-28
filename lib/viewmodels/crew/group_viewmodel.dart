@@ -99,11 +99,10 @@ class CrewViewmodel extends ChangeNotifier {
 
   Future<void> _loadMemberCounts(Iterable<String> groupIds) async {
     try {
-      await Future.wait(
-        groupIds.where((id) => !_memberCounts.containsKey(id)).map((id) async {
-          _memberCounts[id] = await _repository.memberCount(id);
-        }),
-      );
+      final counts = await _repository.memberCounts();
+      for (final id in groupIds) {
+        _memberCounts[id] = counts[id] ?? 0;
+      }
     } catch (e) {
       error = 'Could not load member counts: $e';
     }
@@ -111,12 +110,15 @@ class CrewViewmodel extends ChangeNotifier {
 
   Future<void> _loadInvitedGroups(List<GroupInvitation> invitations) async {
     try {
+      final ids = invitations.map((invitation) => invitation.groupId).toSet();
+      await _loadMemberCounts(ids);
       await Future.wait(
         invitations.where((i) => !_invitedGroups.containsKey(i.groupId)).map((
           i,
         ) async {
           _invitedGroups[i.groupId] = await _repository.groupById(i.groupId);
-          _memberCounts[i.groupId] = await _repository.memberCount(i.groupId);
+          await _repository.memberIdsForGroup(i.groupId);
+          await _loadMemberCounts([i.groupId]);
         }),
       );
     } catch (e) {

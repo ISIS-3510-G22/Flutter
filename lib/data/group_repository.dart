@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/data/local/crew_local_store.dart';
 import 'package:plansync/models/group.dart';
 import 'package:plansync/models/group_invitation.dart';
 
 class GroupRepository {
   final _db = FirebaseFirestore.instance;
+  final _local = CrewLocalStore();
   CollectionReference<Map<String, dynamic>> get _groups =>
       _db.collection('groups');
   CollectionReference<Map<String, dynamic>> get _members =>
@@ -13,34 +17,72 @@ class GroupRepository {
 
   String _memberId(String groupId, String userId) => '${groupId}_$userId';
 
-  Stream<List<Group>> groupsForUser(String uid) {
-    return _members.where('userId', isEqualTo: uid).snapshots().asyncMap((
-      snapshot,
-    ) async {
-      final groupIds = snapshot.docs
-          .map((d) => d.data()['groupId'] as String)
-          .toList();
-      final docs = await Future.wait(
-        groupIds.map((id) => _groups.doc(id).get()),
-      );
-      return docs
-          .where((d) => d.exists)
-          .map((d) => Group.fromFirestore(d.id, d.data()!))
-          .toList();
-    });
+  Stream<List<Group>> groupsForUser(String uid) async* {
+    yield await _local.groups();
+    yield* _serverGroupsForUser(uid);
   }
 
-  Future<int> memberCount(String groupId) async {
-    final result = await _members
-        .where('groupId', isEqualTo: groupId)
-        .count()
-        .get();
-    return result.count ?? 0;
+  Stream<List<Group>> _serverGroupsForUser(String uid) {
+    final membershipStream = _members
+        .where('userId', isEqualTo: uid)
+        .snapshots(includeMetadataChanges: true);
+    final controller = StreamController<List<Group>>();
+    var pendingEmission = Future<void>.value();
+
+    Future<void> emit(QuerySnapshot<Map<String, dynamic>> snapshot) async {
+      final groupIds = snapshot.docs
+          .map((doc) => doc.data()['groupId'] as String)
+          .toSet();
+      final groupDocs = await Future.wait(
+        groupIds.map(
+          (id) => _groups.doc(id).get(const GetOptions(source: Source.server)),
+        ),
+      );
+      final groups = groupDocs
+          .where((doc) => doc.exists)
+          .map((doc) => Group.fromFirestore(doc.id, doc.data()!))
+          .toList();
+      final memberEntries = await Future.wait(
+        groups.map((group) async {
+          final members = await _members
+              .where('groupId', isEqualTo: group.id)
+              .get(const GetOptions(source: Source.server));
+          return MapEntry(
+            group.id,
+            members.docs.map((doc) => doc.data()['userId'] as String).toList(),
+          );
+        }),
+      );
+      await _local.saveGroups(groups, Map.fromEntries(memberEntries));
+      if (!controller.isClosed) controller.add(groups);
+    }
+
+    final subscription = membershipStream.listen((snapshot) {
+      if (snapshot.metadata.isFromCache || !controller.hasListener) return;
+      pendingEmission = pendingEmission
+          .then((_) => emit(snapshot))
+          .catchError((Object _) {});
+    }, onError: (Object _) {});
+    controller.onCancel = subscription.cancel;
+    return controller.stream;
   }
+
+  Future<Map<String, int>> memberCounts() => _local.memberCounts();
 
   Future<List<String>> memberIdsForGroup(String groupId) async {
-    final snapshot = await _members.where('groupId', isEqualTo: groupId).get();
-    return snapshot.docs.map((doc) => doc.data()['userId'] as String).toList();
+    final localIds = await _local.memberIds(groupId);
+    try {
+      final snapshot = await _members
+          .where('groupId', isEqualTo: groupId)
+          .get(const GetOptions(source: Source.server));
+      final memberIds = snapshot.docs
+          .map((doc) => doc.data()['userId'] as String)
+          .toList();
+      await _local.saveMemberIds(groupId, memberIds);
+      return memberIds;
+    } catch (_) {
+      return localIds;
+    }
   }
 
   Future<Group> createGroup({
