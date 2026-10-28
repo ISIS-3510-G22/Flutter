@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:plansync/data/route_repository.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/models/plan.dart';
+import 'package:plansync/model/data/route_repository.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/plan.dart';
 
 class RouteStop {
   final int number;

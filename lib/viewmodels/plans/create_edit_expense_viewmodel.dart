@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/data/expense_repository.dart';
-import 'package:plansync/models/expense.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/data/expense_repository.dart';
+import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/user.dart';
 
 class CreateEditExpenseViewModel extends ChangeNotifier {
   CreateEditExpenseViewModel(

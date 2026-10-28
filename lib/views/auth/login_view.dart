@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/services/connectivity_service.dart';
-import 'package:plansync/viewmodels/login_viewmodel.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/auth/login_viewmodel.dart';
 import 'package:plansync/views/auth/reset_password_view.dart';
 import 'package:plansync/views/auth/sign_up_view.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';

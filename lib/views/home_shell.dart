@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/notification_service.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/notification_service.dart';
+import 'package:plansync/viewmodels/crew/nearby_friends_viewmodel.dart';
 import 'package:plansync/views/activities/my_activities_view.dart';
 import 'package:plansync/views/crew/my_crew_view.dart';
-import 'package:plansync/viewmodels/nearby_friends_viewmodel.dart';
 import 'package:plansync/views/explore/explore_view.dart';
 import 'package:plansync/views/plans/plan_view.dart';
 import 'package:plansync/views/profile/my_profile_view.dart';

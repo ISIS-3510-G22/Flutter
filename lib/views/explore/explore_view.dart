@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/data/explore_repository.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/utils/text_format.dart';
-import 'package:plansync/viewmodels/explore_viewmodel.dart';
+import 'package:plansync/model/data/explore_repository.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/explore/explore_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/explore/nearby_map_view.dart';
 import 'package:plansync/views/explore/public_plan_detail_view.dart';
+import 'package:plansync/views/formatters/text_format.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
 import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';

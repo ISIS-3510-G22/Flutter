@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:plansync/data/group_repository.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/group.dart';
-import 'package:plansync/models/group_invitation.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/data/group_repository.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/group.dart';
+import 'package:plansync/model/models/group_invitation.dart';
+import 'package:plansync/model/models/user.dart';
 
 class CrewViewmodel extends ChangeNotifier {
   final _repository = GroupRepository();

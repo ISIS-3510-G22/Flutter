@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/utils/text_format.dart';
+import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
+import 'package:plansync/views/formatters/text_format.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
 import 'package:plansync/views/widgets/waiting_to_sync.dart';
 

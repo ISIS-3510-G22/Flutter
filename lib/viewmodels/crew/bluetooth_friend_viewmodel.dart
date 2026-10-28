@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:plansync/data/friend_repository.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/friend_request.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/bluetooth_service.dart';
+import 'package:plansync/model/data/friend_repository.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/friend_request.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/bluetooth_service.dart';
 
 class NearbyBluetoothFriend {
   const NearbyBluetoothFriend({

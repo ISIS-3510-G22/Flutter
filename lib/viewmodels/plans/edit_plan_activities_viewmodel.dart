@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:plansync/data/activity_repository.dart';
-import 'package:plansync/data/plan_repository.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/models/pending_write.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/services/pending_write_service.dart';
+import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 
 class EditPlanActivitiesViewModel extends ChangeNotifier {

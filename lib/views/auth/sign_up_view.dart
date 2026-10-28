@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/utils/validators.dart';
-import 'package:plansync/viewmodels/sign_up_viewmodel.dart';
+import 'package:plansync/model/logic/validators.dart';
+import 'package:plansync/viewmodels/auth/sign_up_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 class SignUpView extends StatelessWidget {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/views/theme/app_theme.dart';
 
 class FriendDetailView extends StatelessWidget {
   const FriendDetailView({super.key, required this.friend});

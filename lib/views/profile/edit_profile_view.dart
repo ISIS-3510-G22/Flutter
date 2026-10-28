@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/reimbursement_method.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/connectivity_service.dart';
+import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/connectivity_service.dart';
 import 'package:plansync/viewmodels/profile/edit_profile_viewmodel.dart';
 import 'package:plansync/views/profile/add_reimbursment_method.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';

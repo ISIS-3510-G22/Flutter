@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/data/activity_repository.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/models/pending_write.dart';
-import 'package:plansync/services/pending_write_service.dart';
+import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/services/pending_write_service.dart';
 
 class ActivityDetailViewmodel extends ChangeNotifier {
   ActivityDetailViewmodel(this.activity, this._uid);
