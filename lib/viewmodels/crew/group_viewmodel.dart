@@ -14,6 +14,7 @@ class CrewViewmodel extends ChangeNotifier {
 
   late final StreamSubscription<List<Group>> _groupsSub;
   late final StreamSubscription<List<GroupInvitation>> _invitationsSub;
+  late final Future<void> _cachedInvitationsReady;
 
   List<Group> _groups = [];
   List<GroupInvitation> _invitations = [];
@@ -92,12 +93,19 @@ class CrewViewmodel extends ChangeNotifier {
           },
         );
 
+    _cachedInvitationsReady = _loadCachedInvitations(uid);
     _invitationsSub = _repository
         .pendingInvitationsForUser(uid)
         .listen(
           (invitations) async {
+            await _cachedInvitationsReady;
             _invitations = invitations;
             await _loadInvitedGroups(invitations);
+            await _repository.saveInvitationsForUser(
+              uid,
+              invitations,
+              _invitedGroups,
+            );
             _invitationsLoaded = true;
             _notify();
           },
@@ -107,6 +115,28 @@ class CrewViewmodel extends ChangeNotifier {
             _notify();
           },
         );
+  }
+
+  Future<void> _loadCachedInvitations(String uid) async {
+    try {
+      final cached = await _repository.cachedInvitationsForUser(uid);
+      if (cached == null) {
+        _invitationsLoaded = true;
+        _notify();
+        return;
+      }
+      _invitations = cached.map((entry) => entry.invitation).toList();
+      _invitedGroups.addEntries(
+        cached.map((entry) => MapEntry(entry.group.id, entry.group)),
+      );
+      await _loadMemberCounts(cached.map((entry) => entry.group.id));
+      _invitationsLoaded = true;
+      _notify();
+    } catch (e) {
+      error = 'Could not load saved invitations: $e';
+      _invitationsLoaded = true;
+      _notify();
+    }
   }
 
   Future<void> _loadMemberCounts(Iterable<String> groupIds) async {
@@ -125,9 +155,7 @@ class CrewViewmodel extends ChangeNotifier {
       final ids = invitations.map((invitation) => invitation.groupId).toSet();
       await _loadMemberCounts(ids);
       await Future.wait(
-        invitations.where((i) => !_invitedGroups.containsKey(i.groupId)).map((
-          i,
-        ) async {
+        invitations.map((i) async {
           _invitedGroups[i.groupId] = await _repository.groupById(i.groupId);
           await _repository.memberIdsForGroup(i.groupId);
           await _loadMemberCounts([i.groupId]);

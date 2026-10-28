@@ -1,14 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/crew_local_store.dart';
+import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/group_invitation.dart';
 
 class GroupRepository {
   final _db = FirebaseFirestore.instance;
   final _local = CrewLocalStore();
+  final _files = JsonFileStore();
+  Future<void> _invitationFileWrite = Future<void>.value();
   CollectionReference<Map<String, dynamic>> get _groups =>
       _db.collection('groups');
   CollectionReference<Map<String, dynamic>> get _members =>
@@ -150,7 +154,8 @@ class GroupRepository {
     return _invitations
         .where('userId', isEqualTo: uid)
         .where('status', isEqualTo: InvitationStatus.pending.name)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
+        .where((snapshot) => !snapshot.metadata.isFromCache)
         .map(
           (s) => s.docs
               .map((d) => GroupInvitation.fromFirestore(d.id, d.data()))
@@ -158,8 +163,51 @@ class GroupRepository {
         );
   }
 
+  Future<List<CachedGroupInvitation>?> cachedInvitationsForUser(
+    String uid,
+  ) async {
+    final contents = await _files.read('group_invites_$uid.json');
+    if (contents == null) return null;
+    try {
+      return (jsonDecode(contents) as List)
+          .map(
+            (entry) => CachedGroupInvitation.fromJson(
+              Map<String, dynamic>.from(entry as Map),
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveInvitationsForUser(
+    String uid,
+    List<GroupInvitation> invitations,
+    Map<String, Group> groupsById,
+  ) {
+    final cached = invitations
+        .where((invitation) => groupsById.containsKey(invitation.groupId))
+        .map(
+          (invitation) => CachedGroupInvitation(
+            invitation: invitation,
+            group: groupsById[invitation.groupId]!,
+          ),
+        )
+        .map((entry) => entry.toJson())
+        .toList();
+    final contents = jsonEncode(cached);
+    _invitationFileWrite = _invitationFileWrite
+        .catchError((Object _) {})
+        .then((_) => _files.write('group_invites_$uid.json', contents));
+    return _invitationFileWrite;
+  }
+
   Future<Group> groupById(String id) async {
-    final doc = await _groups.doc(id).get();
+    ConnectivityRepository.instance.ensureOnline();
+    final doc = await _groups
+        .doc(id)
+        .get(const GetOptions(source: Source.server));
     return Group.fromFirestore(doc.id, doc.data()!);
   }
 
