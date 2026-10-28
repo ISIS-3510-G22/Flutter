@@ -37,6 +37,8 @@ class MyActivitiesViewmodel extends ChangeNotifier {
     _loadRecommended();
   }
 
+  Set<String> get pendingIds => PendingWriteRepository.instance.pendingDocIds;
+
   void _loadRecommended() {
     _recommendedSub?.cancel();
     _recommendedSub = _repository.recommended(_uid).listen((activities) {

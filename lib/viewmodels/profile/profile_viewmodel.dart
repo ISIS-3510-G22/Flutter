@@ -35,6 +35,9 @@ class ProfileViewModel extends ChangeNotifier {
     return null;
   }
 
+  bool get isPending =>
+      PendingWriteRepository.instance.pendingDocIds.contains(user.id);
+
   Future<void> _loadLocalPhoto() async {
     localPhotoPath = await _userRepository.pendingPhoto(user.id);
     notifyListeners();
