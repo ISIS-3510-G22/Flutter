@@ -36,7 +36,6 @@ void main() async {
           create: (_) => ThemeService()..setPreference(savedTheme),
         ),
         ChangeNotifierProvider(create: (_) => ConnectivityViewModel()),
-        ChangeNotifierProvider.value(value: PendingWriteRepository.instance),
       ],
       child: const AuthGate(),
     ),
@@ -149,7 +148,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   void _listenForDropped(WriteQueue queue) {
-    queue.addListener(() {
+    queue.changes.listen((_) {
       final message = queue.takeDropped();
       if (message == null) return;
       _messengerKey.currentState?.showSnackBar(
