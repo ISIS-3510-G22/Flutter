@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -63,8 +63,6 @@ class LocalDatabase {
     if (oldVersion < 2) {
       await _createCrewTables(db);
     }
-    // Version 1 databases get the current crew schema from _createCrewTables.
-    // Version 2 already has the crew tables and needs only these two columns.
     if (oldVersion >= 2 && oldVersion < 3) {
       await db.execute('ALTER TABLE people ADD COLUMN methods TEXT');
       await db.execute(
@@ -77,6 +75,17 @@ class LocalDatabase {
         INSERT OR IGNORE INTO crew_cache_state (cacheKey, value)
         SELECT 'friends_saved', CASE
           WHEN EXISTS (SELECT 1 FROM people WHERE is_friend = 1) THEN 1
+          ELSE 0
+        END
+      ''');
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        INSERT OR IGNORE INTO crew_cache_state (cacheKey, value)
+        SELECT 'groups_saved', CASE
+          WHEN EXISTS (
+            SELECT 1 FROM group_members WHERE status = 'member'
+          ) THEN 1
           ELSE 0
         END
       ''');

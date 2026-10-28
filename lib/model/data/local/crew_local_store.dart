@@ -31,6 +31,18 @@ class CrewLocalStore {
     return rows.isNotEmpty && rows.first['value'] == 1;
   }
 
+  Future<bool> hasSavedGroups() async {
+    final db = await _db;
+    final rows = await db.query(
+      'crew_cache_state',
+      columns: ['value'],
+      where: 'cacheKey = ?',
+      whereArgs: ['groups_saved'],
+      limit: 1,
+    );
+    return rows.isNotEmpty && rows.first['value'] == 1;
+  }
+
   Future<void> saveFriends(List<User> friends) async {
     final db = await _db;
     await db.transaction((txn) async {
@@ -41,13 +53,17 @@ class CrewLocalStore {
         'methods': null,
       });
       for (final friend in friends) {
-        await _saveUser(txn, friend, isFriend: true, includePrivateFields: true);
+        await _saveUser(
+          txn,
+          friend,
+          isFriend: true,
+          includePrivateFields: true,
+        );
       }
-      await txn.insert(
-        'crew_cache_state',
-        {'cacheKey': 'friends_saved', 'value': 1},
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await txn.insert('crew_cache_state', {
+        'cacheKey': 'friends_saved',
+        'value': 1,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     });
   }
 
@@ -64,7 +80,12 @@ class CrewLocalStore {
     final db = await _db;
     await db.transaction((txn) async {
       for (final user in users) {
-        await _saveUser(txn, user, isFriend: false, includePrivateFields: false);
+        await _saveUser(
+          txn,
+          user,
+          isFriend: false,
+          includePrivateFields: false,
+        );
       }
     });
   }
@@ -95,15 +116,14 @@ class CrewLocalStore {
   ) async {
     final db = await _db;
     await db.transaction((txn) async {
-      // Refresh confirmed memberships while preserving pending invite rows.
       await txn.delete('group_members', where: "status = 'member'");
 
       for (final group in groups) {
-        await txn.insert(
-          'crew_groups',
-          {'id': group.id, 'name': group.name, 'description': group.description},
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        await txn.insert('crew_groups', {
+          'id': group.id,
+          'name': group.name,
+          'description': group.description,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
 
         for (final userId in memberIds[group.id] ?? const <String>[]) {
           await txn.insert('group_members', {
@@ -113,6 +133,10 @@ class CrewLocalStore {
           }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
+      await txn.insert('crew_cache_state', {
+        'cacheKey': 'groups_saved',
+        'value': 1,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     });
   }
 
@@ -182,24 +206,20 @@ class CrewLocalStore {
     required bool includePrivateFields,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    await db.insert(
-      'people',
-      {
-        'id': user.id,
-        'name': user.name,
-        'lastName': user.lastName,
-        'username': user.username,
-        'email': includePrivateFields ? user.email : null,
-        'phone': includePrivateFields ? user.phone : null,
-        'photoUrl': user.photoUrl,
-        'methods': includePrivateFields
-            ? jsonEncode(user.reimbursementMethods.map(_methodToMap).toList())
-            : null,
-        'is_friend': isFriend ? 1 : 0,
-        'synced_at': now,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await db.insert('people', {
+      'id': user.id,
+      'name': user.name,
+      'lastName': user.lastName,
+      'username': user.username,
+      'email': includePrivateFields ? user.email : null,
+      'phone': includePrivateFields ? user.phone : null,
+      'photoUrl': user.photoUrl,
+      'methods': includePrivateFields
+          ? jsonEncode(user.reimbursementMethods.map(_methodToMap).toList())
+          : null,
+      'is_friend': isFriend ? 1 : 0,
+      'synced_at': now,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
     final update = <String, Object?>{
       'name': user.name,
@@ -212,7 +232,9 @@ class CrewLocalStore {
       update.addAll({
         'email': user.email,
         'phone': user.phone,
-        'methods': jsonEncode(user.reimbursementMethods.map(_methodToMap).toList()),
+        'methods': jsonEncode(
+          user.reimbursementMethods.map(_methodToMap).toList(),
+        ),
         'is_friend': 1,
       });
     }

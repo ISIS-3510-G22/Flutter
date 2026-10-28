@@ -22,6 +22,8 @@ class GroupRepository {
     yield* _serverGroupsForUser(uid);
   }
 
+  Future<bool> hasSavedGroups() => _local.hasSavedGroups();
+
   Stream<List<Group>> _serverGroupsForUser(String uid) {
     final membershipStream = _members
         .where('userId', isEqualTo: uid)
