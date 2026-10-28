@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/local/crew_local_store.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
@@ -12,6 +14,7 @@ class UserRepository {
   final _users = FirebaseFirestore.instance.collection('users');
 
   final _files = JsonFileStore();
+  final _crewLocalStore = CrewLocalStore();
 
   Future<File> _photoFile(String uid) async {
     final dir = await getApplicationDocumentsDirectory();
@@ -172,9 +175,15 @@ class UserRepository {
   }
 
   Future<List<User>> getUsersForSearch({String? excludingId}) async {
-    final snapshot = await _users.get();
-    return snapshot.docs.where((doc) => doc.id != excludingId).map((doc) {
-      return _getUserFromDoc(doc.id, doc.data());
-    }).toList();
+    ConnectivityRepository.instance.ensureOnline();
+    final snapshot = await _users.get(
+      const GetOptions(source: Source.server),
+    );
+    final users = snapshot.docs
+        .where((doc) => doc.id != excludingId)
+        .map((doc) => _getUserFromDoc(doc.id, doc.data()))
+        .toList();
+    await _crewLocalStore.saveDirectory(users);
+    return users;
   }
 }
