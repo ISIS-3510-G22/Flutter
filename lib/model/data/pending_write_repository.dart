@@ -17,7 +17,7 @@ enum WriteKind {
   activityCreate,
   activityUpdate,
   activityLike,
-  activityDelete,
+  activityPhoto,
   tagCounts,
   planCreate,
   planUpdate,
@@ -41,12 +41,15 @@ class PendingWriteRepository extends WriteQueue<WriteKind> {
   final _users = UserRepository();
   final _storage = StorageService();
 
-  Future<void> _uploadProfilePhoto(String uid, String path) async {
+  Future<void> _uploadPhoto(
+    String path,
+    String storagePath,
+    Future<void> Function(String url) setUrl,
+  ) async {
     final file = File(path);
     if (!await file.exists()) return;
     final modified = await file.lastModified();
-    final url = await _storage.upload('profile_pictures/$uid.jpg', file);
-    await _users.updatePhotoUrl(uid, url);
+    await setUrl(await _storage.upload(storagePath, file));
     if (await file.exists() && await file.lastModified() == modified) {
       await file.delete();
     }
@@ -67,7 +70,11 @@ class PendingWriteRepository extends WriteQueue<WriteKind> {
         payload['uid'] as String,
         payload['liked'] as bool,
       ),
-      WriteKind.activityDelete => _activities.delete(write.docId),
+      WriteKind.activityPhoto => _uploadPhoto(
+        payload['path'] as String,
+        'activity_pictures/${write.docId}.jpg',
+        (url) => _activities.updatePhotoUrl(write.docId, url),
+      ),
       WriteKind.tagCounts => _tags.updateCounts(
         (payload['added'] as List).cast<String>(),
         (payload['removed'] as List).cast<String>(),
@@ -87,9 +94,11 @@ class PendingWriteRepository extends WriteQueue<WriteKind> {
         Review.fromJson(payload),
       ),
       WriteKind.profileUpdate => _users.updateProfile(User.fromJson(payload)),
-      WriteKind.profilePhoto => _uploadProfilePhoto(
-        write.docId,
+
+      WriteKind.profilePhoto => _uploadPhoto(
         payload['path'] as String,
+        'profile_pictures/${write.docId}.jpg',
+        (url) => _users.updatePhotoUrl(write.docId, url),
       ),
     };
   }
@@ -104,8 +113,7 @@ class PendingWriteRepository extends WriteQueue<WriteKind> {
         "$name was deleted, so your changes couldn't sync.",
       WriteKind.activityLike =>
         "An activity you liked was deleted, so your like couldn't sync.",
-      WriteKind.activityDelete =>
-        "We couldn't delete an activity on the server.",
+      WriteKind.activityPhoto => "We coudn't load your activity photo",
       WriteKind.tagCounts =>
         "Your activity's tags couldn't update the suggestions.",
       WriteKind.planAddActivity || WriteKind.planRemoveActivity =>
