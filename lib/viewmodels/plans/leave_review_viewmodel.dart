@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/review_repository.dart';
-import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/review.dart';
 import 'package:plansync/model/models/user.dart';
 
@@ -66,14 +64,7 @@ class LeaveReviewViewModel extends ChangeNotifier {
         comment: commentController.text.trim(),
         createdAt: DateTime.now(),
       );
-      await _repository.saveLocal(_planId, review);
-      final sent = await PendingWriteRepository.instance.submit(
-        PendingWrite(
-          kind: WriteKind.reviewSubmit,
-          docId: _planId,
-          payload: review.toJson(),
-        ),
-      );
+      final sent = await _repository.post(_planId, review);
       queued = !sent;
       return true;
     } catch (_) {
