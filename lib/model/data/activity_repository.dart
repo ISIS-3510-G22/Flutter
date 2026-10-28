@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/local/activity_local_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/pending_write.dart';
 
 class ActivityRepository {
   final _activities = FirebaseFirestore.instance.collection("activities");
@@ -34,6 +35,48 @@ class ActivityRepository {
       photoUrl: data['photoUrl'] as String?,
       lat: (data['lat'] as num?)?.toDouble(),
       lng: (data['lng'] as num?)?.toDouble(),
+    );
+  }
+
+  Future<bool> save(String uid, Activity activity, {Activity? previous}) async {
+    await saveLocal(uid, activity);
+    final sent = await _queue.submit(
+      PendingWrite(
+        kind: previous == null
+            ? WriteKind.activityCreate
+            : WriteKind.activityUpdate,
+        docId: activity.id,
+        payload: activity.toJson(),
+      ),
+    );
+    final before = previous?.tags.toSet() ?? <String>{};
+    final after = activity.tags.toSet();
+    final added = after.difference(before).toList();
+    final removed = before.difference(after).toList();
+    if (added.isNotEmpty || removed.isNotEmpty) {
+      await _queue.submit(
+        PendingWrite(
+          kind: WriteKind.tagCounts,
+          docId: activity.id,
+          payload: {'added': added, 'removed': removed},
+        ),
+      );
+    }
+    return sent;
+  }
+
+  Future<bool> setLiked(
+    String uid,
+    Activity activity, {
+    required bool liked,
+  }) async {
+    await saveLocal(uid, activity);
+    return _queue.submit(
+      PendingWrite(
+        kind: WriteKind.activityLike,
+        docId: activity.id,
+        payload: {'uid': uid, 'liked': liked},
+      ),
     );
   }
 
