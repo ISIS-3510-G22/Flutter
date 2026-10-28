@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/place.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/activities/create_edit_activity_viewmodel.dart';
 import 'package:plansync/views/formatters/text_format.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
@@ -32,7 +32,7 @@ class _CreateEditActivityForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CreateEditActivityViewmodel>();
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return Scaffold(
       appBar: AppBar(

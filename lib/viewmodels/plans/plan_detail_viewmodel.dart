@@ -12,7 +12,6 @@ import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/invite_suggestion.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
 import 'package:plansync/model/services/pending_write_service.dart';
 
 class PlanDetailViewModel extends ChangeNotifier {
@@ -63,8 +62,7 @@ class PlanDetailViewModel extends ChangeNotifier {
       _uid,
       updated.activityIds,
     );
-    if (ConnectivityService.instance.isOnline &&
-        !setEquals(tags, updated.tags.toSet())) {
+    if (!setEquals(tags, updated.tags.toSet())) {
       _planRepository.updateTags(updated.id, tags);
     }
     invitees = await _userRepository.planPeople(updated.id, userIds);

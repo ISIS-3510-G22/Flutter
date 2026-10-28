@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/activities/activity_detail_viewmodel.dart';
 import 'package:plansync/views/activities/activity_info.dart';
 import 'package:plansync/views/activities/add_to_plan_view.dart';
@@ -38,7 +38,7 @@ class _ActivityDetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ActivityDetailViewmodel>();
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return Scaffold(
       appBar: AppBar(

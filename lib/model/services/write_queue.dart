@@ -2,15 +2,16 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/write_queue_store.dart';
 import 'package:plansync/model/models/pending_write.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
 
 abstract class WriteQueue<K extends Enum> extends ChangeNotifier {
   WriteQueue(String table, List<K> kinds)
     : _store = WriteQueueStore(table, kinds);
 
   final WriteQueueStore<K> _store;
+  final _connectivity = ConnectivityRepository.instance;
   List<PendingWrite<K>> _pending = [];
 
   bool _flushing = false;
@@ -23,7 +24,7 @@ abstract class WriteQueue<K extends Enum> extends ChangeNotifier {
   Future<void> start() async {
     if (_started) return;
     _started = true;
-    ConnectivityService.instance.addListener(flush);
+    _connectivity.changes.listen((_) => flush());
     await _reload();
     await flush();
   }
@@ -41,7 +42,7 @@ abstract class WriteQueue<K extends Enum> extends ChangeNotifier {
   }
 
   Future<bool> submit(PendingWrite<K> write) {
-    if (!ConnectivityService.instance.isOnline || hasPending) {
+    if (!_connectivity.isOnline || hasPending) {
       return _enqueue(write).then((_) => false);
     }
     return send(write)
@@ -67,7 +68,7 @@ abstract class WriteQueue<K extends Enum> extends ChangeNotifier {
       (error is FirebaseException && !_dropCodes.contains(error.code));
 
   Future<void> flush() async {
-    if (_flushing || !ConnectivityService.instance.isOnline) return;
+    if (_flushing || !_connectivity.isOnline) return;
     _flushing = true;
     try {
       while (_pending.isNotEmpty) {

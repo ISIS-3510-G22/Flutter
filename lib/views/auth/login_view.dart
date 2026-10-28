@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/auth/login_viewmodel.dart';
 import 'package:plansync/views/auth/reset_password_view.dart';
 import 'package:plansync/views/auth/sign_up_view.dart';
@@ -24,7 +24,7 @@ class _LoginForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<LoginViewModel>();
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 

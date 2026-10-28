@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:isolate';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/invite_suggestion_ids.dart';
@@ -9,6 +10,8 @@ import 'package:plansync/model/models/plan.dart';
 
 class PlanRepository {
   final _plans = FirebaseFirestore.instance.collection('plans');
+
+  final _connectivity = ConnectivityRepository.instance;
 
   final _inviteSuggestionRuns = FirebaseFirestore.instance
       .collection('transferConfigs')
@@ -34,6 +37,11 @@ class PlanRepository {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<void> updateTags(String planId, Set<String> tags) async {
+    if (!_connectivity.isOnline) return;
+    await _plans.doc(planId).update({'tags': tags.toList()});
   }
 
   Plan _fromData(String id, Map<String, dynamic> data) {
@@ -131,10 +139,6 @@ class PlanRepository {
       'date': Timestamp.fromDate(plan.date),
       'isPublic': plan.isPublic,
     });
-  }
-
-  Future<void> updateTags(String planId, Set<String> tags) {
-    return _plans.doc(planId).update({'tags': tags.toList()});
   }
 
   Future<List<Plan>> publicPlans() async {

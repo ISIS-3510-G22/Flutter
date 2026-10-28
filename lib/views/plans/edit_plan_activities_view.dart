@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/edit_plan_activities_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
@@ -30,7 +30,7 @@ class _EditPlanActivitiesBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<EditPlanActivitiesViewModel>();
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Add Activity')),

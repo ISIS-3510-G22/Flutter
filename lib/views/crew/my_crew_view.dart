@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/nearby_friends_viewmodel.dart';
@@ -139,7 +139,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
   Widget build(BuildContext context) {
     final vm = context.watch<CrewViewmodel>();
     final colors = Theme.of(context).colorScheme;
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return ColoredBox(
       color: colors.surface,
@@ -338,7 +338,7 @@ class _FriendsList extends StatelessWidget {
     }
 
     if (vm.friends.isEmpty && !vm.hasSavedFriends) {
-      final online = context.watch<ConnectivityService>().isOnline;
+      final online = context.watch<ConnectivityViewModel>().isOnline;
       return Center(
         child: online
             ? const CircularProgressIndicator()
@@ -373,9 +373,7 @@ class _FriendsList extends StatelessWidget {
         if (vm.friends.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 32),
-            child: Center(
-              child: Text('No friends yet'),
-            ),
+            child: Center(child: Text('No friends yet')),
           )
         else
           for (final friend in vm.friends) ...[

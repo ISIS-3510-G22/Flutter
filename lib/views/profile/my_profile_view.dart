@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/connectivity_service.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/model/services/pending_write_service.dart';
 import 'package:plansync/model/services/theme_service.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
@@ -57,7 +57,7 @@ class _MyProfileBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ProfileViewModel>();
-    final online = context.watch<ConnectivityService>().isOnline;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final pending = context.watch<PendingWriteService>().pendingDocIds.contains(
       vm.user.id,
     );
