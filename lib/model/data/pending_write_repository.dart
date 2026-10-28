@@ -113,7 +113,8 @@ class PendingWriteRepository extends WriteQueue<WriteKind> {
         "$name was deleted, so your changes couldn't sync.",
       WriteKind.activityLike =>
         "An activity you liked was deleted, so your like couldn't sync.",
-      WriteKind.activityPhoto => "We coudn't load your activity photo",
+      WriteKind.activityPhoto =>
+        "An activity you edited was deleted, so its photo couldn't upload.",
       WriteKind.tagCounts =>
         "Your activity's tags couldn't update the suggestions.",
       WriteKind.planAddActivity || WriteKind.planRemoveActivity =>
