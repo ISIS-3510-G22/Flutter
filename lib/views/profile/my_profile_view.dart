@@ -2,9 +2,10 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:plansync/model/models/theme_preferences.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/model/services/theme_service.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
+import 'package:plansync/viewmodels/global/theme_viewmodel.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
 import 'package:plansync/views/profile/edit_profile_view.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
@@ -56,9 +57,9 @@ class _MyProfileBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ProfileViewModel>();
+    final theme = context.watch<ThemeViewModel>();
     final online = context.watch<ConnectivityViewModel>().isOnline;
     final pending = vm.isPending;
-    final themeService = context.watch<ThemeService>();
     final colors = Theme.of(context).colorScheme;
 
     final placeholder = Icon(
@@ -206,9 +207,9 @@ class _MyProfileBody extends StatelessWidget {
                         label: Text('Auto'),
                       ),
                     ],
-                    selected: {themeService.preference},
+                    selected: {theme.preference},
                     onSelectionChanged: (selection) =>
-                        themeService.setPreference(selection.first),
+                        theme.setPreference(selection.first),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
