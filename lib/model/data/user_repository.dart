@@ -27,7 +27,7 @@ class UserRepository {
     return await file.exists() ? file.path : null;
   }
 
-  Future<String> savePhotoLocal(String uid, String pickedPath) async {
+  Future<String> _savePhotoLocal(String uid, String pickedPath) async {
     final file = await _photoFile(uid);
     await file.parent.create(recursive: true);
     await File(pickedPath).copy(file.path);
@@ -35,7 +35,7 @@ class UserRepository {
   }
 
   Future<bool> saveProfile(User user) async {
-    await saveLocal(user);
+    await _saveLocal(user);
     return _queue.submit(
       PendingWrite(
         kind: WriteKind.profileUpdate,
@@ -46,7 +46,7 @@ class UserRepository {
   }
 
   Future<bool> savePhoto(String uid, String pickedPath) async {
-    final path = await savePhotoLocal(uid, pickedPath);
+    final path = await _savePhotoLocal(uid, pickedPath);
     return _queue.submit(
       PendingWrite(
         kind: WriteKind.profilePhoto,
@@ -58,7 +58,7 @@ class UserRepository {
 
   String _meFile(String uid) => 'me_$uid.json';
 
-  Future<void> saveLocal(User user) =>
+  Future<void> _saveLocal(User user) =>
       _files.write(_meFile(user.id), jsonEncode(user.toJson()));
 
   Future<User?> _readMe(String uid) async {
@@ -79,7 +79,7 @@ class UserRepository {
           .timeout(const Duration(seconds: 8));
       if (!doc.exists) return null;
       final user = _getUserFromDoc(uid, doc.data()!);
-      await saveLocal(user);
+      await _saveLocal(user);
       return user;
     } catch (_) {
       final saved = await _readMe(uid);

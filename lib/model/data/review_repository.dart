@@ -18,7 +18,7 @@ class ReviewRepository {
   PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
   Future<bool> post(String planId, Review review) async {
-    await saveLocal(planId, review);
+    await _saveLocal(planId, review);
     return _queue.submit(
       PendingWrite(
         kind: WriteKind.reviewSubmit,
@@ -31,7 +31,7 @@ class ReviewRepository {
   String _reviewFile(String planId, String userId) =>
       'review_${planId}_$userId.json';
 
-  Future<void> saveLocal(String planId, Review review) => _files.write(
+  Future<void> _saveLocal(String planId, Review review) => _files.write(
     _reviewFile(planId, review.userId),
     jsonEncode(review.toJson()),
   );
@@ -82,7 +82,7 @@ class ReviewRepository {
           .timeout(const Duration(seconds: 8));
       if (!doc.exists) return _readReview(file);
       final review = _fromDoc(doc);
-      await saveLocal(planId, review);
+      await _saveLocal(planId, review);
       return review;
     } catch (_) {
       return _readReview(file);

@@ -39,7 +39,7 @@ class ActivityRepository {
   }
 
   Future<bool> save(String uid, Activity activity, {Activity? previous}) async {
-    await saveLocal(uid, activity);
+    await _saveLocal(uid, activity);
     final sent = await _queue.submit(
       PendingWrite(
         kind: previous == null
@@ -70,7 +70,7 @@ class ActivityRepository {
     Activity activity, {
     required bool liked,
   }) async {
-    await saveLocal(uid, activity);
+    await _saveLocal(uid, activity);
     return _queue.submit(
       PendingWrite(
         kind: WriteKind.activityLike,
@@ -141,7 +141,7 @@ class ActivityRepository {
     _activities.where('likedBy', arrayContains: uid),
   );
 
-  Future<void> saveLocal(String uid, Activity activity) =>
+  Future<void> _saveLocal(String uid, Activity activity) =>
       _local.upsert(uid, activity);
 
   Future<void> create(Activity activity) {

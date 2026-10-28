@@ -109,7 +109,7 @@ class PlanRepository {
     });
   }
 
-  Future<void> saveLocal(String uid, Plan plan) async {
+  Future<void> _saveLocal(String uid, Plan plan) async {
     final saved = await _readPlans(_plansFile(uid)) ?? [];
     final plans = <Plan>[];
     for (final p in saved) {
@@ -123,7 +123,7 @@ class PlanRepository {
   }
 
   Future<bool> save(String uid, Plan plan, {required bool isNew}) async {
-    await saveLocal(uid, plan);
+    await _saveLocal(uid, plan);
     return _queue.submit(
       PendingWrite(
         kind: isNew ? WriteKind.planCreate : WriteKind.planUpdate,
@@ -139,7 +139,7 @@ class PlanRepository {
     String activityId, {
     required bool added,
   }) async {
-    await saveLocal(uid, plan);
+    await _saveLocal(uid, plan);
     return _queue.submit(
       PendingWrite(
         kind: added ? WriteKind.planAddActivity : WriteKind.planRemoveActivity,
