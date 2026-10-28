@@ -1,9 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
-import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
 
 class AddToPlanViewModel extends ChangeNotifier {
@@ -47,16 +45,11 @@ class AddToPlanViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       final plan = plans.firstWhere((p) => p.id == selectedPlanId);
-      await _planRepository.saveLocal(
+      final sent = await _planRepository.setActivity(
         _uid,
         plan.withActivityIds([...plan.activityIds, activityId]),
-      );
-      final sent = await PendingWriteRepository.instance.submit(
-        PendingWrite(
-          kind: WriteKind.planAddActivity,
-          docId: plan.id,
-          payload: {'activityId': activityId},
-        ),
+        activityId,
+        added: true,
       );
       queued = !sent;
       return true;

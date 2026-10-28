@@ -2,10 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/activity_repository.dart';
-import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/models/activity.dart';
-import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
 
@@ -54,18 +52,7 @@ class EditPlanActivitiesViewModel extends ChangeNotifier {
     notifyListeners();
 
     return _planRepository
-        .saveLocal(_uid, _plan)
-        .then(
-          (_) => PendingWriteRepository.instance.submit(
-            PendingWrite(
-              kind: adding
-                  ? WriteKind.planAddActivity
-                  : WriteKind.planRemoveActivity,
-              docId: _plan.id,
-              payload: {'activityId': activity.id},
-            ),
-          ),
-        )
+        .setActivity(_uid, _plan, activity.id, added: adding)
         .then((sent) => !sent)
         .catchError((_) {
           _plan = before;
