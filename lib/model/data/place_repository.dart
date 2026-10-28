@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/place_search_cache.dart';
 import 'package:plansync/model/models/place.dart';
 
@@ -8,6 +9,7 @@ class PlaceRepository {
   final _client = HttpClient();
   static const _apiKey = String.fromEnvironment('GEOAPIFY_KEY');
   static final _cache = PlaceSearchCache();
+  final _connectivity = ConnectivityRepository.instance;
 
   Future<List<Place>> _fetch(String query) async {
     final uri = Uri.https('api.geoapify.com', '/v1/geocode/autocomplete', {
@@ -35,6 +37,7 @@ class PlaceRepository {
   Future<List<Place>> search(String query) async {
     final key = query.trim().toLowerCase();
     final cached = _cache.get(key);
+    _connectivity.ensureOnline();
     if (cached != null) return cached;
     final places = await _fetch(key).timeout(const Duration(seconds: 8));
     _cache.put(key, places);
