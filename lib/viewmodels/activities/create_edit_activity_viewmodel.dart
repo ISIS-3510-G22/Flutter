@@ -26,6 +26,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
           lng: activity.lng!,
         );
       }
+      _loadLocalPhoto(activity.id);
     }
 
     _loadTags();
@@ -37,6 +38,8 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   final _placeRepository = PlaceRepository();
   final addressFocus = FocusNode();
   final Activity? _editingActivity;
+
+  String? localPhotoPath;
 
   final nameController = TextEditingController();
   final addressController = TextEditingController();
@@ -66,6 +69,11 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   Future<void> _loadTags() async {
     allTags = await _tagRepository.allTags();
     isLoadingTags = false;
+    notifyListeners();
+  }
+
+  Future<void> _loadLocalPhoto(String id) async {
+    localPhotoPath = await _repository.pendingPhoto(id);
     notifyListeners();
   }
 
