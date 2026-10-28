@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/pending_write.dart';
@@ -14,6 +15,7 @@ class ReviewRepository {
           .collection('reviews');
 
   final _files = JsonFileStore();
+  final _connectivity = ConnectivityRepository.instance;
 
   PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
@@ -77,6 +79,7 @@ class ReviewRepository {
   Future<Review?> reviewBy(String planId, String userId) async {
     final file = _reviewFile(planId, userId);
     try {
+      _connectivity.ensureOnline();
       final doc = await _reviews(planId)
           .doc(userId)
           .get(const GetOptions(source: Source.server))

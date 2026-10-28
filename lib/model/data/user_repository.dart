@@ -20,6 +20,8 @@ class UserRepository {
 
   PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
+  final _connectivity = ConnectivityRepository.instance;
+
   Future<File> _photoFile(String uid) async {
     final dir = await getApplicationDocumentsDirectory();
     return File(join(dir.path, 'uploads', 'profile_$uid.jpg'));
@@ -76,6 +78,7 @@ class UserRepository {
 
   Future<User?> currentUser(String uid) async {
     try {
+      _connectivity.ensureOnline();
       final doc = await _users
           .doc(uid)
           .get(const GetOptions(source: Source.server))
@@ -107,6 +110,7 @@ class UserRepository {
   Future<List<User>> planPeople(String planId, List<String> ids) async {
     final file = 'plan_${planId}_people.json';
     try {
+      _connectivity.ensureOnline();
       final users = await getUsers(
         ids,
         source: Source.server,
