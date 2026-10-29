@@ -9,7 +9,6 @@ import 'package:plansync/model/logic/validators.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/place.dart';
 import 'package:plansync/model/models/tag.dart';
-import 'package:plansync/model/services/storage_service.dart';
 
 class CreateEditActivityViewmodel extends ChangeNotifier {
   CreateEditActivityViewmodel(this._ownerId, [this._editingActivity]) {
@@ -27,6 +26,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
           lng: activity.lng!,
         );
       }
+      _loadLocalPhoto(activity.id);
     }
 
     _loadTags();
@@ -39,6 +39,8 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   final addressFocus = FocusNode();
   final Activity? _editingActivity;
 
+  String? localPhotoPath;
+
   final nameController = TextEditingController();
   final addressController = TextEditingController();
   final notesController = TextEditingController();
@@ -46,7 +48,6 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   final newTagController = TextEditingController();
 
   final _picker = ImagePicker();
-  final _storageService = StorageService();
   File? pickedPhoto;
 
   String? tagError;
@@ -68,6 +69,11 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
   Future<void> _loadTags() async {
     allTags = await _tagRepository.allTags();
     isLoadingTags = false;
+    notifyListeners();
+  }
+
+  Future<void> _loadLocalPhoto(String id) async {
+    localPhotoPath = await _repository.pendingPhoto(id);
     notifyListeners();
   }
 
@@ -149,12 +155,6 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
 
     try {
       final id = _editingActivity?.id ?? _repository.newId();
-      final photoUrl = pickedPhoto == null
-          ? _editingActivity?.photoUrl
-          : await _storageService.upload(
-              'activity_pictures/$id.jpg',
-              pickedPhoto!,
-            );
 
       final activity = Activity(
         id: id,
@@ -166,7 +166,7 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
         visibility: activityVisibility,
         ownerId: _editingActivity?.ownerId ?? _ownerId,
         likedBy: _editingActivity?.likedBy ?? [],
-        photoUrl: photoUrl,
+        photoUrl: _editingActivity?.photoUrl,
         lat: place?.lat,
         lng: place?.lng,
       );
@@ -177,6 +177,12 @@ class CreateEditActivityViewmodel extends ChangeNotifier {
         previous: _editingActivity,
       );
       queued = !sent;
+      if (pickedPhoto != null) {
+        final photoSent = await _repository.savePhoto(id, pickedPhoto!.path);
+        final path = await _repository.pendingPhoto(id);
+        if (path != null) await FileImage(File(path)).evict();
+        if (!photoSent) queued = true;
+      }
 
       return activity;
     } catch (_) {

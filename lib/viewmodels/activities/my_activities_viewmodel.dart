@@ -21,6 +21,8 @@ class MyActivitiesViewmodel extends ChangeNotifier {
   List<Activity> _liked = [];
   List<Activity> _recommended = [];
 
+  Map<String, String> localPhotos = {};
+
   final String _uid;
   StreamSubscription<List<Activity>>? _recommendedSub;
 
@@ -58,6 +60,7 @@ class MyActivitiesViewmodel extends ChangeNotifier {
       _liked = activities;
       notifyListeners();
     });
+    _loadLocalPhotos();
   }
 
   void _onConnectivityChanged(bool online) {
@@ -66,6 +69,16 @@ class MyActivitiesViewmodel extends ChangeNotifier {
 
   void selectTab(ActivitiesTab tab) {
     currentTab = tab;
+    notifyListeners();
+  }
+
+  Future<void> _loadLocalPhotos() async {
+    final photos = <String, String>{};
+    for (final id in pendingIds) {
+      final path = await _repository.pendingPhoto(id);
+      if (path != null) photos[id] = path;
+    }
+    localPhotos = photos;
     notifyListeners();
   }
 

@@ -3,7 +3,9 @@ import 'package:plansync/model/data/activity_repository.dart';
 import 'package:plansync/model/models/activity.dart';
 
 class ActivityDetailViewmodel extends ChangeNotifier {
-  ActivityDetailViewmodel(this.activity, this._uid);
+  ActivityDetailViewmodel(this.activity, this._uid) {
+    _loadLocalPhoto();
+  }
 
   Activity activity;
   final String _uid;
@@ -14,9 +16,19 @@ class ActivityDetailViewmodel extends ChangeNotifier {
   bool get isOwner => activity.ownerId == _uid;
   bool get isLiked => activity.likedBy.contains(_uid);
 
-  void applyUpdate(Activity updated) {
+  String? localPhotoPath;
+
+  Future<void> _loadLocalPhoto() async {
+    localPhotoPath = await _repository.pendingPhoto(activity.id);
+    notifyListeners();
+  }
+
+  Future<void> applyUpdate(Activity updated) async {
     activity = updated;
     notifyListeners();
+    final fresh = await _repository.planActivities(_uid, [updated.id]);
+    if (fresh.isNotEmpty) activity = fresh.first;
+    await _loadLocalPhoto();
   }
 
   Future<bool> toggleLike() {
@@ -48,22 +60,5 @@ class ActivityDetailViewmodel extends ChangeNotifier {
           notifyListeners();
           return false;
         });
-  }
-
-  Future<bool> delete() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
-    try {
-      await _repository.delete(activity.id);
-      return true;
-    } catch (_) {
-      errorMessage = 'Something went wrong. Try again.';
-      return false;
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
   }
 }

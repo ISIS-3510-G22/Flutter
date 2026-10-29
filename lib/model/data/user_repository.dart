@@ -1,12 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/crew_local_store.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
+import 'package:plansync/model/data/local/upload_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
@@ -54,6 +52,7 @@ class UserRepository {
   final _users = FirebaseFirestore.instance.collection('users');
 
   final _files = JsonFileStore();
+  final _uploads = UploadStore();
   final _crewLocalStore = CrewLocalStore();
   static final _userCache = UserCache();
 
@@ -65,23 +64,9 @@ class UserRepository {
 
   User? cachedUser(String id, {bool allowStale = false}) =>
       _userCache.get(id, allowStale: allowStale);
-
-  Future<File> _photoFile(String uid) async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File(join(dir.path, 'uploads', 'profile_$uid.jpg'));
-  }
-
-  Future<String?> pendingPhoto(String uid) async {
-    final file = await _photoFile(uid);
-    return await file.exists() ? file.path : null;
-  }
-
-  Future<String> _savePhotoLocal(String uid, String pickedPath) async {
-    final file = await _photoFile(uid);
-    await file.parent.create(recursive: true);
-    await File(pickedPath).copy(file.path);
-    return file.path;
-  }
+  
+  Future<String?> pendingPhoto(String uid) =>
+      _uploads.pending('profile_$uid.jpg');
 
   Future<bool> saveProfile(User user) async {
     _userCache.put(user);
@@ -96,7 +81,7 @@ class UserRepository {
   }
 
   Future<bool> savePhoto(String uid, String pickedPath) async {
-    final path = await _savePhotoLocal(uid, pickedPath);
+    final path = await _uploads.save('profile_$uid.jpg', pickedPath);
     return _queue.submit(
       PendingWrite(
         kind: WriteKind.profilePhoto,
