@@ -59,6 +59,7 @@ class _InviteFriendsViewState extends State<InviteFriendsView> {
   @override
   Widget build(BuildContext context) {
     final friendsVm = context.watch<FriendsViewModel>();
+    final crewVm = context.watch<CrewViewmodel>();
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -178,6 +179,11 @@ class _InviteFriendsViewState extends State<InviteFriendsView> {
                                 : Text(
                                     isMember
                                         ? 'Member'
+                                        : crewVm.isInviteWaiting(
+                                            widget.group.id,
+                                            friend.id,
+                                          )
+                                        ? 'Waiting to sync'
                                         : isInvited
                                         ? 'Invited'
                                         : 'Invite',
