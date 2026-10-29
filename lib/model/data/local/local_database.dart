@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -54,6 +54,7 @@ class LocalDatabase {
     ''');
     await _createCrewTables(db);
     await _createSplitTables(db);
+    await _createCrewOutbox(db);
   }
 
   static Future<void> _onUpgrade(
@@ -93,6 +94,9 @@ class LocalDatabase {
     }
     if (oldVersion < 6) {
       await _createSplitTables(db);
+    }
+    if (oldVersion < 7) {
+      await _createCrewOutbox(db);
     }
   }
 
@@ -177,6 +181,17 @@ class LocalDatabase {
         plan_id TEXT NOT NULL,
         list TEXT NOT NULL,
         PRIMARY KEY (plan_id, list)
+      )
+    ''');
+  }
+
+  static Future<void> _createCrewOutbox(Database db) async {
+    await db.execute('''
+      CREATE TABLE crew_outbox (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL,
+        docId TEXT NOT NULL,
+        payload TEXT NOT NULL
       )
     ''');
   }
