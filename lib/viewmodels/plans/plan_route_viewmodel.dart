@@ -1,8 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/route_repository.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/plan_route.dart';
+
+/// What the map is drawing, so the view picks the message.
+enum RouteShown { real, saved, straightLines }
 
 class RouteStop {
   final int number;
@@ -36,11 +43,15 @@ class PlanRouteViewModel extends ChangeNotifier {
         ),
       );
     }
+    _connectivitySub = ConnectivityRepository.instance.changes.listen((online) {
+      if (online && shown == RouteShown.straightLines) loadRoute();
+    });
     loadRoute();
   }
 
   final Plan plan;
   final _repository = RouteRepository();
+  late final StreamSubscription<bool> _connectivitySub;
 
   final List<RouteStop> stops = [];
   final List<Activity> missingLocation = [];
@@ -48,7 +59,9 @@ class PlanRouteViewModel extends ChangeNotifier {
   TravelMode mode = TravelMode.walk;
   PlanRoute? route;
   bool isLoading = false;
-  bool usingStraightLines = false;
+  RouteShown shown = RouteShown.straightLines;
+
+  bool get usingStraightLines => shown == RouteShown.straightLines;
 
   List<LatLng> get stopPoints => stops.map((s) => s.point).toList();
 
@@ -67,18 +80,34 @@ class PlanRouteViewModel extends ChangeNotifier {
   Future<void> loadRoute() async {
     if (stops.length < 2) return;
     isLoading = true;
-    usingStraightLines = false;
     notifyListeners();
 
-    try {
-      route = await _repository.route(stopPoints, mode);
-      if (route == null) usingStraightLines = true;
-    } catch (_) {
-      route = null;
-      usingStraightLines = true;
+    final result = await _repository.route(plan.id, stopPoints, mode);
+    route = result?.route;
+    if (result == null) {
+      shown = RouteShown.straightLines;
+    } else if (result.saved) {
+      shown = RouteShown.saved;
+    } else {
+      shown = RouteShown.real;
     }
 
     isLoading = false;
     notifyListeners();
+  }
+
+  // The route can finish loading after the view closed.
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _connectivitySub.cancel();
+    super.dispose();
   }
 }
