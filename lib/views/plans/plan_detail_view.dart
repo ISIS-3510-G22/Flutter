@@ -167,6 +167,11 @@ class _PlanDetailBody extends StatelessWidget {
                                   ),
                                 ),
                               if (vm.isCreator) ...[
+                                if (vm.waitingToSync)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 8),
+                                    child: Text('Waiting to sync'),
+                                  ),
                                 Expanded(
                                   child: FilledButton.icon(
                                     onPressed: () =>
