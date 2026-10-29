@@ -29,11 +29,14 @@ class AuthRepository {
   }
 
   /// Offline it throws `OfflineException` at once instead of sending a
-  /// request we know will fail.
+  /// request we know will fail. On Wi-Fi without internet (online but no
+  /// answer) it gives up after 8 s with a `TimeoutException`.
   Future<void> sendPasswordResetEmail({required String email}) {
     return _translate(() {
       ConnectivityRepository.instance.ensureOnline();
-      return _authService.sendPasswordResetEmail(email: email);
+      return _authService
+          .sendPasswordResetEmail(email: email)
+          .timeout(const Duration(seconds: 8));
     });
   }
 
