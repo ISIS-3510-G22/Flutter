@@ -424,7 +424,7 @@ class _NearbyFriendCard extends StatelessWidget {
 
     return CrewFriendsCard(
       name: fullName.isEmpty ? user.username : fullName,
-      email: '@${user.username}',
+      email: user.username.isEmpty ? 'Bluetooth user' : '@${user.username}',
       initials: initials.isEmpty ? '?' : initials.toUpperCase(),
       avatarColors: const Color(0xFFFFB5A6),
       photoUrl: user.photoUrl,
