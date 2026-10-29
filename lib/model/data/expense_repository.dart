@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/model/data/local/split_local_store.dart';
 import 'package:plansync/model/models/expense.dart';
 
 class ExpenseRepository {
@@ -7,6 +8,8 @@ class ExpenseRepository {
           .collection('plans')
           .doc(planId)
           .collection('expenses');
+
+  final _local = SplitLocalStore();
 
   Expense _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
     final data = d.data()!;
@@ -32,11 +35,19 @@ class ExpenseRepository {
     'splitAmongIds': expense.splitAmongIds,
   };
 
-  Stream<List<Expense>> expensesForPlan(String planId) {
-    return _expenses(planId)
+  /// The saved copy first (`null` if never saved), then each server answer,
+  /// saved before it's emitted. Offline the listener stays silent (R2).
+  Stream<List<Expense>?> expensesForPlan(String planId) async* {
+    yield await _local.expenses(planId);
+    yield* _expenses(planId)
         .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(_fromDoc).toList());
+        .snapshots(includeMetadataChanges: true)
+        .where((snapshot) => !snapshot.metadata.isFromCache)
+        .asyncMap((snapshot) async {
+          final expenses = snapshot.docs.map(_fromDoc).toList();
+          await _local.saveExpenses(planId, expenses);
+          return expenses;
+        });
   }
 
   Future<void> create(String planId, Expense expense) {
