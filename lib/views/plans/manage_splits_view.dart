@@ -5,6 +5,7 @@ import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/manage_splits_viewmodel.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
+import 'package:plansync/views/widgets/waiting_to_sync.dart';
 import 'package:provider/provider.dart';
 
 class ManageSplitsView extends StatelessWidget {
@@ -115,13 +116,6 @@ class _ManageSplitsBody extends StatelessWidget {
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      if (vm.errorMessage != null) ...[
-                        Text(
-                          vm.errorMessage!,
-                          style: TextStyle(color: colors.error),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
                       if (vm.youOwe.isEmpty && vm.owedToYou.isEmpty) ...[
                         Text('You are all settled up', style: sectionStyle),
                         const SizedBox(height: 16),
@@ -135,7 +129,7 @@ class _ManageSplitsBody extends StatelessWidget {
                             preferredMethod: vm.preferredMethodOf(row.userId),
                             allMethods: vm.allMethodsOf(row.userId),
                             paid: false,
-                            onToggle: (_) => vm.markPaid(row),
+                            onToggle: (_) => _show(context, vm.markPaid(row)),
                           ),
                         const SizedBox(height: 16),
                       ],
@@ -159,7 +153,8 @@ class _ManageSplitsBody extends StatelessWidget {
                             row: row,
                             subtitle: 'You paid',
                             paid: true,
-                            onToggle: (_) => vm.undoPaid(row),
+                            pending: vm.pendingIds.contains(row.settlementId),
+                            onToggle: (_) => _show(context, vm.undoPaid(row)),
                           ),
                         for (final row in vm.paidToYou)
                           _SplitCard(row: row, subtitle: 'Paid you'),
@@ -179,6 +174,14 @@ String _owedSubtitle(SplitRow row) {
   return 'Overdue · $days days since the plan';
 }
 
+void _show(BuildContext context, Future<String?> result) {
+  final messenger = ScaffoldMessenger.of(context);
+  result.then((message) {
+    if (message == null) return;
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  });
+}
+
 class _SplitCard extends StatelessWidget {
   const _SplitCard({
     required this.row,
@@ -188,6 +191,7 @@ class _SplitCard extends StatelessWidget {
     this.allMethods,
     this.paid,
     this.onToggle,
+    this.pending = false,
   });
 
   final SplitRow row;
@@ -199,6 +203,7 @@ class _SplitCard extends StatelessWidget {
   final List<ReimbursementMethod>? allMethods;
   final bool? paid;
   final ValueChanged<bool>? onToggle;
+  final bool pending;
 
   @override
   Widget build(BuildContext context) {
@@ -245,6 +250,13 @@ class _SplitCard extends StatelessWidget {
           ],
         );
       }
+    }
+
+    if (pending) {
+      subtitleWidget = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [?subtitleWidget, const WaitingToSync()],
+      );
     }
 
     if (paid != null && onToggle != null) {

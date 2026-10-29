@@ -3,14 +3,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:plansync/model/data/expense_repository.dart';
 import 'package:plansync/model/data/plan_payment_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/models/expense.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
 
 class PlanExpensesViewModel extends ChangeNotifier {
   PlanExpensesViewModel(this.planId, this.participants, this._currentUserId) {
-    _sub = _expenseRepository.expensesForPlan(planId).listen(_onExpenses);
-    _choicesSub = _paymentRepository.choicesForPlan(planId).listen(_onChoices);
+    _hadPending = _queue.hasPendingFor(planId);
+    _queueSub = _queue.changes.listen((_) => _onQueueChanged());
+    _listenToServer();
     _loadMyMethods();
   }
 
@@ -22,8 +24,15 @@ class PlanExpensesViewModel extends ChangeNotifier {
   final String _currentUserId;
   final _expenseRepository = ExpenseRepository();
   final _paymentRepository = PlanPaymentRepository();
-  late final StreamSubscription<List<Expense>?> _sub;
-  late final StreamSubscription<Map<String, String>> _choicesSub;
+  StreamSubscription<List<Expense>?>? _sub;
+  StreamSubscription<Map<String, String>>? _choicesSub;
+  late final StreamSubscription<void> _queueSub;
+  late bool _hadPending;
+
+  SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
+
+  /// Expenses and payments of this plan still waiting to sync.
+  Set<String> get pendingIds => _queue.pendingIdsFor(planId);
 
   List<Expense> expenses = [];
   bool isLoading = true;
@@ -34,6 +43,32 @@ class PlanExpensesViewModel extends ChangeNotifier {
 
   List<ReimbursementMethod> myMethods = [];
   String? myMethodId;
+
+  void _listenToServer() {
+    _sub?.cancel();
+    _choicesSub?.cancel();
+    _sub = _expenseRepository.expensesForPlan(planId).listen(_onExpenses);
+    _choicesSub = _paymentRepository.choicesForPlan(planId).listen(_onChoices);
+  }
+
+  /// Every queue change re-reads the local copy (labels, offline saves). Only
+  /// when this plan's last queued write is gone does it listen to the server
+  /// again: that full snapshot brings others' changes and drops dropped edits.
+  Future<void> _onQueueChanged() async {
+    final pending = _queue.hasPendingFor(planId);
+    final caughtUp = _hadPending && !pending;
+    _hadPending = pending;
+    if (caughtUp) {
+      _listenToServer();
+      return;
+    }
+    final saved = await _expenseRepository.savedExpenses(planId);
+    if (saved != null) expenses = saved;
+    myMethodId = (await _paymentRepository.savedChoices(
+      planId,
+    ))[_currentUserId];
+    notifyListeners();
+  }
 
   void _onExpenses(List<Expense>? updated) {
     notSaved = updated == null;
@@ -69,14 +104,26 @@ class PlanExpensesViewModel extends ChangeNotifier {
     return null;
   }
 
-  Future<bool> chooseMethod(String? methodId) async {
-    if (methodId == null) return false;
-    try {
-      await _paymentRepository.choose(planId, _currentUserId, methodId);
-      return true;
-    } catch (_) {
-      return false;
-    }
+  /// The screen doesn't wait: `.then` picks the message from whether it was
+  /// sent or kept on the phone, `.catchError` covers a local save failure.
+  Future<String?> chooseMethod(String? methodId) {
+    if (methodId == null) return Future.value(null);
+    final before = myMethodId;
+    myMethodId = methodId;
+    notifyListeners();
+    return _paymentRepository
+        .chooseMethod(planId, _currentUserId, methodId)
+        .then(
+          (sent) => sent
+              ? 'Payment method saved'
+              : 'Payment method saved on your phone. Others see it when '
+                    "you're back online.",
+        )
+        .catchError((_) {
+          myMethodId = before;
+          notifyListeners();
+          return "Couldn't save your payment method on this phone.";
+        });
   }
 
   String payerName(Expense expense) {
@@ -101,8 +148,9 @@ class PlanExpensesViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _sub.cancel();
-    _choicesSub.cancel();
+    _sub?.cancel();
+    _choicesSub?.cancel();
+    _queueSub.cancel();
     super.dispose();
   }
 }
