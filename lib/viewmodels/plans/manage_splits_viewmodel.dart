@@ -7,6 +7,7 @@ import 'package:plansync/model/data/overdue_debt_repository.dart';
 import 'package:plansync/model/data/plan_payment_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/settlement_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/logic/debt_simplifier.dart';
 import 'package:plansync/model/logic/overdue.dart';
 import 'package:plansync/model/models/expense.dart';
@@ -45,6 +46,16 @@ class ManageSplitsViewModel extends ChangeNotifier {
     } else {
       _loadParticipants(participantIds);
     }
+    _hadPending = _queue.hasPendingFor(_planId);
+    _queueSub = _queue.changes.listen((_) => _onQueueChanged());
+    _listenToServer();
+    _loadPlanDate();
+  }
+
+  void _listenToServer() {
+    _expensesSub?.cancel();
+    _settlementsSub?.cancel();
+    _choicesSub?.cancel();
     _expensesSub = _expenseRepository.expensesForPlan(_planId).listen((e) {
       _expenses = e;
       _expensesLoaded = true;
@@ -57,11 +68,33 @@ class ManageSplitsViewModel extends ChangeNotifier {
       _settlementsLoaded = true;
       _recalculate();
     });
-    _loadPlanDate();
     _choicesSub = _paymentRepository.choicesForPlan(_planId).listen((c) {
       _methodChoices = c;
       notifyListeners();
     });
+  }
+
+  /// Every queue change re-reads the local copy (labels, offline saves). Only
+  /// when this plan's last queued write is gone does it listen to the server
+  /// again: that full snapshot brings others' changes and drops dropped ones.
+  Future<void> _onQueueChanged() async {
+    final pending = _queue.hasPendingFor(_planId);
+    final caughtUp = _hadPending && !pending;
+    _hadPending = pending;
+    if (caughtUp) {
+      _listenToServer();
+      return;
+    }
+    await _reloadLocal();
+  }
+
+  Future<void> _reloadLocal() async {
+    final expenses = await _expenseRepository.savedExpenses(_planId);
+    final settlements = await _settlementRepository.savedSettlements(_planId);
+    if (expenses != null) _expenses = expenses;
+    if (settlements != null) _settlements = settlements;
+    _methodChoices = await _paymentRepository.savedChoices(_planId);
+    _recalculate();
   }
 
   final String _planId;
@@ -75,9 +108,16 @@ class ManageSplitsViewModel extends ChangeNotifier {
   final _overdueRepository = OverdueDebtRepository();
   DateTime? _planDate;
   var _syncedOverdue = '';
-  late final StreamSubscription<List<Expense>?> _expensesSub;
-  late final StreamSubscription<List<Settlement>?> _settlementsSub;
-  late final StreamSubscription<Map<String, String>> _choicesSub;
+  StreamSubscription<List<Expense>?>? _expensesSub;
+  StreamSubscription<List<Settlement>?>? _settlementsSub;
+  StreamSubscription<Map<String, String>>? _choicesSub;
+  late final StreamSubscription<void> _queueSub;
+  late bool _hadPending;
+
+  SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
+
+  /// Payments of this plan still waiting to sync.
+  Set<String> get pendingIds => _queue.pendingIdsFor(_planId);
   Map<String, String> _methodChoices = {};
 
   // `null` = never saved on this phone and no server answer yet.
@@ -91,7 +131,6 @@ class ManageSplitsViewModel extends ChangeNotifier {
   List<SplitRow> paidByYou = [];
   List<SplitRow> paidToYou = [];
   bool isLoading = true;
-  String? errorMessage;
 
   /// Balances need both lists: with either one never saved they'd be wrong,
   /// so the view shows "Connect to load this plan's expenses." instead.
@@ -284,41 +323,57 @@ class ManageSplitsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> markPaid(SplitRow row) async {
-    errorMessage = null;
-    try {
-      await _settlementRepository.settle(
-        _planId,
-        Settlement(
-          id: '',
-          fromId: _currentUserId,
-          toId: row.userId,
-          amount: row.amount,
-        ),
-      );
-    } catch (_) {
-      errorMessage = "Couldn't mark this payment. Try again.";
-      notifyListeners();
-    }
+  static const _queuedPayment =
+      "Payment saved on your phone. Balances update for everyone when you're "
+      'back online.';
+
+  /// The screen doesn't wait: `.then` picks the message (none when sent,
+  /// "saved on your phone" when queued), `.catchError` the local failure.
+  /// The settlement ID is made here, so undo works while it's still queued.
+  Future<String?> markPaid(SplitRow row) {
+    final settlement = Settlement(
+      id: _settlementRepository.newId(_planId),
+      fromId: _currentUserId,
+      toId: row.userId,
+      amount: row.amount,
+    );
+    return _settlementRepository
+        .markPaid(_planId, settlement)
+        .then((sent) async {
+          await _reloadLocal();
+          return sent ? null : _queuedPayment;
+        })
+        .catchError((_) => "Couldn't save this payment on your phone.");
   }
 
-  Future<void> undoPaid(SplitRow row) async {
+  Future<String?> undoPaid(SplitRow row) {
     final settlementId = row.settlementId;
-    if (settlementId == null) return;
-    errorMessage = null;
-    try {
-      await _settlementRepository.unsettle(_planId, settlementId);
-    } catch (_) {
-      errorMessage = "Couldn't undo this payment. Try again.";
-      notifyListeners();
-    }
+    if (settlementId == null) return Future.value(null);
+    return _settlementRepository
+        .undoPaid(_planId, settlementId)
+        .then((sent) async {
+          await _reloadLocal();
+          return sent ? null : _queuedPayment;
+        })
+        .catchError((_) => "Couldn't undo this payment on your phone.");
+  }
+
+  // Set in dispose: async work (queue reloads, `.then` / `.catchError`,
+  // awaited saves) can finish after the view closed, so stop notifying then.
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
   }
 
   @override
   void dispose() {
-    _expensesSub.cancel();
-    _settlementsSub.cancel();
-    _choicesSub.cancel();
+    _disposed = true;
+    _expensesSub?.cancel();
+    _settlementsSub?.cancel();
+    _choicesSub?.cancel();
+    _queueSub.cancel();
     super.dispose();
   }
 }

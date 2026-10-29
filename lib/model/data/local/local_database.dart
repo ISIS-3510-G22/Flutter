@@ -55,6 +55,7 @@ class LocalDatabase {
     await _createCrewTables(db);
     await _createSplitTables(db);
     await _createCrewOutbox(db);
+    await _createSplitOutbox(db);
   }
 
   static Future<void> _onUpgrade(
@@ -95,8 +96,9 @@ class LocalDatabase {
     if (oldVersion < 6) {
       await _createSplitTables(db);
     }
-    if (oldVersion < 7) {
+    if (oldVersion < 8) {
       await _createCrewOutbox(db);
+      await _createSplitOutbox(db);
     }
   }
 
@@ -187,7 +189,19 @@ class LocalDatabase {
 
   static Future<void> _createCrewOutbox(Database db) async {
     await db.execute('''
-      CREATE TABLE crew_outbox (
+      CREATE TABLE IF NOT EXISTS crew_outbox (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL,
+        docId TEXT NOT NULL,
+        payload TEXT NOT NULL
+      )
+    ''');
+  }
+}
+      
+  static Future<void> _createSplitOutbox(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS split_outbox (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         kind TEXT NOT NULL,
         docId TEXT NOT NULL,

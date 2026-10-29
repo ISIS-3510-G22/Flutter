@@ -47,6 +47,20 @@ class SplitLocalStore {
     });
   }
 
+  Future<void> saveExpense(String planId, Expense e) async {
+    final db = await _db;
+    await db.insert('expenses', {
+      ...e.toJson(),
+      'plan_id': planId,
+      'split_among': jsonEncode(e.splitAmongIds),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> removeExpense(String id) async {
+    final db = await _db;
+    await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
+  }
+
   /// `null` when this plan's settlements were never saved on this phone.
   Future<List<Settlement>?> settlements(String planId) async {
     final db = await _db;
@@ -75,6 +89,19 @@ class SplitLocalStore {
       }
       await _markSaved(txn, planId, _settlementsList);
     });
+  }
+
+  Future<void> saveSettlement(String planId, Settlement s) async {
+    final db = await _db;
+    await db.insert('settlements', {
+      ...s.toJson(),
+      'plan_id': planId,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> removeSettlement(String id) async {
+    final db = await _db;
+    await db.delete('settlements', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<User>> people(String planId) async {
