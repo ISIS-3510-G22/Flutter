@@ -146,8 +146,18 @@ class PlanExpensesViewModel extends ChangeNotifier {
     return 'For ${ids.length} people';
   }
 
+  // Set in dispose: async work (queue reloads, `.then` / `.catchError`,
+  // awaited saves) can finish after the view closed, so stop notifying then.
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     _sub?.cancel();
     _choicesSub?.cancel();
     _queueSub.cancel();

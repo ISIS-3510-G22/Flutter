@@ -153,8 +153,18 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
     }
   }
 
+  // Set in dispose: async work (queue reloads, `.then` / `.catchError`,
+  // awaited saves) can finish after the view closed, so stop notifying then.
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     nameController.dispose();
     valueController.dispose();
     super.dispose();

@@ -358,8 +358,18 @@ class ManageSplitsViewModel extends ChangeNotifier {
         .catchError((_) => "Couldn't undo this payment on your phone.");
   }
 
+  // Set in dispose: async work (queue reloads, `.then` / `.catchError`,
+  // awaited saves) can finish after the view closed, so stop notifying then.
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     _expensesSub?.cancel();
     _settlementsSub?.cancel();
     _choicesSub?.cancel();
