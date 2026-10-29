@@ -160,6 +160,11 @@ class GroupRepository {
 
     final sentOn = DateTime.now();
     final invitationRef = _invitations.doc();
+    final friends = await _local.peopleByIds([userId]);
+    final friend = friends.isEmpty ? null : friends.first;
+    final friendName = friend == null
+        ? userId
+        : '${friend.name} ${friend.lastName}'.trim();
     await _local.saveInvitedMember(groupId, userId);
     final synced = await CrewWriteQueue.instance.submit(
       PendingWrite(
@@ -167,6 +172,7 @@ class GroupRepository {
         docId: invitationRef.id,
         payload: {
           'invitationId': invitationRef.id,
+          'name': friendName,
           'groupId': groupId,
           'userId': userId,
           'sentOn': sentOn.toIso8601String(),
@@ -277,6 +283,7 @@ class GroupRepository {
   Future<bool> acceptInvitation(
     GroupInvitation invitation, {
     Group? group,
+    String? itemName,
   }) async {
     if (group == null) {
       await _local.setMembershipStatus(
@@ -291,19 +298,26 @@ class GroupRepository {
       PendingWrite(
         kind: CrewWriteKind.inviteAccept,
         docId: invitation.id,
-        payload: {'groupId': invitation.groupId, 'userId': invitation.userId},
+        payload: {
+          'name': itemName ?? group?.name ?? invitation.groupId,
+          'groupId': invitation.groupId,
+          'userId': invitation.userId,
+        },
       ),
     );
     return synced;
   }
 
-  Future<bool> denyInvitation(GroupInvitation invitation) async {
+  Future<bool> denyInvitation(
+    GroupInvitation invitation, {
+    String? itemName,
+  }) async {
     await _local.removeMembership(invitation.groupId, invitation.userId);
     final synced = await CrewWriteQueue.instance.submit(
       PendingWrite(
         kind: CrewWriteKind.inviteDeny,
         docId: invitation.id,
-        payload: const {},
+        payload: {'name': itemName ?? invitation.groupId},
       ),
     );
     return synced;

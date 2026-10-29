@@ -237,6 +237,7 @@ class CrewViewmodel extends ChangeNotifier {
       final synced = await _repository.acceptInvitation(
         invitation,
         group: group,
+        itemName: group?.name,
       );
       if (!synced) _waitingIds.add(invitation.id);
     }, 'Could not accept the invitation');
@@ -253,7 +254,10 @@ class CrewViewmodel extends ChangeNotifier {
         _invitations,
         _invitedGroups,
       );
-      final synced = await _repository.denyInvitation(invitation);
+      final synced = await _repository.denyInvitation(
+        invitation,
+        itemName: _invitedGroups[invitation.groupId]?.name,
+      );
       if (!synced) _waitingIds.add(invitation.id);
     }, 'Could not deny the invitation');
   }

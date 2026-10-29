@@ -63,6 +63,25 @@ class FriendRepository {
     return _requestFileWrite;
   }
 
+  Future<bool> hasPendingOutgoingRequest(
+    String uid,
+    String targetUserId,
+  ) async {
+    final contents = await _files.read('friend_requests_$uid.json');
+    if (contents == null) return false;
+    try {
+      final data = jsonDecode(contents) as Map<String, dynamic>;
+      final outgoing = data['outgoing'] as List<dynamic>? ?? const [];
+      return outgoing.any((entry) {
+        final request = Map<String, dynamic>.from(entry as Map);
+        return request['toUserId'] == targetUserId &&
+            request['status'] == FriendRequestStatus.pending.name;
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
   Map<String, dynamic> _requestToJson(FriendRequest request) => {
     'id': request.id,
     'fromUserId': request.fromUserId,
@@ -100,6 +119,7 @@ class FriendRepository {
     String toUserId, [
     String? requestId,
     DateTime? sentOn,
+    String? itemName,
   ]) {
     requestId ??= newRequestId();
     final requestRef = _requests.doc(requestId);
@@ -110,6 +130,7 @@ class FriendRepository {
         docId: requestRef.id,
         payload: {
           'requestId': requestRef.id,
+          'name': itemName ?? toUserId,
           'fromUserId': fromUserId,
           'toUserId': toUserId,
           'sentOn': sentOn.toIso8601String(),
@@ -134,22 +155,22 @@ class FriendRepository {
         .map((s) => s.docs.map((d) => _fromData(d.id, d.data())).toList());
   }
 
-  Future<bool> acceptRequest(String requestId) {
+  Future<bool> acceptRequest(String requestId, {String? itemName}) {
     return CrewWriteQueue.instance.submit(
       PendingWrite(
         kind: CrewWriteKind.requestAccept,
         docId: requestId,
-        payload: const {},
+        payload: {'name': itemName ?? requestId},
       ),
     );
   }
 
-  Future<bool> denyRequest(String requestId) {
+  Future<bool> denyRequest(String requestId, {String? itemName}) {
     return CrewWriteQueue.instance.submit(
       PendingWrite(
         kind: CrewWriteKind.requestDeny,
         docId: requestId,
-        payload: const {},
+        payload: {'name': itemName ?? requestId},
       ),
     );
   }

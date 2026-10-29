@@ -229,6 +229,7 @@ class PlanRepository {
         kind: CrewWriteKind.planInvite,
         docId: plan.id,
         payload: {
+          'name': plan.name,
           'userIds': invitedIds.toList(),
           'invitedAt': invitedAt.toIso8601String(),
         },

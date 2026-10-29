@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/write_queue.dart';
 import 'package:plansync/model/models/pending_write.dart';
@@ -40,46 +38,37 @@ class CrewWriteQueue extends WriteQueue<CrewWriteKind> {
   @override
   Future<void> send(PendingWrite<CrewWriteKind> write) async {
     final payload = write.payload;
-    try {
-      await switch (write.kind) {
-        CrewWriteKind.requestSend =>
-          _friendRequests.doc(payload['requestId'] as String).set({
-            'fromUserId': payload['fromUserId'] as String,
-            'toUserId': payload['toUserId'] as String,
-            'sentOn': Timestamp.fromDate(_dateTime(payload['sentOn'])),
-            'status': 'pending',
-          }),
-        CrewWriteKind.requestAccept => _friendRequests.doc(write.docId).update({
-          'status': 'accepted',
+    await switch (write.kind) {
+      CrewWriteKind.requestSend =>
+        _friendRequests.doc(payload['requestId'] as String).set({
+          'fromUserId': payload['fromUserId'] as String,
+          'toUserId': payload['toUserId'] as String,
+          'sentOn': Timestamp.fromDate(_dateTime(payload['sentOn'])),
+          'status': 'pending',
         }),
-        CrewWriteKind.requestDeny => _friendRequests.doc(write.docId).update({
-          'status': 'denied',
+      CrewWriteKind.requestAccept => _friendRequests.doc(write.docId).update({
+        'status': 'accepted',
+      }),
+      CrewWriteKind.requestDeny => _friendRequests.doc(write.docId).update({
+        'status': 'denied',
+      }),
+      CrewWriteKind.groupCreate => _createGroup(write.docId, payload),
+      CrewWriteKind.groupInvite =>
+        _groupInvitations.doc(payload['invitationId'] as String).set({
+          'groupId': payload['groupId'] as String,
+          'userId': payload['userId'] as String,
+          'sentOn': Timestamp.fromDate(_dateTime(payload['sentOn'])),
+          'status': 'pending',
         }),
-        CrewWriteKind.groupCreate => _createGroup(write.docId, payload),
-        CrewWriteKind.groupInvite =>
-          _groupInvitations.doc(payload['invitationId'] as String).set({
-            'groupId': payload['groupId'] as String,
-            'userId': payload['userId'] as String,
-            'sentOn': Timestamp.fromDate(_dateTime(payload['sentOn'])),
-            'status': 'pending',
-          }),
-        CrewWriteKind.inviteAccept => _acceptGroupInvitation(
-          write.docId,
-          payload,
-        ),
-        CrewWriteKind.inviteDeny => _groupInvitations.doc(write.docId).update({
-          'status': 'denied',
-        }),
-        CrewWriteKind.planInvite => _inviteToPlan(write.docId, payload),
-      };
-    } on FirebaseException catch (error) {
-      // A plan created in another queue may not exist yet. Keep its invite
-      // queued so it can be retried after the plan creation syncs.
-      if (write.kind == CrewWriteKind.planInvite && error.code == 'not-found') {
-        throw TimeoutException('The plan is not available yet.');
-      }
-      rethrow;
-    }
+      CrewWriteKind.inviteAccept => _acceptGroupInvitation(
+        write.docId,
+        payload,
+      ),
+      CrewWriteKind.inviteDeny => _groupInvitations.doc(write.docId).update({
+        'status': 'denied',
+      }),
+      CrewWriteKind.planInvite => _inviteToPlan(write.docId, payload),
+    };
   }
 
   Future<void> _createGroup(

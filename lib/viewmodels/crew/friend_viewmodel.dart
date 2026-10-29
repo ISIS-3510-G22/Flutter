@@ -240,13 +240,33 @@ class FriendsViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> sendFriendRequest(String targetUserId) {
+  Future<void> sendFriendRequest(String targetUserId) async {
     if (targetUserId == _uid ||
         isFriend(targetUserId) ||
         hasSentRequestTo(targetUserId)) {
-      return Future.value();
+      return;
     }
-    return _runQueued(targetUserId, () async {
+    if (await _repository.hasPendingOutgoingRequest(_uid, targetUserId)) {
+      _outgoingRequestUserIds.add(targetUserId);
+      _notify();
+      return;
+    }
+    User? target;
+    for (final user in [..._searchResults, ...?_searchableUsers]) {
+      if (user.id == targetUserId) {
+        target = user;
+        break;
+      }
+    }
+    final fullName = target == null
+        ? ''
+        : '${target.name} ${target.lastName}'.trim();
+    final displayName = fullName.isNotEmpty
+        ? fullName
+        : target?.username.isNotEmpty == true
+        ? target!.username
+        : targetUserId;
+    await _runQueued(targetUserId, () async {
       final requestId = _repository.newRequestId();
       final sentOn = DateTime.now();
       final request = FriendRequest(
@@ -266,6 +286,7 @@ class FriendsViewModel extends ChangeNotifier {
         targetUserId,
         requestId,
         sentOn,
+        displayName,
       );
       if (!synced) {
         _waitingIds.add(targetUserId);
@@ -286,7 +307,11 @@ class FriendsViewModel extends ChangeNotifier {
       if (requester != null) await _repository.saveAcceptedFriend(requester);
       await _saveRequestsToFile();
       _notify();
-      final synced = await _repository.acceptRequest(request.id);
+      final itemName = _requesterName(requester, request.fromUserId);
+      final synced = await _repository.acceptRequest(
+        request.id,
+        itemName: itemName,
+      );
       if (!synced) _waitingIds.add(request.id);
       await _saveRequestsToFile();
       return synced;
@@ -298,7 +323,12 @@ class FriendsViewModel extends ChangeNotifier {
       _requests = _requests.where((item) => item.id != request.id).toList();
       await _saveRequestsToFile();
       _notify();
-      final synced = await _repository.denyRequest(request.id);
+      final requester = _requesters[request.fromUserId];
+      final itemName = _requesterName(requester, request.fromUserId);
+      final synced = await _repository.denyRequest(
+        request.id,
+        itemName: itemName,
+      );
       if (!synced) _waitingIds.add(request.id);
       await _saveRequestsToFile();
       return synced;
@@ -321,6 +351,13 @@ class FriendsViewModel extends ChangeNotifier {
       _busyIds.remove(id);
       _notify();
     }
+  }
+
+  String _requesterName(User? requester, String fallback) {
+    if (requester == null) return fallback;
+    final fullName = '${requester.name} ${requester.lastName}'.trim();
+    if (fullName.isNotEmpty) return fullName;
+    return requester.username.isNotEmpty ? requester.username : fallback;
   }
 
   void _notify() {
