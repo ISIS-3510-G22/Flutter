@@ -167,11 +167,6 @@ class _PlanDetailBody extends StatelessWidget {
                                   ),
                                 ),
                               if (vm.isCreator) ...[
-                                if (vm.waitingToSync)
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 8),
-                                    child: Text('Waiting to sync'),
-                                  ),
                                 Expanded(
                                   child: FilledButton.icon(
                                     onPressed: () =>
@@ -198,6 +193,52 @@ class _PlanDetailBody extends StatelessWidget {
                             ],
                           ],
                         ),
+                        if (vm.waitingToSync)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.sync,
+                                        size: 14,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Waiting to sync',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         if (!online && !vm.isCreator && vm.isActive > 0)
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
