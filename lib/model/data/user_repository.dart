@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/local/crew_local_store.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/data/local/upload_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
@@ -14,6 +15,7 @@ class UserRepository {
 
   final _files = JsonFileStore();
   final _uploads = UploadStore();
+  final _crewLocalStore = CrewLocalStore();
 
   PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
@@ -188,9 +190,22 @@ class UserRepository {
   }
 
   Future<List<User>> getUsersForSearch({String? excludingId}) async {
-    final snapshot = await _users.get();
-    return snapshot.docs.where((doc) => doc.id != excludingId).map((doc) {
-      return _getUserFromDoc(doc.id, doc.data());
-    }).toList();
+    ConnectivityRepository.instance.ensureOnline();
+    final snapshot = await _users
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
+    final users = snapshot.docs
+        .where((doc) => doc.id != excludingId)
+        .map((doc) => _getUserFromDoc(doc.id, doc.data()))
+        .toList();
+    await _crewLocalStore.saveDirectory(users);
+    return users;
   }
+
+  Future<bool> hasSavedSearchDirectory() => _crewLocalStore.hasSavedDirectory();
+
+  Future<List<User>> storedSearchDirectory() => _crewLocalStore.directory();
+
+  Future<List<User>> cachedUsersByIds(List<String> ids) =>
+      _crewLocalStore.peopleByIds(ids);
 }

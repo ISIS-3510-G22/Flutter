@@ -207,7 +207,8 @@ class ActivityRepository {
   Future<List<Activity>> publicActivities() async {
     final snapshot = await _activities
         .where('visibility', isEqualTo: ActivityVisibility.public.name)
-        .get();
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     return snapshot.docs.map(_fromDoc).toList();
   }
 

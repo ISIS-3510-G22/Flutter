@@ -4,9 +4,11 @@ import 'package:latlong2/latlong.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:plansync/model/services/location_service.dart';
 import 'package:plansync/viewmodels/explore/nearby_map_viewmodel.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/explore/public_plan_detail_view.dart';
 import 'package:plansync/views/widgets/circle_back_button.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 const _geoapifyKey = String.fromEnvironment('GEOAPIFY_KEY');
@@ -30,6 +32,7 @@ class _NearbyMapBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final vm = context.watch<NearbyMapViewModel>();
 
     Widget content;
@@ -38,12 +41,10 @@ class _NearbyMapBody extends StatelessWidget {
         content = const Center(child: CircularProgressIndicator());
       case NearbyStatus.locationError:
         content = _LocationErrorMessage(vm: vm);
-      case NearbyStatus.error:
-        content = _MessageWithAction(
+      case NearbyStatus.neverSaved:
+        content = const _MessageWithAction(
           icon: Icons.cloud_off_outlined,
-          message: 'Could not load what is near you.',
-          actionLabel: 'Try again',
-          onAction: vm.load,
+          message: 'Connect to see plans near you.',
         );
       case NearbyStatus.ready:
         content = _NearbyMap(vm: vm);
@@ -60,7 +61,22 @@ class _NearbyMapBody extends StatelessWidget {
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: _TopBar(vm: vm),
+                child: Column(
+                  children: [
+                    _TopBar(vm: vm),
+                    if (!online && vm.status == NearbyStatus.ready) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: const OfflineBanner(
+                          message:
+                              "You're offline. Pins are from your last visit; "
+                              "map areas you haven't viewed stay blank.",
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -206,6 +222,13 @@ class _NearbyMapState extends State<_NearbyMap> {
                   'https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}',
               additionalOptions: const {'apiKey': _geoapifyKey},
               userAgentPackageName: 'com.example.plansync',
+              // Same config as the plan route map: the provider keeps
+              // whichever configuration it was first created with.
+              tileProvider: NetworkTileProvider(
+                cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
+                  overrideFreshAge: const Duration(days: 30),
+                ),
+              ),
             ),
             CircleLayer(
               circles: [
@@ -546,14 +569,14 @@ class _MessageWithAction extends StatelessWidget {
   const _MessageWithAction({
     required this.icon,
     required this.message,
-    required this.actionLabel,
-    required this.onAction,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final String message;
-  final String actionLabel;
-  final VoidCallback onAction;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -568,8 +591,10 @@ class _MessageWithAction extends StatelessWidget {
             Icon(icon, size: 48, color: colors.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onAction, child: Text(actionLabel)),
+            if (actionLabel != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            ],
           ],
         ),
       ),

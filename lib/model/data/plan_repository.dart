@@ -3,12 +3,13 @@ import 'dart:isolate';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/crew_write_queue.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/invite_suggestion_ids.dart';
-import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/pending_write.dart';
 
 class PlanRepository {
   final _plans = FirebaseFirestore.instance.collection('plans');
@@ -30,6 +31,7 @@ class PlanRepository {
   final _files = JsonFileStore();
 
   String _plansFile(String uid) => 'plans_$uid.json';
+  String _inviteSuggestionsFile(String uid) => 'invite_suggestions_$uid.json';
 
   PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
@@ -173,12 +175,18 @@ class PlanRepository {
   }
 
   Future<List<Plan>> publicPlans() async {
-    final snapshot = await _plans.where('isPublic', isEqualTo: true).get();
+    final snapshot = await _plans
+        .where('isPublic', isEqualTo: true)
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     return snapshot.docs.map((d) => _fromData(d.id, d.data())).toList();
   }
 
   Future<List<String>> recommendedPlanIds(String uid) async {
-    final latest = await _planRecommendationRuns.doc('latest').get();
+    final latest = await _planRecommendationRuns
+        .doc('latest')
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     final latestData = latest.data();
     if (latestData == null) return [];
     final runId = latestData['latestRunId'];
@@ -189,26 +197,44 @@ class PlanRepository {
         .collection('output')
         .where('uid', isEqualTo: uid)
         .limit(1)
-        .get();
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     if (output.docs.isEmpty) return [];
 
     final map = output.docs.first['plan_ids'] as Map<String, dynamic>;
     return List.generate(map.length, (i) => map['$i'] as String);
   }
 
-  Future<void> invite(String planId, List<String> userIds) {
-    final invitedAt = Timestamp.now();
-    return _plans.doc(planId).update({
-      'participantsIds': FieldValue.arrayUnion(userIds),
-      'invitations': FieldValue.arrayUnion([
-        for (final id in userIds)
-          {
-            'userId': id,
-            'rsvp': RsvpStatus.invited.name,
-            'invitedAt': invitedAt,
-          },
-      ]),
-    });
+  Future<bool> invite(
+    String uid,
+    Plan plan,
+    List<String> userIds, {
+    required DateTime invitedAt,
+  }) async {
+    final invitedIds = userIds.toSet();
+    final optimistic = plan.withInvitations([
+      ...plan.invitations.where(
+        (invitation) => !invitedIds.contains(invitation.userId),
+      ),
+      for (final userId in invitedIds)
+        Invitation(
+          userId: userId,
+          rsvp: RsvpStatus.invited,
+          invitedAt: invitedAt,
+        ),
+    ]);
+    await _saveLocal(uid, optimistic);
+    return CrewWriteQueue.instance.submit(
+      PendingWrite(
+        kind: CrewWriteKind.planInvite,
+        docId: plan.id,
+        payload: {
+          'name': plan.name,
+          'userIds': invitedIds.toList(),
+          'invitedAt': invitedAt.toIso8601String(),
+        },
+      ),
+    );
   }
 
   List<dynamic> _listFromFirestore(dynamic raw) {
@@ -218,7 +244,11 @@ class PlanRepository {
   }
 
   Future<InviteSuggestionIds> inviteSuggestions(String uid) async {
-    final latest = await _inviteSuggestionRuns.doc('latest').get();
+    _connectivity.ensureOnline();
+    final latest = await _inviteSuggestionRuns
+        .doc('latest')
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     final runId = latest.data()?['latestRunId'] as String?;
     if (runId == null) return InviteSuggestionIds.empty;
 
@@ -227,7 +257,8 @@ class PlanRepository {
         .collection('output')
         .where('uid', isEqualTo: uid)
         .limit(1)
-        .get();
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
     if (output.docs.isEmpty) return InviteSuggestionIds.empty;
 
     final data = output.docs.first.data();
@@ -241,6 +272,26 @@ class PlanRepository {
       ).map((e) => (e as num).toInt()).toList(),
       groupIds: _listFromFirestore(data['group_ids']).cast<String>(),
     );
+  }
+
+  Future<void> saveInviteSuggestions(
+    String uid,
+    InviteSuggestionIds suggestions,
+  ) => _files.write(
+    _inviteSuggestionsFile(uid),
+    jsonEncode(suggestions.toJson()),
+  );
+
+  Future<InviteSuggestionIds?> cachedInviteSuggestions(String uid) async {
+    final contents = await _files.read(_inviteSuggestionsFile(uid));
+    if (contents == null) return null;
+    try {
+      return InviteSuggestionIds.fromJson(
+        jsonDecode(contents) as Map<String, dynamic>,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> setRsvp(String planId, String userId, RsvpStatus rsvp) {

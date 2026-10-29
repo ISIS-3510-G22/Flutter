@@ -93,6 +93,10 @@ class _FriendRequestCard extends StatelessWidget {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error)));
+      } else if (context.read<FriendsViewModel>().isWaitingToSync(request.id)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Waiting to sync')));
       }
     }
 

@@ -100,6 +100,15 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (vm.isWaitingToSync(widget.group.id)) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Waiting to sync',
+                    style: text.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 4),
                 FutureBuilder<List<User>>(
                   future: _membersFuture,

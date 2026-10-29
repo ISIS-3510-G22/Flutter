@@ -48,3 +48,5 @@ CLAUDE.md
 
 env.json
 functions/node_modules/
+
+*-admin-key.json

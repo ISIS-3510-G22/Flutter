@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 5,
+      version: 7,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -53,6 +53,9 @@ class LocalDatabase {
       )
     ''');
     await _createCrewTables(db);
+    await _createSplitTables(db);
+    await _createCrewOutbox(db);
+    await _createSplitOutbox(db);
   }
 
   static Future<void> _onUpgrade(
@@ -89,6 +92,13 @@ class LocalDatabase {
           ELSE 0
         END
       ''');
+    }
+    if (oldVersion < 6) {
+      await _createSplitTables(db);
+    }
+    if (oldVersion < 8) {
+      await _createCrewOutbox(db);
+      await _createSplitOutbox(db);
     }
   }
 
@@ -130,6 +140,72 @@ class LocalDatabase {
       CREATE TABLE IF NOT EXISTS crew_cache_state (
         cacheKey TEXT PRIMARY KEY,
         value INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _createSplitTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE expenses (
+        id TEXT PRIMARY KEY,
+        plan_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        value REAL NOT NULL,
+        paid_by_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        split_among TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE settlements (
+        id TEXT PRIMARY KEY,
+        plan_id TEXT NOT NULL,
+        from_id TEXT NOT NULL,
+        to_id TEXT NOT NULL,
+        amount REAL NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE plan_people (
+        plan_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        methods TEXT NOT NULL,
+        chosen_method_id TEXT,
+        PRIMARY KEY (plan_id, user_id)
+      )
+    ''');
+    // One row per plan and list once that list has been saved, so an empty
+    // list ("no expenses yet") can be told apart from "never loaded".
+    await db.execute('''
+      CREATE TABLE split_saved (
+        plan_id TEXT NOT NULL,
+        list TEXT NOT NULL,
+        PRIMARY KEY (plan_id, list)
+      )
+    ''');
+  }
+
+  static Future<void> _createCrewOutbox(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS crew_outbox (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL,
+        docId TEXT NOT NULL,
+        payload TEXT NOT NULL
+      )
+    ''');
+  }
+}
+      
+  static Future<void> _createSplitOutbox(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS split_outbox (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL,
+        docId TEXT NOT NULL,
+        payload TEXT NOT NULL
       )
     ''');
   }

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:plansync/model/data/auth_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/user.dart';
 
@@ -25,7 +26,8 @@ class ProfileViewModel extends ChangeNotifier {
   late final StreamSubscription<void> _queueSub;
 
   String? get signOutWarning {
-    if (PendingWriteRepository.instance.hasPending) {
+    if (PendingWriteRepository.instance.hasPending ||
+        SplitOutboxRepository.instance.hasPending) {
       return "You have changes that haven't synced yet. If you log out now, they'll be lost.";
     }
     if (!ConnectivityRepository.instance.isOnline) {
@@ -45,6 +47,7 @@ class ProfileViewModel extends ChangeNotifier {
   Future<void> signOut() async {
     _queueSub.cancel();
     await PendingWriteRepository.instance.clear();
+    await SplitOutboxRepository.instance.clear();
     await AuthRepository().signOut();
   }
 

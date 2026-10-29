@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/group_repository.dart';
+import 'package:plansync/model/data/crew_write_queue.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/group_invitation.dart';
@@ -14,12 +15,29 @@ class CrewViewmodel extends ChangeNotifier {
 
   late final StreamSubscription<List<Group>> _groupsSub;
   late final StreamSubscription<List<GroupInvitation>> _invitationsSub;
+  late final Future<void> _cachedInvitationsReady;
 
   List<Group> _groups = [];
   List<GroupInvitation> _invitations = [];
 
   final Map<String, int> _memberCounts = {};
   final Map<String, Group> _invitedGroups = {};
+  final Set<String> _waitingIds = {};
+  final Map<String, String> _waitingPairDocIds = {};
+  late final StreamSubscription<void> _queueSub = CrewWriteQueue
+      .instance
+      .changes
+      .listen((_) {
+        for (final group in _groups) {
+          if (CrewWriteQueue.instance.pendingDocIds.contains(group.id)) {
+            _waitingIds.add(group.id);
+          }
+        }
+        _waitingIds.removeWhere(
+          (id) => !CrewWriteQueue.instance.pendingDocIds.contains(id),
+        );
+        _notify();
+      });
 
   bool _groupsLoaded = false;
   int _groupStreamEmissions = 0;
@@ -38,6 +56,9 @@ class CrewViewmodel extends ChangeNotifier {
   int memberCountFor(String groupId) => _memberCounts[groupId] ?? 0;
   Group? groupForInvitation(GroupInvitation invitation) =>
       _invitedGroups[invitation.groupId];
+  bool isWaitingToSync(String id) => _waitingIds.contains(id);
+  bool isInviteWaiting(String groupId, String userId) =>
+      _waitingIds.contains(_waitingPairDocIds['${groupId}_$userId']);
 
   Future<List<User>> membersForGroup(String groupId) async {
     final memberIds = await _repository.memberIdsForGroup(groupId);
@@ -56,7 +77,12 @@ class CrewViewmodel extends ChangeNotifier {
     error = null;
     _notify();
     try {
-      await _repository.inviteUser(groupId, userId);
+      final result = await _repository.inviteUser(groupId, userId);
+      if (!result.synced) {
+        _waitingIds.add(result.invitationId);
+        _waitingPairDocIds['${groupId}_$userId'] = result.invitationId;
+      }
+      _notify();
       return true;
     } catch (e) {
       error = 'Could not invite this friend: $e';
@@ -92,12 +118,19 @@ class CrewViewmodel extends ChangeNotifier {
           },
         );
 
+    _cachedInvitationsReady = _loadCachedInvitations(uid);
     _invitationsSub = _repository
         .pendingInvitationsForUser(uid)
         .listen(
           (invitations) async {
+            await _cachedInvitationsReady;
             _invitations = invitations;
             await _loadInvitedGroups(invitations);
+            await _repository.saveInvitationsForUser(
+              uid,
+              invitations,
+              _invitedGroups,
+            );
             _invitationsLoaded = true;
             _notify();
           },
@@ -107,6 +140,28 @@ class CrewViewmodel extends ChangeNotifier {
             _notify();
           },
         );
+  }
+
+  Future<void> _loadCachedInvitations(String uid) async {
+    try {
+      final cached = await _repository.cachedInvitationsForUser(uid);
+      if (cached == null) {
+        _invitationsLoaded = true;
+        _notify();
+        return;
+      }
+      _invitations = cached.map((entry) => entry.invitation).toList();
+      _invitedGroups.addEntries(
+        cached.map((entry) => MapEntry(entry.group.id, entry.group)),
+      );
+      await _loadMemberCounts(cached.map((entry) => entry.group.id));
+      _invitationsLoaded = true;
+      _notify();
+    } catch (e) {
+      error = 'Could not load saved invitations: $e';
+      _invitationsLoaded = true;
+      _notify();
+    }
   }
 
   Future<void> _loadMemberCounts(Iterable<String> groupIds) async {
@@ -125,9 +180,7 @@ class CrewViewmodel extends ChangeNotifier {
       final ids = invitations.map((invitation) => invitation.groupId).toSet();
       await _loadMemberCounts(ids);
       await Future.wait(
-        invitations.where((i) => !_invitedGroups.containsKey(i.groupId)).map((
-          i,
-        ) async {
+        invitations.map((i) async {
           _invitedGroups[i.groupId] = await _repository.groupById(i.groupId);
           await _repository.memberIdsForGroup(i.groupId);
           await _loadMemberCounts([i.groupId]);
@@ -144,11 +197,20 @@ class CrewViewmodel extends ChangeNotifier {
   }) async {
     try {
       error = null;
-      return await _repository.createGroup(
+      final group = await _repository.createGroup(
         name: name,
         description: description,
         creatorUid: _uid,
       );
+      if (!_groups.any((item) => item.id == group.id)) {
+        _groups = [..._groups, group];
+        _memberCounts[group.id] = 1;
+      }
+      if (CrewWriteQueue.instance.pendingDocIds.contains(group.id)) {
+        _waitingIds.add(group.id);
+      }
+      _notify();
+      return group;
     } catch (e) {
       error = 'Could not create the group: $e';
       _notify();
@@ -156,18 +218,48 @@ class CrewViewmodel extends ChangeNotifier {
     }
   }
 
-  Future<void> acceptInvitation(GroupInvitation invitation) {
-    return _run(
-      () => _repository.acceptInvitation(invitation),
-      'Could not accept the invitation',
-    );
+  Future<void> acceptInvitation(GroupInvitation invitation) async {
+    await _run(() async {
+      _invitations = _invitations
+          .where((item) => item.id != invitation.id)
+          .toList();
+      final group = _invitedGroups[invitation.groupId];
+      if (group != null && !_groups.any((item) => item.id == group.id)) {
+        _groups = [..._groups, group];
+        _memberCounts[group.id] = (_memberCounts[group.id] ?? 0) + 1;
+      }
+      _notify();
+      await _repository.saveInvitationsForUser(
+        _uid,
+        _invitations,
+        _invitedGroups,
+      );
+      final synced = await _repository.acceptInvitation(
+        invitation,
+        group: group,
+        itemName: group?.name,
+      );
+      if (!synced) _waitingIds.add(invitation.id);
+    }, 'Could not accept the invitation');
   }
 
-  Future<void> denyInvitation(GroupInvitation invitation) {
-    return _run(
-      () => _repository.denyInvitation(invitation.id),
-      'Could not deny the invitation',
-    );
+  Future<void> denyInvitation(GroupInvitation invitation) async {
+    await _run(() async {
+      _invitations = _invitations
+          .where((item) => item.id != invitation.id)
+          .toList();
+      _notify();
+      await _repository.saveInvitationsForUser(
+        _uid,
+        _invitations,
+        _invitedGroups,
+      );
+      final synced = await _repository.denyInvitation(
+        invitation,
+        itemName: _invitedGroups[invitation.groupId]?.name,
+      );
+      if (!synced) _waitingIds.add(invitation.id);
+    }, 'Could not deny the invitation');
   }
 
   void clearError() {
@@ -193,6 +285,7 @@ class CrewViewmodel extends ChangeNotifier {
     _disposed = true;
     _groupsSub.cancel();
     _invitationsSub.cancel();
+    _queueSub.cancel();
     super.dispose();
   }
 }
