@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/plan_expenses_viewmodel.dart';
 import 'package:plansync/views/plans/create_edit_expense_view.dart';
 import 'package:plansync/views/plans/manage_splits_view.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class PlanExpensesView extends StatelessWidget {
@@ -30,7 +32,32 @@ class _PlanExpensesBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final vm = context.watch<PlanExpensesViewModel>();
+    final colors = Theme.of(context).colorScheme;
+
+    Widget content;
+    if (vm.isLoading || (vm.notSaved && online)) {
+      content = const Center(child: CircularProgressIndicator());
+    } else if (vm.notSaved) {
+      content = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            "Connect to load this plan's expenses.",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: colors.onSurfaceVariant),
+          ),
+        ),
+      );
+    } else {
+      content = Column(
+        children: [
+          _PaymentMethodPicker(vm: vm),
+          Expanded(child: _ExpensesList(vm: vm)),
+        ],
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -74,14 +101,15 @@ class _PlanExpensesBody extends StatelessWidget {
           ),
         ),
       ),
-      body: vm.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _PaymentMethodPicker(vm: vm),
-                Expanded(child: _ExpensesList(vm: vm)),
-              ],
+      body: Column(
+        children: [
+          if (!online && !vm.notSaved)
+            const OfflineBanner(
+              message: "You're offline. Showing expenses as last saved.",
             ),
+          Expanded(child: content),
+        ],
+      ),
     );
   }
 }
@@ -177,7 +205,7 @@ class _PaymentMethodPicker extends StatelessWidget {
               content: Text(
                 saved
                     ? 'Payment method saved'
-                    : 'Something went wrong. Try again.',
+                    : "Couldn't save your payment method. Try again.",
               ),
             ),
           );
