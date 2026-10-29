@@ -6,6 +6,7 @@ import 'package:plansync/firebase_options.dart';
 import 'package:plansync/model/data/auth_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/data/theme_repository.dart';
 import 'package:plansync/model/data/write_queue.dart';
 import 'package:plansync/model/models/user.dart';
@@ -65,6 +66,7 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
     _listenForDropped(PendingWriteRepository.instance);
+    _listenForDropped(SplitOutboxRepository.instance);
     _connectivity = context.read<ConnectivityViewModel>()
       ..addListener(_retryWhenOnline);
     _authStateChanges = _authRepository.authStateChanges;
@@ -229,6 +231,7 @@ class _AuthGateState extends State<AuthGate> {
     _activeUserId = user.id;
     _registerNotificationsOnce(user);
     unawaited(PendingWriteRepository.instance.start());
+    unawaited(SplitOutboxRepository.instance.start());
     if (_pendingNotificationType != null) _scheduleNotificationRoute();
     return HomeShell(
       key: _homeShellKey,

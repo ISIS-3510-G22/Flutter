@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/expense.dart';
 import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/create_edit_expense_viewmodel.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class CreateEditExpenseView extends StatelessWidget {
@@ -35,6 +37,7 @@ class _CreateEditExpenseForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final vm = context.watch<CreateEditExpenseViewModel>();
 
     return Scaffold(
@@ -46,6 +49,14 @@ class _CreateEditExpenseForm extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (!online) ...[
+              const OfflineBanner(
+                message:
+                    "You're offline. Expenses you save or delete stay on your "
+                    "phone and sync when you're back online.",
+              ),
+              const SizedBox(height: 16),
+            ],
             const Text('NAME'),
             TextField(
               controller: vm.nameController,
@@ -106,12 +117,13 @@ class _CreateEditExpenseForm extends StatelessWidget {
                   onPressed: vm.isLoading
                       ? null
                       : () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           final confirmed = await _confirmDelete(context);
                           if (!confirmed) return;
                           final deleted = await vm.delete();
-                          if (deleted && context.mounted) {
-                            Navigator.pop(context);
-                          }
+                          if (!deleted || !context.mounted) return;
+                          _showQueued(messenger, vm.queuedMessage);
+                          Navigator.pop(context);
                         },
                   child: const Text('Delete Expense'),
                 ),
@@ -139,10 +151,11 @@ class _CreateEditExpenseForm extends StatelessWidget {
                     onPressed: vm.isLoading
                         ? null
                         : () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             final saved = await vm.save();
-                            if (saved && context.mounted) {
-                              Navigator.pop(context);
-                            }
+                            if (!saved || !context.mounted) return;
+                            _showQueued(messenger, vm.queuedMessage);
+                            Navigator.pop(context);
                           },
                     child: vm.isLoading
                         ? const SizedBox(
@@ -159,6 +172,11 @@ class _CreateEditExpenseForm extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showQueued(ScaffoldMessengerState messenger, String? message) {
+    if (message == null) return;
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<bool> _confirmDelete(BuildContext context) async {

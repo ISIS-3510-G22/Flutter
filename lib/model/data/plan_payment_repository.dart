@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/split_local_store.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/user.dart';
 
 class PlanPaymentRepository {
@@ -15,6 +17,9 @@ class PlanPaymentRepository {
   final _userRepository = UserRepository();
   final _connectivity = ConnectivityRepository.instance;
 
+  // A getter, never a field: the queue's constructor creates this repository.
+  SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
+
   /// Saved choices first, then each server answer, saved before it's emitted.
   Stream<Map<String, String>> choicesForPlan(String planId) async* {
     yield await _local.choices(planId);
@@ -25,6 +30,7 @@ class PlanPaymentRepository {
           final choices = {
             for (final d in snapshot.docs) d.id: d.data()['methodId'] as String,
           };
+          if (_queue.hasPendingFor(planId)) return _local.choices(planId);
           for (final entry in choices.entries) {
             await _local.saveChoice(planId, entry.key, entry.value);
           }
@@ -47,6 +53,26 @@ class PlanPaymentRepository {
       return saved.where((u) => ids.contains(u.id)).toList();
     }
   }
+
+  Future<Map<String, String>> savedChoices(String planId) =>
+      _local.choices(planId);
+
+  Future<bool> chooseMethod(
+    String planId,
+    String userId,
+    String methodId,
+  ) async {
+    await _local.saveChoice(planId, userId, methodId);
+    return _queue.submit(
+      PendingWrite(
+        kind: SplitWriteKind.paymentChoose,
+        docId: SplitOutboxRepository.docId(planId, userId),
+        payload: {'planId': planId, 'userId': userId, 'methodId': methodId},
+      ),
+    );
+  }
+
+  // Server method, called by the queue's `send`.
 
   Future<void> choose(String planId, String userId, String methodId) {
     return _choices(planId).doc(userId).set({'methodId': methodId});

@@ -5,6 +5,7 @@ import 'package:plansync/viewmodels/plans/plan_expenses_viewmodel.dart';
 import 'package:plansync/views/plans/create_edit_expense_view.dart';
 import 'package:plansync/views/plans/manage_splits_view.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
+import 'package:plansync/views/widgets/waiting_to_sync.dart';
 import 'package:provider/provider.dart';
 
 class PlanExpensesView extends StatelessWidget {
@@ -145,8 +146,15 @@ class _ExpensesList extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  subtitle: Text(
-                    '${vm.payerName(expense)} · ${vm.splitLabel(expense)}',
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${vm.payerName(expense)} · ${vm.splitLabel(expense)}',
+                      ),
+                      if (vm.pendingIds.contains(expense.id))
+                        const WaitingToSync(),
+                    ],
                   ),
                   onTap: () => Navigator.push(
                     context,
@@ -197,18 +205,12 @@ class _PaymentMethodPicker extends StatelessWidget {
               ),
             ),
         ],
-        onChanged: (methodId) async {
+        onChanged: (methodId) {
           final messenger = ScaffoldMessenger.of(context);
-          final saved = await vm.chooseMethod(methodId);
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(
-                saved
-                    ? 'Payment method saved'
-                    : "Couldn't save your payment method. Try again.",
-              ),
-            ),
-          );
+          vm.chooseMethod(methodId).then((message) {
+            if (message == null) return;
+            messenger.showSnackBar(SnackBar(content: Text(message)));
+          });
         },
       );
     }

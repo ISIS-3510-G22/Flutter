@@ -40,6 +40,10 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
+  /// Set when the last save or delete was kept on the phone (queued), for
+  /// the snackbar the form shows as it closes. `null` when it was sent.
+  String? queuedMessage;
+
   bool get isForEveryone =>
       participants.every((p) => splitAmongIds.contains(p.id));
 
@@ -90,7 +94,7 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      var id = '';
+      var id = _repository.newId(_planId);
       var createdAt = DateTime.now();
       if (_editingExpense case final editing?) {
         id = editing.id;
@@ -104,14 +108,20 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
         createdAt: createdAt,
         splitAmongIds: splitAmongIds.toList(),
       );
-      if (_editingExpense == null) {
-        await _repository.create(_planId, expense);
-      } else {
-        await _repository.update(_planId, expense);
-      }
+      // The form waits (it closes afterwards), so `await`: at most the 8 s
+      // send timeout online, instantly offline.
+      final sent = await _repository.save(
+        _planId,
+        expense,
+        isNew: _editingExpense == null,
+      );
+      queuedMessage = sent
+          ? null
+          : "Expense saved on your phone. Everyone sees it when you're back "
+                'online.';
       return true;
     } catch (_) {
-      errorMessage = 'Something went wrong. Try again.';
+      errorMessage = "Couldn't save this expense on your phone.";
       return false;
     } finally {
       isLoading = false;
@@ -128,10 +138,14 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.delete(_planId, expense.id);
+      final sent = await _repository.remove(_planId, expense);
+      queuedMessage = sent
+          ? null
+          : "Expense deleted on your phone. It's removed for everyone when "
+                "you're back online.";
       return true;
     } catch (_) {
-      errorMessage = 'Something went wrong. Try again.';
+      errorMessage = "Couldn't delete this expense on your phone.";
       return false;
     } finally {
       isLoading = false;
@@ -139,8 +153,18 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
     }
   }
 
+  // Set in dispose: async work (queue reloads, `.then` / `.catchError`,
+  // awaited saves) can finish after the view closed, so stop notifying then.
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     nameController.dispose();
     valueController.dispose();
     super.dispose();
