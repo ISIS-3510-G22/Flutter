@@ -166,6 +166,7 @@ class GroupRepository {
         kind: CrewWriteKind.groupInvite,
         docId: invitationRef.id,
         payload: {
+          'invitationId': invitationRef.id,
           'groupId': groupId,
           'userId': userId,
           'sentOn': sentOn.toIso8601String(),

@@ -42,12 +42,13 @@ class CrewWriteQueue extends WriteQueue<CrewWriteKind> {
     final payload = write.payload;
     try {
       await switch (write.kind) {
-        CrewWriteKind.requestSend => _friendRequests.doc(write.docId).set({
-          'fromUserId': payload['fromUserId'] as String,
-          'toUserId': payload['toUserId'] as String,
-          'sentOn': Timestamp.fromDate(_dateTime(payload['sentOn'])),
-          'status': 'pending',
-        }),
+        CrewWriteKind.requestSend =>
+          _friendRequests.doc(payload['requestId'] as String).set({
+            'fromUserId': payload['fromUserId'] as String,
+            'toUserId': payload['toUserId'] as String,
+            'sentOn': Timestamp.fromDate(_dateTime(payload['sentOn'])),
+            'status': 'pending',
+          }),
         CrewWriteKind.requestAccept => _friendRequests.doc(write.docId).update({
           'status': 'accepted',
         }),
@@ -55,12 +56,13 @@ class CrewWriteQueue extends WriteQueue<CrewWriteKind> {
           'status': 'denied',
         }),
         CrewWriteKind.groupCreate => _createGroup(write.docId, payload),
-        CrewWriteKind.groupInvite => _groupInvitations.doc(write.docId).set({
-          'groupId': payload['groupId'] as String,
-          'userId': payload['userId'] as String,
-          'sentOn': Timestamp.fromDate(_dateTime(payload['sentOn'])),
-          'status': 'pending',
-        }),
+        CrewWriteKind.groupInvite =>
+          _groupInvitations.doc(payload['invitationId'] as String).set({
+            'groupId': payload['groupId'] as String,
+            'userId': payload['userId'] as String,
+            'sentOn': Timestamp.fromDate(_dateTime(payload['sentOn'])),
+            'status': 'pending',
+          }),
         CrewWriteKind.inviteAccept => _acceptGroupInvitation(
           write.docId,
           payload,

@@ -109,6 +109,7 @@ class FriendRepository {
         kind: CrewWriteKind.requestSend,
         docId: requestRef.id,
         payload: {
+          'requestId': requestRef.id,
           'fromUserId': fromUserId,
           'toUserId': toUserId,
           'sentOn': sentOn.toIso8601String(),
