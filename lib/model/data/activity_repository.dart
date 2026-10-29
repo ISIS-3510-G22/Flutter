@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/local/activity_local_store.dart';
+import 'package:plansync/model/data/local/upload_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/pending_write.dart';
@@ -9,6 +10,7 @@ class ActivityRepository {
   final _activities = FirebaseFirestore.instance.collection("activities");
 
   final _local = ActivityLocalStore();
+  final _uploads = UploadStore();
   final _connectivity = ConnectivityRepository.instance;
 
   final _recommendationRuns = FirebaseFirestore.instance
@@ -163,8 +165,22 @@ class ActivityRepository {
     });
   }
 
-  Future<void> delete(String activityId) {
-    return _activities.doc(activityId).delete();
+  Future<String?> pendingPhoto(String id) =>
+      _uploads.pending('activity_$id.jpg');
+
+  Future<bool> savePhoto(String id, String pickedPath) async {
+    final path = await _uploads.save('activity_$id.jpg', pickedPath);
+    return _queue.submit(
+      PendingWrite(
+        kind: WriteKind.activityPhoto,
+        docId: id,
+        payload: {'path': path},
+      ),
+    );
+  }
+
+  Future<void> updatePhotoUrl(String id, String photoUrl) {
+    return _activities.doc(id).update({'photoUrl': photoUrl});
   }
 
   Future<void> update(Activity activity) {
@@ -175,7 +191,6 @@ class ActivityRepository {
       'notes': activity.notes,
       'tags': activity.tags.toList(),
       'visibility': activity.visibility.name,
-      'photoUrl': activity.photoUrl,
       'lat': activity.lat,
       'lng': activity.lng,
     });
