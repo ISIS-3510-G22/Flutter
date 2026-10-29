@@ -12,15 +12,59 @@ import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
 
+class UserCache {
+  UserCache({
+    this.capacity = 50,
+    this.timeToLive = const Duration(minutes: 10),
+  });
+
+  final int capacity;
+  final Duration timeToLive;
+  final _entries = <String, _CachedUser>{};
+
+  User? get(String id, {bool allowStale = false}) {
+    final entry = _entries.remove(id);
+    if (entry == null) return null;
+    _entries[id] = entry;
+    if (!allowStale && DateTime.now().difference(entry.savedAt) >= timeToLive) {
+      return null;
+    }
+    return entry.user;
+  }
+
+  void put(User user) {
+    _entries.remove(user.id);
+    _entries[user.id] = _CachedUser(user, DateTime.now());
+    while (_entries.length > capacity) {
+      _entries.remove(_entries.keys.first);
+    }
+  }
+
+  void invalidate(String id) => _entries.remove(id);
+}
+
+class _CachedUser {
+  const _CachedUser(this.user, this.savedAt);
+
+  final User user;
+  final DateTime savedAt;
+}
+
 class UserRepository {
   final _users = FirebaseFirestore.instance.collection('users');
 
   final _files = JsonFileStore();
   final _crewLocalStore = CrewLocalStore();
+  static final _userCache = UserCache();
 
   PendingWriteRepository get _queue => PendingWriteRepository.instance;
 
   final _connectivity = ConnectivityRepository.instance;
+
+  bool get isOnline => _connectivity.isOnline;
+
+  User? cachedUser(String id, {bool allowStale = false}) =>
+      _userCache.get(id, allowStale: allowStale);
 
   Future<File> _photoFile(String uid) async {
     final dir = await getApplicationDocumentsDirectory();
@@ -40,6 +84,7 @@ class UserRepository {
   }
 
   Future<bool> saveProfile(User user) async {
+    _userCache.put(user);
     await _saveLocal(user);
     return _queue.submit(
       PendingWrite(
@@ -85,11 +130,13 @@ class UserRepository {
           .timeout(const Duration(seconds: 8));
       if (!doc.exists) return null;
       final user = _getUserFromDoc(uid, doc.data()!);
+      _userCache.put(user);
       await _saveLocal(user);
       return user;
     } catch (_) {
       final saved = await _readMe(uid);
       if (saved == null) rethrow;
+      _userCache.put(saved);
       return saved;
     }
   }
@@ -156,14 +203,34 @@ class UserRepository {
   }
 
   Future<User?> getUser(String id) async {
-    final doc = await _users.doc(id).get();
-    if (!doc.exists) return null;
-    final data = doc.data()!;
-    return _getUserFromDoc(id, data);
+    final online = _connectivity.isOnline;
+    final cached = _userCache.get(id, allowStale: !online);
+    if (cached != null) return cached;
+    if (!online) return null;
+
+    try {
+      _connectivity.ensureOnline();
+      final doc = await _users
+          .doc(id)
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 8));
+      if (!doc.exists) {
+        _userCache.invalidate(id);
+        return null;
+      }
+      final user = _getUserFromDoc(id, doc.data()!);
+      _userCache.put(user);
+      return user;
+    } catch (_) {
+      if (!_connectivity.isOnline) {
+        return _userCache.get(id, allowStale: true);
+      }
+      rethrow;
+    }
   }
 
-  Future<void> createUser(User user) {
-    return _users.doc(user.id).set({
+  Future<void> createUser(User user) async {
+    await _users.doc(user.id).set({
       'name': user.name,
       'lastName': user.lastName,
       'username': user.username,
@@ -174,10 +241,12 @@ class UserRepository {
           .map((m) => {'id': m.id, 'type': m.type, 'account': m.account})
           .toList(),
     });
+    _userCache.put(user);
   }
 
-  Future<void> updateProfile(User user) {
-    return _users.doc(user.id).update({
+  Future<void> updateProfile(User user) async {
+    _userCache.invalidate(user.id);
+    await _users.doc(user.id).update({
       'name': user.name,
       'lastName': user.lastName,
       'phone': user.phone,
@@ -187,8 +256,9 @@ class UserRepository {
     });
   }
 
-  Future<void> updatePhotoUrl(String userId, String photoUrl) {
-    return _users.doc(userId).update({'photoUrl': photoUrl});
+  Future<void> updatePhotoUrl(String userId, String photoUrl) async {
+    _userCache.invalidate(userId);
+    await _users.doc(userId).update({'photoUrl': photoUrl});
   }
 
   Future<List<User>> getUsers(
