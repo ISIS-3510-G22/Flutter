@@ -67,6 +67,11 @@ class CrewLocalStore {
     });
   }
 
+  Future<void> addFriend(User friend) async {
+    final db = await _db;
+    await _saveUser(db, friend, isFriend: true, includePrivateFields: true);
+  }
+
   Future<List<User>> directory() async {
     final db = await _db;
     final rows = await db.query(
@@ -205,6 +210,69 @@ class CrewLocalStore {
     });
   }
 
+  Future<void> saveOptimisticGroup(Group group, String creatorUid) async {
+    final db = await _db;
+    await db.transaction((txn) async {
+      await txn.insert('crew_groups', {
+        'id': group.id,
+        'name': group.name,
+        'description': group.description,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await txn.insert('group_members', {
+        'groupId': group.id,
+        'userId': creatorUid,
+        'status': 'member',
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await txn.insert('crew_cache_state', {
+        'cacheKey': 'groups_saved',
+        'value': 1,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+  }
+
+  Future<void> saveInvitedMember(String groupId, String userId) async {
+    final db = await _db;
+    await db.insert('group_members', {
+      'groupId': groupId,
+      'userId': userId,
+      'status': 'invited',
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> removeMembership(String groupId, String userId) async {
+    final db = await _db;
+    await db.delete(
+      'group_members',
+      where: 'groupId = ? AND userId = ?',
+      whereArgs: [groupId, userId],
+    );
+  }
+
+  Future<void> setMembershipStatus(
+    String groupId,
+    String userId,
+    String status,
+  ) async {
+    final db = await _db;
+    await db.insert('group_members', {
+      'groupId': groupId,
+      'userId': userId,
+      'status': status,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<String?> membershipStatus(String groupId, String userId) async {
+    final db = await _db;
+    final rows = await db.query(
+      'group_members',
+      columns: ['status'],
+      where: 'groupId = ? AND userId = ?',
+      whereArgs: [groupId, userId],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first['status'] as String;
+  }
+
   Future<Map<String, int>> memberCounts() async {
     final db = await _db;
     final rows = await db.rawQuery('''
@@ -229,6 +297,17 @@ class CrewLocalStore {
       orderBy: 'userId',
     );
     return rows.map((row) => row['userId'] as String).toList();
+  }
+
+  Future<Set<String>> invitedIds(String groupId) async {
+    final db = await _db;
+    final rows = await db.query(
+      'group_members',
+      columns: ['userId'],
+      where: "groupId = ? AND status = 'invited'",
+      whereArgs: [groupId],
+    );
+    return rows.map((row) => row['userId'] as String).toSet();
   }
 
   Future<List<User>> members(String groupId) async {

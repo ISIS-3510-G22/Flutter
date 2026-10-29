@@ -513,6 +513,8 @@ class _SearchResultCard extends StatelessWidget {
             : Text(
                 friend
                     ? 'Friends'
+                    : vm.isWaitingToSync(user.id)
+                    ? 'Waiting to sync'
                     : sent
                     ? 'Sent'
                     : 'Request',
