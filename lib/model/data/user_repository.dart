@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
-import 'package:plansync/model/data/local/crew_local_store.dart';
-import 'package:plansync/model/data/local/json_file_store.dart';
-import 'package:plansync/model/data/local/upload_store.dart';
+import 'package:plansync/model/services/local/crew_local_store.dart';
+import 'package:plansync/model/services/local/json_file_store.dart';
+import 'package:plansync/model/services/local/upload_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';

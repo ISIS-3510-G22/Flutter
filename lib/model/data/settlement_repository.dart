@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:plansync/model/data/local/split_local_store.dart';
+import 'package:plansync/model/services/local/split_local_store.dart';
 import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/settlement.dart';

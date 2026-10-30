@@ -4,7 +4,7 @@ import 'dart:isolate';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/crew_write_queue.dart';
-import 'package:plansync/model/data/local/json_file_store.dart';
+import 'package:plansync/model/services/local/json_file_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/invite_suggestion_ids.dart';

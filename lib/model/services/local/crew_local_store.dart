@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:plansync/model/data/local/local_database.dart';
+import 'package:plansync/model/services/local/local_database.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';

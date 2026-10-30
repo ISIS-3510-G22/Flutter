@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/activity_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
-import 'package:plansync/model/data/local/json_file_store.dart';
+import 'package:plansync/model/services/local/json_file_store.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/review_repository.dart';
 import 'package:plansync/model/models/activity.dart';

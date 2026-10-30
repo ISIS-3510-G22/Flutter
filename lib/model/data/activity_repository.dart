@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
-import 'package:plansync/model/data/local/activity_local_store.dart';
-import 'package:plansync/model/data/local/upload_store.dart';
+import 'package:plansync/model/services/local/activity_local_store.dart';
+import 'package:plansync/model/services/local/upload_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/pending_write.dart';
