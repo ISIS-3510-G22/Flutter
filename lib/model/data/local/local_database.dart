@@ -197,8 +197,7 @@ class LocalDatabase {
       )
     ''');
   }
-}
-      
+
   static Future<void> _createSplitOutbox(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS split_outbox (
