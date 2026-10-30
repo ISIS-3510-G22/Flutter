@@ -100,8 +100,8 @@ class BluetoothFriendService {
         return false;
       }
       return true;
-    } catch (e) {
-      _emitError('Bluetooth check failed: $e');
+    } catch (_) {
+      _emitError('Could not check Bluetooth availability. Please try again.');
       return false;
     }
   }
@@ -147,8 +147,8 @@ class BluetoothFriendService {
       );
       _advertising = true;
       return true;
-    } catch (e) {
-      _emitError('Could not start advertising: $e');
+    } catch (_) {
+      _emitError('Could not make your phone discoverable. Please try again.');
       return false;
     }
   }
@@ -268,8 +268,8 @@ class BluetoothFriendService {
       _scanning = true;
       _shouldScan = true;
       return true;
-    } catch (e) {
-      _emitError('Could not start scanning: $e');
+    } catch (_) {
+      _emitError('Could not scan for nearby devices. Please try again.');
       return false;
     }
   }
@@ -308,8 +308,8 @@ class BluetoothFriendService {
         try {
           await _central.startDiscovery(serviceUUIDs: [_serviceUuid]);
           _scanning = true;
-        } catch (e) {
-          _emitError('Could not resume Bluetooth scanning: $e');
+        } catch (_) {
+          _emitError('Could not resume scanning for nearby devices.');
         }
       }
     }
@@ -371,8 +371,8 @@ class BluetoothFriendService {
         BluetoothEvent(BluetoothEventType.requestSent, recipientDeviceId),
       );
       return true;
-    } catch (e) {
-      _emitError('Could not send friend request: $e');
+    } catch (_) {
+      _emitError('Could not send the friend request over Bluetooth.');
       return false;
     } finally {
       try {

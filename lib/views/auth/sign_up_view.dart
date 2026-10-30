@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/logic/validators.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/auth/sign_up_viewmodel.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class SignUpView extends StatelessWidget {
@@ -35,6 +37,7 @@ class _SignUpFormState extends State<_SignUpForm> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<SignUpViewModel>();
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -69,6 +72,11 @@ class _SignUpFormState extends State<_SignUpForm> {
           key: _formKey,
           child: Column(
             children: [
+              if (!online)
+                const OfflineBanner(
+                  message:
+                      'Creating an account needs a connection. What you typed stays here.',
+                ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(40, 34, 40, 28),
@@ -117,7 +125,7 @@ class _SignUpFormState extends State<_SignUpForm> {
                         obscureText: true,
                         validator: validatePassword,
                       ),
-                      if (vm.errorMessage != null)
+                      if (online && vm.errorMessage != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(

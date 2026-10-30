@@ -15,6 +15,7 @@ import 'package:plansync/views/crew/nearby_friends_view.dart';
 import 'package:plansync/views/theme/app_theme.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:plansync/views/widgets/view_header.dart';
 import 'package:provider/provider.dart';
@@ -147,6 +148,10 @@ class _MyCrewContentState extends State<_MyCrewContent> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const ViewHeader(title: 'My Crew'),
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing your crew as last saved.",
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: TabTrack(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:plansync/views/theme/app_theme.dart';
 
 class CrewFriendsCard extends StatelessWidget {
@@ -40,7 +41,7 @@ class CrewFriendsCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
-                color: const Color(0x1F000000),
+                color: Color(0x1F000000),
                 blurRadius: 8,
                 offset: Offset(0, 5),
               ),
@@ -61,12 +62,20 @@ class CrewFriendsCard extends StatelessWidget {
                   backgroundColor: avatarColors,
                   child: photoUrl != null && photoUrl!.trim().isNotEmpty
                       ? ClipOval(
-                          child: Image.network(
-                            photoUrl!,
+                          child: CachedNetworkImage(
+                            imageUrl: photoUrl!,
                             width: 44,
                             height: 44,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
+                            placeholder: (context, url) => _InitialsAvatar(
+                              initials: initials,
+                              textStyle: text.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                color: AppTheme.black,
+                              ),
+                            ),
+                            errorWidget: (context, url, error) =>
                                 _InitialsAvatar(
                                   initials: initials,
                                   textStyle: text.labelLarge?.copyWith(

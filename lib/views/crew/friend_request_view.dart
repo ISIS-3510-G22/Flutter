@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/friend_request.dart';
 import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/views/theme/app_theme.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class FriendRequestView extends StatelessWidget {
@@ -11,6 +13,7 @@ class FriendRequestView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<FriendsViewModel>();
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -35,35 +38,50 @@ class FriendRequestView extends StatelessWidget {
           child: Divider(height: 1, color: colors.outline),
         ),
       ),
-      body: vm.areRequestsLoading
-          ? const Center(child: CircularProgressIndicator())
-          : vm.requestError != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(vm.requestError!, textAlign: TextAlign.center),
-              ),
-            )
-          : vm.pendingRequests.isEmpty
-          ? Center(
-              child: Text(
-                'No friend requests yet.',
-                style: text.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-              itemCount: vm.pendingRequests.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final request = vm.pendingRequests[index];
-                final requester = vm.requesterFor(request);
-                return _FriendRequestCard(
-                  request: request,
-                  requester: requester,
-                );
-              },
+      body: Column(
+        children: [
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing requests as last saved.",
             ),
+          Expanded(
+            child: vm.areRequestsLoading
+                ? const Center(child: CircularProgressIndicator())
+                : vm.requestError != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        vm.requestError!,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                : vm.pendingRequests.isEmpty
+                ? Center(
+                    child: Text(
+                      'No friend requests yet.',
+                      style: text.bodyLarge?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                    itemCount: vm.pendingRequests.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final request = vm.pendingRequests[index];
+                      final requester = vm.requesterFor(request);
+                      return _FriendRequestCard(
+                        request: request,
+                        requester: requester,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

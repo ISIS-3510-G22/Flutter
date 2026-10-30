@@ -84,8 +84,8 @@ class CrewViewmodel extends ChangeNotifier {
       }
       _notify();
       return true;
-    } catch (e) {
-      error = 'Could not invite this friend: $e';
+    } catch (_) {
+      error = 'Could not invite this friend. Please try again.';
       _notify();
       return false;
     }
@@ -111,9 +111,10 @@ class CrewViewmodel extends ChangeNotifier {
             _groupsLoaded = true;
             _notify();
           },
-          onError: (Object e) {
+          onError: (Object _) {
             _groupsLoaded = true;
-            error = 'Could not load your groups: $e';
+            error =
+                'Could not load your groups. Check your connection and try again.';
             _notify();
           },
         );
@@ -134,9 +135,10 @@ class CrewViewmodel extends ChangeNotifier {
             _invitationsLoaded = true;
             _notify();
           },
-          onError: (Object e) {
+          onError: (Object _) {
             _invitationsLoaded = true;
-            error = 'Could not load your invitations: $e';
+            error =
+                'Could not load your invitations. Check your connection and try again.';
             _notify();
           },
         );
@@ -157,8 +159,8 @@ class CrewViewmodel extends ChangeNotifier {
       await _loadMemberCounts(cached.map((entry) => entry.group.id));
       _invitationsLoaded = true;
       _notify();
-    } catch (e) {
-      error = 'Could not load saved invitations: $e';
+    } catch (_) {
+      error = 'Could not load your saved invitations.';
       _invitationsLoaded = true;
       _notify();
     }
@@ -170,8 +172,8 @@ class CrewViewmodel extends ChangeNotifier {
       for (final id in groupIds) {
         _memberCounts[id] = counts[id] ?? 0;
       }
-    } catch (e) {
-      error = 'Could not load member counts: $e';
+    } catch (_) {
+      error = 'Could not load group member counts.';
     }
   }
 
@@ -186,8 +188,8 @@ class CrewViewmodel extends ChangeNotifier {
           await _loadMemberCounts([i.groupId]);
         }),
       );
-    } catch (e) {
-      error = 'Could not load invitation details: $e';
+    } catch (_) {
+      error = 'Could not load group invitation details.';
     }
   }
 
@@ -211,8 +213,8 @@ class CrewViewmodel extends ChangeNotifier {
       }
       _notify();
       return group;
-    } catch (e) {
-      error = 'Could not create the group: $e';
+    } catch (_) {
+      error = 'Could not create the group. Please try again.';
       _notify();
       rethrow;
     }
@@ -270,8 +272,8 @@ class CrewViewmodel extends ChangeNotifier {
   Future<void> _run(Future<void> Function() action, String message) async {
     try {
       await action();
-    } catch (e) {
-      error = '$message: $e';
+    } catch (_) {
+      error = '$message. Please try again.';
       _notify();
     }
   }

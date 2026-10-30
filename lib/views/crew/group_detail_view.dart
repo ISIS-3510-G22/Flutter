@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/crew/invite_friends_view.dart';
 import 'package:plansync/views/theme/app_theme.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class GroupDetailView extends StatefulWidget {
@@ -52,6 +54,7 @@ class _GroupDetailViewState extends State<GroupDetailView> {
     final vm = context.watch<CrewViewmodel>();
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return ColoredBox(
       color: colors.surface,
@@ -87,6 +90,10 @@ class _GroupDetailViewState extends State<GroupDetailView> {
             ),
           ),
           Divider(height: 1, color: colors.outline),
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing members as last saved.",
+            ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(28, 32, 28, 32),
@@ -145,7 +152,7 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                     }
                     if (snapshot.hasError) {
                       return Text(
-                        'Could not load group members: ${snapshot.error}',
+                        'Could not load group members. Check your connection and try again.',
                       );
                     }
                     final members = snapshot.data ?? const <User>[];

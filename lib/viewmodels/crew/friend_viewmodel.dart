@@ -27,8 +27,8 @@ class FriendsViewModel extends ChangeNotifier {
             _friendsLoaded = true;
             _notify();
           },
-          onError: (Object error) {
-            this.error = 'Could not load friends: $error';
+          onError: (Object _) {
+            error = 'Could not load your friends. Please try again.';
             _friendsLoaded = true;
             _notify();
           },
@@ -45,15 +45,15 @@ class FriendsViewModel extends ChangeNotifier {
                   .toList();
               final users = await _userRepository.getUsers(requesterIds);
               _requesters = {for (final user in users) user.id: user};
-            } catch (error) {
-              this.error = 'Could not load requesters: $error';
+            } catch (_) {
+              error = 'Could not load friend request details.';
             }
             await _saveRequestsToFile();
             _requestsLoaded = true;
             _notify();
           },
-          onError: (Object error) {
-            this.error = 'Could not load friend requests: $error';
+          onError: (Object _) {
+            error = 'Could not load friend requests. Please try again.';
             _requestsLoaded = true;
             _notify();
           },
@@ -71,8 +71,8 @@ class FriendsViewModel extends ChangeNotifier {
             _outgoingLoaded = true;
             _notify();
           },
-          onError: (Object error) {
-            this.error = 'Could not load sent friend requests: $error';
+          onError: (Object _) {
+            error = 'Could not load sent friend requests. Please try again.';
             _outgoingLoaded = true;
             _notify();
           },
@@ -150,8 +150,8 @@ class FriendsViewModel extends ChangeNotifier {
         requesters: _requesters,
         outgoing: _outgoingRequests,
       );
-    } catch (error) {
-      this.error = 'Could not save friend requests: $error';
+    } catch (_) {
+      error = 'Could not save friend requests on this device.';
     }
   }
 
@@ -228,15 +228,16 @@ class FriendsViewModel extends ChangeNotifier {
           _searchMessage =
               'Offline: searching people saved on your phone. New users won\'t show up.';
         }
-      } catch (localError) {
+      } catch (_) {
         if (generation != _searchGeneration) return;
-        this.error = 'Could not search users: $localError';
+        error = 'Could not search saved users. Please try again.';
         _searchResults = [];
       }
     } finally {
-      if (generation != _searchGeneration) return;
-      _searching = false;
-      _notify();
+      if (generation == _searchGeneration) {
+        _searching = false;
+        _notify();
+      }
     }
   }
 
@@ -345,8 +346,8 @@ class FriendsViewModel extends ChangeNotifier {
     _notify();
     try {
       await action();
-    } catch (e) {
-      error = '$message: $e';
+    } catch (_) {
+      error = '$message. Please try again.';
     } finally {
       _busyIds.remove(id);
       _notify();
