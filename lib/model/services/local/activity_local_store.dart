@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:plansync/model/data/local/local_database.dart';
+import 'package:plansync/model/services/local/local_database.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:sqflite/sqflite.dart';
 

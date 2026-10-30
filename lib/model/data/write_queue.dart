@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
-import 'package:plansync/model/data/local/write_queue_store.dart';
+import 'package:plansync/model/services/local/write_queue_store.dart';
 import 'package:plansync/model/models/pending_write.dart';
 
 abstract class WriteQueue<K extends Enum> {

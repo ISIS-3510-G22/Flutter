@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:plansync/model/data/cache/place_search_cache.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
-import 'package:plansync/model/data/place_search_cache.dart';
 import 'package:plansync/model/models/place.dart';
 
 class PlaceRepository {
