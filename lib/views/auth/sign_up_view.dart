@@ -154,7 +154,9 @@ class _SignUpFormState extends State<_SignUpForm> {
                       height: 52,
                       width: 140,
                       child: FilledButton(
-                        onPressed: vm.isLoading ? null : () => _submit(vm),
+                        onPressed: vm.isLoading || !vm.isOnline
+                            ? null
+                            : () => _submit(vm),
                         style: FilledButton.styleFrom(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(9),
