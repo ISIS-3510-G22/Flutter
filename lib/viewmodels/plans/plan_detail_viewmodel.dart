@@ -9,6 +9,7 @@ import 'package:plansync/model/data/friend_repository.dart';
 import 'package:plansync/model/data/group_repository.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/group.dart';
@@ -39,9 +40,12 @@ class PlanDetailViewModel extends ChangeNotifier {
       .instance
       .changes
       .listen((_) {
-        waitingToSync = CrewWriteQueue.instance.pendingDocIds.contains(plan.id);
         notifyListeners();
       });
+  late final StreamSubscription<void> _splitQueueSub = SplitOutboxRepository
+      .instance
+      .changes
+      .listen((_) => notifyListeners());
 
   final String _uid;
   Plan plan;
@@ -49,7 +53,13 @@ class PlanDetailViewModel extends ChangeNotifier {
   List<User> invitees = [];
   bool isLoading = true;
   bool showInvitees = true;
-  bool waitingToSync = false;
+  bool _inviting = false;
+
+  bool get waitingToSync =>
+      _inviting ||
+      PendingWriteRepository.instance.pendingDocIds.contains(plan.id) ||
+      CrewWriteQueue.instance.pendingDocIds.contains(plan.id) ||
+      SplitOutboxRepository.instance.hasPendingFor(plan.id);
 
   bool get isCreator => plan.creatorId == _uid;
 
@@ -90,7 +100,10 @@ class PlanDetailViewModel extends ChangeNotifier {
   double get estimatedCostPerPerson {
     final going = plan.goingIds.length;
     if (activities.isEmpty || going == 0) return 0;
-    final total = activities.fold<double>(0, (sum, a) => sum + a.expectedPrice);
+    final total = activities.fold<double>(
+      0,
+      (total, activity) => total + activity.expectedPrice,
+    );
     return total / going;
   }
 
@@ -109,16 +122,14 @@ class PlanDetailViewModel extends ChangeNotifier {
       for (final id in userIds)
         Invitation(userId: id, rsvp: RsvpStatus.invited, invitedAt: invitedAt),
     ]);
-    waitingToSync = true;
+    _inviting = true;
     notifyListeners();
-    final synced = await _planRepository.invite(
-      _uid,
-      plan,
-      userIds,
-      invitedAt: invitedAt,
-    );
-    waitingToSync = !synced;
-    notifyListeners();
+    try {
+      await _planRepository.invite(_uid, plan, userIds, invitedAt: invitedAt);
+    } finally {
+      _inviting = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> respondRsvp(bool going) async {
@@ -222,6 +233,7 @@ class PlanDetailViewModel extends ChangeNotifier {
     _sub.cancel();
     _queueSub.cancel();
     _crewQueueSub.cancel();
+    _splitQueueSub.cancel();
     super.dispose();
   }
 }
