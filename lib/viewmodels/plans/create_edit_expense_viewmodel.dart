@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/expense_repository.dart';
+import 'package:plansync/model/logic/custom_split.dart';
 import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/split_method.dart';
 import 'package:plansync/model/models/user.dart';
 
 class CreateEditExpenseViewModel extends ChangeNotifier {
@@ -13,16 +15,24 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
            ? payerId
            : participants.first.id {
     splitAmongIds = participants.map((p) => p.id).toSet();
+    amountControllers = {
+      for (final p in participants) p.id: TextEditingController(),
+    };
     if (_editingExpense case final expense?) {
       nameController.text = expense.name;
-      valueController.text = expense.value % 1 == 0
-          ? expense.value.toStringAsFixed(0)
-          : expense.value.toString();
+      valueController.text = _amountText(expense.value);
       if (expense.splitAmongIds.isNotEmpty) {
         splitAmongIds = expense.splitAmongIds.toSet();
       }
+      splitMethod = expense.splitMethod;
+      expense.customAmounts.forEach((id, amount) {
+        amountControllers[id]?.text = _amountText(amount);
+      });
     }
   }
+
+  static String _amountText(double amount) =>
+      amount % 1 == 0 ? amount.toStringAsFixed(0) : amount.toString();
 
   final String _planId;
   final List<User> participants;
@@ -36,6 +46,11 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
 
   String paidById;
   Set<String> splitAmongIds = {};
+
+  SplitMethod splitMethod = SplitMethod.equal;
+
+  /// One per participant; only the selected ones count.
+  late final Map<String, TextEditingController> amountControllers;
 
   bool isLoading = false;
   String? errorMessage;
@@ -60,6 +75,39 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
       splitAmongIds = {};
     }
     notifyListeners();
+  }
+
+  void selectMethod(SplitMethod method) {
+    splitMethod = method;
+    errorMessage = null;
+    notifyListeners();
+  }
+
+  /// Called as the value or any custom amount is typed, so the remaining
+  /// line and the Save button update.
+  void onAmountChanged() => notifyListeners();
+
+  Map<String, double> get _customAmounts => {
+    for (final id in splitAmongIds)
+      id: double.tryParse(amountControllers[id]?.text.trim() ?? '') ?? 0,
+  };
+
+  /// Positive: still to assign. Negative: over the total.
+  int get remaining => remainingCents(
+    double.tryParse(valueController.text.trim()) ?? 0,
+    _customAmounts,
+  );
+
+  bool get amountsAddUp => splitMethod == SplitMethod.equal || remaining == 0;
+
+  String? get _customError {
+    if (_customAmounts.values.any((amount) => amount < 0)) {
+      return "Amounts can't be negative.";
+    }
+    final money = '\$${(remaining.abs() / 100).toStringAsFixed(2)}';
+    if (remaining > 0) return 'Assign the remaining $money before saving.';
+    if (remaining < 0) return 'The amounts are over the total by $money.';
+    return null;
   }
 
   void toggleParticipant(String userId) {
@@ -88,6 +136,12 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    final custom = splitMethod == SplitMethod.custom;
+    if (custom && _customError != null) {
+      errorMessage = _customError;
+      notifyListeners();
+      return false;
+    }
 
     isLoading = true;
     errorMessage = null;
@@ -107,6 +161,8 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
         paidById: paidById,
         createdAt: createdAt,
         splitAmongIds: splitAmongIds.toList(),
+        splitMethod: splitMethod,
+        customAmounts: custom ? _customAmounts : const {},
       );
       // The form waits (it closes afterwards), so `await`: at most the 8 s
       // send timeout online, instantly offline.
@@ -167,6 +223,9 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
     _disposed = true;
     nameController.dispose();
     valueController.dispose();
+    for (final controller in amountControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 }
