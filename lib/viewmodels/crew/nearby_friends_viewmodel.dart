@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:plansync/model/data/friend_repository.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/live_location_repository.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:plansync/model/services/location_service.dart';
 import 'package:plansync/model/services/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NearbyFriend {
   const NearbyFriend({required this.user, required this.distanceKm});
@@ -19,13 +21,15 @@ class NearbyFriendsViewModel extends ChangeNotifier
     with WidgetsBindingObserver {
   NearbyFriendsViewModel(this._userId, this._notificationService) {
     WidgetsBinding.instance.addObserver(this);
-    _staleLocationTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) {
-        _evaluateNearbyAlerts();
-        _notify();
-      },
+    isOnline = _connectivity.isOnline;
+    _connectivitySubscription = _connectivity.changes.listen(
+      _handleConnectivityChange,
     );
+    unawaited(_loadNotificationRadius());
+    _staleLocationTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _evaluateNearbyAlerts();
+      _notify();
+    });
     _friendsSubscription = _friendRepository
         .friendsForUser(_userId)
         .listen(
@@ -49,9 +53,12 @@ class NearbyFriendsViewModel extends ChangeNotifier
   final _friendRepository = FriendRepository();
   final _locationRepository = LiveLocationRepository();
   final _locationService = LocationService();
+  final _connectivity = ConnectivityRepository.instance;
+  final _preferences = SharedPreferencesAsync();
   final _distance = const Distance();
   static const notificationRadiusOptions = [1, 2];
   late final StreamSubscription<List<User>> _friendsSubscription;
+  late final StreamSubscription<bool> _connectivitySubscription;
   StreamSubscription<List<SharedLocation>>? _locationsSubscription;
   Timer? _refreshTimer;
   Future<void> _backgroundCleanup = Future<void>.value();
@@ -61,11 +68,16 @@ class NearbyFriendsViewModel extends ChangeNotifier
   final Set<String> _alreadyAlerted = {};
   LatLng? _myPosition;
   int notificationRadiusKm = 2;
+  bool isOnline = true;
   bool isSharing = false;
+  bool isSharingPaused = false;
   bool isLoading = false;
   bool _disposed = false;
+  int _connectivityRevision = 0;
   String? error;
   LocationError? locationError;
+
+  String? get sharingMessage => isSharingPaused ? 'Sharing paused.' : null;
 
   List<NearbyFriend> get nearbyFriends {
     final position = _myPosition;
@@ -87,11 +99,45 @@ class NearbyFriendsViewModel extends ChangeNotifier
     return matches;
   }
 
-  void selectNotificationRadius(int radiusKm) {
+  Future<void> selectNotificationRadius(int radiusKm) async {
     if (!notificationRadiusOptions.contains(radiusKm)) return;
     notificationRadiusKm = radiusKm;
     _evaluateNearbyAlerts();
     _notify();
+    await _preferences.setInt('nearby_radius_km', radiusKm);
+  }
+
+  Future<void> _loadNotificationRadius() async {
+    try {
+      final savedRadius = await _preferences.getInt('nearby_radius_km');
+      if (savedRadius != null &&
+          notificationRadiusOptions.contains(savedRadius)) {
+        notificationRadiusKm = savedRadius;
+        _notify();
+      }
+    } catch (_) {}
+  }
+
+  void _handleConnectivityChange(bool online) {
+    _connectivityRevision++;
+    isOnline = online;
+    if (!online && isSharing) {
+      isSharingPaused = true;
+      error = null;
+      _refreshTimer?.cancel();
+      _stopWatchingFriendLocations();
+      _notify();
+      return;
+    }
+    if (online && isSharing && isSharingPaused) {
+      unawaited(_resumeAfterReconnect());
+      return;
+    }
+    _notify();
+  }
+
+  Future<void> _resumeAfterReconnect() async {
+    await _resumeSharing();
   }
 
   @override
@@ -102,12 +148,20 @@ class NearbyFriendsViewModel extends ChangeNotifier
     } else {
       _refreshTimer?.cancel();
       _stopWatchingFriendLocations();
-      _backgroundCleanup = _locationRepository.stopSharing(_userId);
+      if (_connectivity.isOnline) {
+        _backgroundCleanup = _locationRepository.stopSharing(_userId);
+      }
     }
   }
 
   Future<void> startSharing() async {
     if (isSharing || isLoading) return;
+    if (!_connectivity.isOnline) {
+      isOnline = false;
+      error = 'Sharing needs a connection.';
+      _notify();
+      return;
+    }
     isLoading = true;
     error = null;
     locationError = null;
@@ -123,9 +177,10 @@ class NearbyFriendsViewModel extends ChangeNotifier
     }
 
     isSharing = true;
+    isSharingPaused = false;
     _myPosition = result.position;
-    await _publish(result.position!);
-    if (isSharing) {
+    final published = await _publish(result.position!);
+    if (isSharing && published) {
       _watchFriendLocations();
       _startRefreshTimer();
       _evaluateNearbyAlerts();
@@ -135,13 +190,16 @@ class NearbyFriendsViewModel extends ChangeNotifier
 
   Future<void> stopSharing() async {
     isSharing = false;
+    isSharingPaused = false;
     _refreshTimer?.cancel();
     _stopWatchingFriendLocations();
     _myPosition = null;
     _alreadyAlerted.clear();
     _notify();
     try {
-      await _locationRepository.stopSharing(_userId);
+      if (_connectivity.isOnline) {
+        await _locationRepository.stopSharing(_userId);
+      }
     } catch (_) {
       error = 'Could not stop sharing. Please try again.';
       _notify();
@@ -194,6 +252,14 @@ class NearbyFriendsViewModel extends ChangeNotifier
 
   Future<void> _refreshAndPublish() async {
     if (!isSharing) return;
+    if (!_connectivity.isOnline) {
+      isOnline = false;
+      isSharingPaused = true;
+      _refreshTimer?.cancel();
+      _stopWatchingFriendLocations();
+      _notify();
+      return;
+    }
     final result = await _locationService.currentPosition();
     if (_disposed || !isSharing) return;
     if (result.error != null) {
@@ -202,7 +268,7 @@ class NearbyFriendsViewModel extends ChangeNotifier
       return;
     }
     _myPosition = result.position;
-    await _publish(result.position!);
+    if (!await _publish(result.position!)) return;
     _evaluateNearbyAlerts();
     _notify();
   }
@@ -212,22 +278,53 @@ class NearbyFriendsViewModel extends ChangeNotifier
       await _backgroundCleanup;
     } catch (_) {}
     if (_disposed || !isSharing) return;
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+    if (!_connectivity.isOnline) {
+      isOnline = false;
+      isSharingPaused = true;
+      _notify();
+      return;
+    }
     await _refreshAndPublish();
-    if (isSharing) {
+    if (isSharing && !isSharingPaused) {
       _watchFriendLocations();
       _startRefreshTimer();
       _evaluateNearbyAlerts();
     }
   }
 
-  Future<void> _publish(LatLng position) async {
-    try {
-      await _locationRepository.publish(_userId, position);
+  Future<bool> _publish(LatLng position) async {
+    if (!_connectivity.isOnline) {
+      isOnline = false;
+      isSharingPaused = true;
       error = null;
+      _notify();
+      return false;
+    }
+    final connectivityRevision = _connectivityRevision;
+    try {
+      await _locationRepository
+          .publish(_userId, position)
+          .timeout(const Duration(seconds: 8));
+      isSharingPaused = false;
+      error = null;
+      return true;
     } catch (_) {
-      isSharing = false;
+      if (connectivityRevision != _connectivityRevision) return false;
       _refreshTimer?.cancel();
-      error = 'Could not start location sharing. Check your connection.';
+      if (!_connectivity.isOnline) {
+        isOnline = false;
+        isSharingPaused = true;
+        error = null;
+      } else {
+        isSharing = false;
+        isSharingPaused = false;
+        error = 'Could not start location sharing. Check your connection.';
+      }
+      _notify();
+      return false;
     }
   }
 
@@ -275,8 +372,11 @@ class NearbyFriendsViewModel extends ChangeNotifier
     _staleLocationTimer.cancel();
     _refreshTimer?.cancel();
     unawaited(_friendsSubscription.cancel());
+    unawaited(_connectivitySubscription.cancel());
     unawaited(_locationsSubscription?.cancel());
-    if (isSharing) unawaited(_locationRepository.stopSharing(_userId));
+    if (isSharing && _connectivity.isOnline) {
+      unawaited(_locationRepository.stopSharing(_userId));
+    }
     super.dispose();
   }
 }
