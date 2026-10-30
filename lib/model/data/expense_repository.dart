@@ -3,6 +3,7 @@ import 'package:plansync/model/services/local/split_local_store.dart';
 import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/models/expense.dart';
 import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/split_method.dart';
 
 class ExpenseRepository {
   CollectionReference<Map<String, dynamic>> _expenses(String planId) =>
@@ -25,6 +26,12 @@ class ExpenseRepository {
     if (data['splitAmongIds'] is List) {
       splitAmongIds = (data['splitAmongIds'] as List).cast<String>();
     }
+    final customAmounts = <String, double>{};
+    if (data['customAmounts'] is Map) {
+      (data['customAmounts'] as Map).forEach((id, amount) {
+        customAmounts[id as String] = (amount as num).toDouble();
+      });
+    }
     return Expense(
       id: d.id,
       name: data['name'] as String,
@@ -32,6 +39,10 @@ class ExpenseRepository {
       paidById: data['paidById'] as String,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       splitAmongIds: splitAmongIds,
+      splitMethod:
+          SplitMethod.values.asNameMap()[data['splitMethod']] ??
+          SplitMethod.equal,
+      customAmounts: customAmounts,
     );
   }
 
@@ -41,6 +52,8 @@ class ExpenseRepository {
     'paidById': expense.paidById,
     'createdAt': Timestamp.fromDate(expense.createdAt),
     'splitAmongIds': expense.splitAmongIds,
+    'splitMethod': expense.splitMethod.name,
+    'customAmounts': expense.customAmounts,
   };
 
   /// The saved copy first (`null` if never saved), then each server answer,

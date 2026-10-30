@@ -1,0 +1,1 @@
+enum SplitMethod { equal, custom }

@@ -6,6 +6,7 @@ import 'package:plansync/model/data/plan_payment_repository.dart';
 import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/models/expense.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/model/models/split_method.dart';
 import 'package:plansync/model/models/user.dart';
 
 class PlanExpensesViewModel extends ChangeNotifier {
@@ -134,6 +135,7 @@ class PlanExpensesViewModel extends ChangeNotifier {
   }
 
   String splitLabel(Expense expense) {
+    if (expense.splitMethod == SplitMethod.custom) return 'Custom amounts';
     final ids = expense.splitAmongIds;
     if (ids.isEmpty || participants.every((p) => ids.contains(p.id))) {
       return 'For everyone';

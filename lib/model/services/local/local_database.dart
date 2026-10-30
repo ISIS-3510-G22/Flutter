@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -100,6 +100,17 @@ class LocalDatabase {
       await _createCrewOutbox(db);
       await _createSplitOutbox(db);
     }
+    // Below 6 the table was just created with these columns.
+    if (oldVersion >= 6 && oldVersion < 9) {
+      await db.execute(
+        "ALTER TABLE expenses ADD COLUMN split_method TEXT NOT NULL "
+        "DEFAULT 'equal'",
+      );
+      await db.execute(
+        "ALTER TABLE expenses ADD COLUMN custom_amounts TEXT NOT NULL "
+        "DEFAULT '{}'",
+      );
+    }
   }
 
   static Future<void> _createCrewTables(Database db) async {
@@ -153,7 +164,9 @@ class LocalDatabase {
         value REAL NOT NULL,
         paid_by_id TEXT NOT NULL,
         created_at INTEGER NOT NULL,
-        split_among TEXT NOT NULL
+        split_among TEXT NOT NULL,
+        split_method TEXT NOT NULL DEFAULT 'equal',
+        custom_amounts TEXT NOT NULL DEFAULT '{}'
       )
     ''');
     await db.execute('''
