@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/views/theme/app_theme.dart';
@@ -58,10 +59,9 @@ class FriendDetailView extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 48,
                     backgroundColor: const Color(0xFFFFB5A6),
-                    backgroundImage: friend.photoUrl == null
-                        ? null
-                        : NetworkImage(friend.photoUrl!),
-                    child: friend.photoUrl == null
+                    child:
+                        friend.photoUrl == null ||
+                            friend.photoUrl!.trim().isEmpty
                         ? Text(
                             initials.isEmpty ? '?' : initials.toUpperCase(),
                             style: text.headlineSmall?.copyWith(
@@ -69,7 +69,28 @@ class FriendDetailView extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           )
-                        : null,
+                        : ClipOval(
+                            child: Image(
+                              image: CachedNetworkImageProvider(
+                                friend.photoUrl!,
+                              ),
+                              width: 96,
+                              height: 96,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Center(
+                                    child: Text(
+                                      initials.isEmpty
+                                          ? '?'
+                                          : initials.toUpperCase(),
+                                      style: text.headlineSmall?.copyWith(
+                                        color: AppTheme.black,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 18),
