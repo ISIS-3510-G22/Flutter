@@ -28,6 +28,7 @@ class SplitLocalStore {
         Expense.fromJson({
           ...row,
           'split_among': jsonDecode(row['split_among'] as String),
+          'custom_amounts': jsonDecode(row['custom_amounts'] as String),
         }),
     ];
   }
@@ -41,6 +42,7 @@ class SplitLocalStore {
           ...e.toJson(),
           'plan_id': planId,
           'split_among': jsonEncode(e.splitAmongIds),
+          'custom_amounts': jsonEncode(e.customAmounts),
         });
       }
       await _markSaved(txn, planId, _expensesList);
@@ -53,6 +55,7 @@ class SplitLocalStore {
       ...e.toJson(),
       'plan_id': planId,
       'split_among': jsonEncode(e.splitAmongIds),
+      'custom_amounts': jsonEncode(e.customAmounts),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
