@@ -373,6 +373,7 @@ class _FriendPickerState extends State<_FriendPicker> {
       listenable: widget.viewModel,
       builder: (context, _) {
         final vm = widget.viewModel;
+        final online = context.watch<ConnectivityViewModel>().isOnline;
         final friendIds = widget.friends.map((friend) => friend.id).toSet();
         final suggestions = vm.suggestedPeople
             .where((suggestion) => friendIds.contains(suggestion.user.id))
@@ -386,77 +387,95 @@ class _FriendPickerState extends State<_FriendPicker> {
         final showSuggested =
             suggestions.isNotEmpty || vm.suggestedGroups.isNotEmpty;
 
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return Column(
           children: [
-            if (vm.suggestionsNeedConnection) ...[
-              const Text('Suggestions need a connection.'),
-              const SizedBox(height: 12),
-            ],
-            if (showSuggested) ...[
-              Text(
-                'SUGGESTED',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(color: AppTheme.greyDark),
+            if (!online)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+                child: const OfflineBanner(
+                  message:
+                      "You're offline. Showing friends and suggestions as last saved.",
+                ),
               ),
-              const SizedBox(height: 8),
-              for (final suggestion in suggestions)
-                _suggestedPersonTile(suggestion),
-              if (vm.suggestedGroups.isNotEmpty)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final group in vm.suggestedGroups)
-                      ActionChip(
-                        label: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 160),
-                          child: Text(
-                            group.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        onPressed: () => _addGroup(context, vm, group),
-                      ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (vm.suggestionsNeedConnection) ...[
+                    const Text('Suggestions need a connection.'),
+                    const SizedBox(height: 12),
                   ],
-                ),
-              const SizedBox(height: 12),
-            ],
-            if (showSuggested && friends.isNotEmpty) ...[
-              Text(
-                'FRIENDS',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(color: AppTheme.greyDark),
+                  if (showSuggested) ...[
+                    Text(
+                      'SUGGESTED',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppTheme.greyDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    for (final suggestion in suggestions)
+                      _suggestedPersonTile(suggestion),
+                    if (vm.suggestedGroups.isNotEmpty)
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          for (final group in vm.suggestedGroups)
+                            ActionChip(
+                              label: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 160,
+                                ),
+                                child: Text(
+                                  group.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              onPressed: () => _addGroup(context, vm, group),
+                            ),
+                        ],
+                      ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (showSuggested && friends.isNotEmpty) ...[
+                    Text(
+                      'FRIENDS',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppTheme.greyDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                  ],
+                  if (friends.isEmpty && suggestions.isEmpty)
+                    const Text('No friends left to invite.'),
+                  for (final friend in friends)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: UserAvatar(photoUrl: friend.photoUrl),
+                      value: _selected.contains(friend.id),
+                      title: Text(
+                        '${friend.name} ${friend.lastName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '@${friend.username}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onChanged: (checked) => _toggle(friend.id, checked),
+                    ),
+                  FilledButton(
+                    onPressed: _selected.isEmpty
+                        ? null
+                        : () => Navigator.pop(context, _selected),
+                    child: const Text('Invite'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 2),
-            ],
-            if (friends.isEmpty && suggestions.isEmpty)
-              const Text('No friends left to invite.'),
-            for (final friend in friends)
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                secondary: UserAvatar(photoUrl: friend.photoUrl),
-                value: _selected.contains(friend.id),
-                title: Text(
-                  '${friend.name} ${friend.lastName}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  '@${friend.username}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onChanged: (checked) => _toggle(friend.id, checked),
-              ),
-            FilledButton(
-              onPressed: _selected.isEmpty
-                  ? null
-                  : () => Navigator.pop(context, _selected),
-              child: const Text('Invite'),
             ),
           ],
         );
