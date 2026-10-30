@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/theme/app_theme.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class InviteFriendsView extends StatefulWidget {
@@ -61,6 +63,7 @@ class _InviteFriendsViewState extends State<InviteFriendsView> {
     final friendsVm = context.watch<FriendsViewModel>();
     final crewVm = context.watch<CrewViewmodel>();
     final colors = Theme.of(context).colorScheme;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -83,119 +86,138 @@ class _InviteFriendsViewState extends State<InviteFriendsView> {
           child: Divider(height: 1, color: colors.outline),
         ),
       ),
-      body: friendsVm.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : friendsVm.error != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(friendsVm.error!, textAlign: TextAlign.center),
-              ),
-            )
-          : FutureBuilder<List<User>>(
-              future: _membersFuture,
-              builder: (context, membersSnapshot) {
-                if (membersSnapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (membersSnapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Could not load group members: ${membersSnapshot.error}',
+      body: Column(
+        children: [
+          if (!online)
+            const OfflineBanner(
+              message:
+                  "Offline: showing who's in the group and invited as last saved.",
+            ),
+          Expanded(
+            child: friendsVm.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : friendsVm.error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        friendsVm.error!,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                  );
-                }
-                final memberIds = (membersSnapshot.data ?? const <User>[])
-                    .map((user) => user.id)
-                    .toSet();
-
-                return FutureBuilder<Set<String>>(
-                  future: _pendingInvitesFuture,
-                  builder: (context, invitationsSnapshot) {
-                    if (invitationsSnapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (invitationsSnapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Could not load pending invitations: ${invitationsSnapshot.error}',
-                        ),
-                      );
-                    }
-                    final invitedIds = invitationsSnapshot.data ?? <String>{};
-                    if (friendsVm.friends.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'Add friends before inviting them to a group.',
-                        ),
-                      );
-                    }
-
-                    return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                      itemCount: friendsVm.friends.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 14),
-                      itemBuilder: (context, index) {
-                        final friend = friendsVm.friends[index];
-                        final isMember = memberIds.contains(friend.id);
-                        final isInvited =
-                            invitedIds.contains(friend.id) ||
-                            _sentUserIds.contains(friend.id);
-                        final isBusy = _busyUserIds.contains(friend.id);
-                        final initials =
-                            '${friend.name.isNotEmpty ? friend.name[0] : ''}'
-                            '${friend.lastName.isNotEmpty ? friend.lastName[0] : ''}';
-
-                        return CrewFriendsCard(
-                          name: '${friend.name} ${friend.lastName}'.trim(),
-                          email: '@${friend.username}',
-                          initials: initials.isEmpty
-                              ? '?'
-                              : initials.toUpperCase(),
-                          avatarColors: const Color(0xFFFFB5A6),
-                          photoUrl: friend.photoUrl,
-                          trailing: FilledButton(
-                            onPressed: isMember || isInvited || isBusy
-                                ? null
-                                : () => _invite(friend),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppTheme.coral,
-                              foregroundColor: AppTheme.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                              ),
-                            ),
-                            child: isBusy
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppTheme.white,
-                                    ),
-                                  )
-                                : Text(
-                                    isMember
-                                        ? 'Member'
-                                        : crewVm.isInviteWaiting(
-                                            widget.group.id,
-                                            friend.id,
-                                          )
-                                        ? 'Waiting to sync'
-                                        : isInvited
-                                        ? 'Invited'
-                                        : 'Invite',
-                                  ),
+                  )
+                : FutureBuilder<List<User>>(
+                    future: _membersFuture,
+                    builder: (context, membersSnapshot) {
+                      if (membersSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (membersSnapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            'Could not load group members: ${membersSnapshot.error}',
                           ),
                         );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
+                      }
+                      final memberIds = (membersSnapshot.data ?? const <User>[])
+                          .map((user) => user.id)
+                          .toSet();
+
+                      return FutureBuilder<Set<String>>(
+                        future: _pendingInvitesFuture,
+                        builder: (context, invitationsSnapshot) {
+                          if (invitationsSnapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+                          if (invitationsSnapshot.hasError) {
+                            return Center(
+                              child: Text(
+                                'Could not load pending invitations: ${invitationsSnapshot.error}',
+                              ),
+                            );
+                          }
+                          final invitedIds =
+                              invitationsSnapshot.data ?? <String>{};
+                          if (friendsVm.friends.isEmpty) {
+                            return const Center(
+                              child: Text(
+                                'Add friends before inviting them to a group.',
+                              ),
+                            );
+                          }
+
+                          return ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                            itemCount: friendsVm.friends.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 14),
+                            itemBuilder: (context, index) {
+                              final friend = friendsVm.friends[index];
+                              final isMember = memberIds.contains(friend.id);
+                              final isInvited =
+                                  invitedIds.contains(friend.id) ||
+                                  _sentUserIds.contains(friend.id);
+                              final isBusy = _busyUserIds.contains(friend.id);
+                              final initials =
+                                  '${friend.name.isNotEmpty ? friend.name[0] : ''}'
+                                  '${friend.lastName.isNotEmpty ? friend.lastName[0] : ''}';
+
+                              return CrewFriendsCard(
+                                name: '${friend.name} ${friend.lastName}'
+                                    .trim(),
+                                email: '@${friend.username}',
+                                initials: initials.isEmpty
+                                    ? '?'
+                                    : initials.toUpperCase(),
+                                avatarColors: const Color(0xFFFFB5A6),
+                                photoUrl: friend.photoUrl,
+                                trailing: FilledButton(
+                                  onPressed: isMember || isInvited || isBusy
+                                      ? null
+                                      : () => _invite(friend),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppTheme.coral,
+                                    foregroundColor: AppTheme.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                    ),
+                                  ),
+                                  child: isBusy
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppTheme.white,
+                                          ),
+                                        )
+                                      : Text(
+                                          isMember
+                                              ? 'Member'
+                                              : crewVm.isInviteWaiting(
+                                                  widget.group.id,
+                                                  friend.id,
+                                                )
+                                              ? 'Waiting to sync'
+                                              : isInvited
+                                              ? 'Invited'
+                                              : 'Invite',
+                                        ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
