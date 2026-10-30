@@ -66,13 +66,8 @@ class ExploreViewModel extends ChangeNotifier {
     if (ratingOptions.contains(saved.rating)) selectedRating = saved.rating!;
   }
 
-  /// Pull to refresh: the same load as on open (saved file, then server).
-  /// Completes when the load finishes; offline that's right after the file.
   Future<void> refresh() => _loadSnapshot();
 
-  // Shared by every load that overlaps: a load cancelled by a newer one
-  // never reaches `onDone`, so the newer one completes the same future and
-  // the refresh spinner never hangs.
   Completer<void>? _loadDone;
 
   Future<void> _loadSnapshot() {

@@ -43,13 +43,9 @@ class _ExploreBody extends StatelessWidget {
                 'dates and ratings may have changed.',
           ),
         Expanded(
-          // Offline the refresh ends right after the saved file, so the
-          // spinner closes fast and what's on screen stays.
           child: RefreshIndicator(
             onRefresh: vm.refresh,
             child: ListView(
-              // Pullable even when the content is shorter than the screen
-              // (no plans, or "Connect to discover plans").
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 16),
               children: [

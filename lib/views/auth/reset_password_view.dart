@@ -86,8 +86,6 @@ class _ResetPasswordForm extends StatelessWidget {
                                   width: double.infinity,
                                   height: 52,
                                   child: FilledButton(
-                                    // Disabled offline; `watch` re-enables it on
-                                    // reconnect. The typed email is never cleared.
                                     onPressed: vm.isLoading || !online
                                         ? null
                                         : vm.resetPassword,
