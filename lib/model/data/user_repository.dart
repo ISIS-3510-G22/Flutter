@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:plansync/model/data/cache/user_profile_cache.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/services/local/crew_local_store.dart';
 import 'package:plansync/model/services/local/json_file_store.dart';
@@ -9,44 +10,6 @@ import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
-
-class UserCache {
-  UserCache({
-    this.capacity = 50,
-    this.timeToLive = const Duration(minutes: 10),
-  });
-
-  final int capacity;
-  final Duration timeToLive;
-  final _entries = <String, _CachedUser>{};
-
-  User? get(String id, {bool allowStale = false}) {
-    final entry = _entries.remove(id);
-    if (entry == null) return null;
-    _entries[id] = entry;
-    if (!allowStale && DateTime.now().difference(entry.savedAt) >= timeToLive) {
-      return null;
-    }
-    return entry.user;
-  }
-
-  void put(User user) {
-    _entries.remove(user.id);
-    _entries[user.id] = _CachedUser(user, DateTime.now());
-    while (_entries.length > capacity) {
-      _entries.remove(_entries.keys.first);
-    }
-  }
-
-  void invalidate(String id) => _entries.remove(id);
-}
-
-class _CachedUser {
-  const _CachedUser(this.user, this.savedAt);
-
-  final User user;
-  final DateTime savedAt;
-}
 
 class UserRepository {
   final _users = FirebaseFirestore.instance.collection('users');

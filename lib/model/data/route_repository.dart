@@ -3,8 +3,8 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:latlong2/latlong.dart';
+import 'package:plansync/model/data/cache/route_cache.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
-import 'package:plansync/model/data/route_cache.dart';
 import 'package:plansync/model/data/saved_route_repository.dart';
 import 'package:plansync/model/models/plan_route.dart';
 
