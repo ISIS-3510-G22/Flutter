@@ -70,4 +70,15 @@ class Plan {
     invitations: invitations,
     isPublic: isPublic,
   );
+
+  Plan withInvitations(List<Invitation> value) => Plan(
+    id: id,
+    name: name,
+    date: date,
+    creatorId: creatorId,
+    tags: tags,
+    activityIds: activityIds,
+    invitations: value,
+    isPublic: isPublic,
+  );
 }

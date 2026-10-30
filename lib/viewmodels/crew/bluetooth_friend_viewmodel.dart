@@ -271,8 +271,8 @@ class BluetoothFriendViewModel extends ChangeNotifier {
         final userId = await _service.identifyNearbyDevice(deviceId);
         if (_disposed || userId == null || userId == _userId) continue;
 
-        final user = await _userRepository.getUser(userId);
-        if (_disposed || user == null) continue;
+        final user = await _nearbyUser(userId);
+        if (_disposed) continue;
         final latestDevice = _latestDevices[deviceId];
         if (latestDevice == null) continue;
         _nearby[deviceId] = NearbyBluetoothFriend(
@@ -290,6 +290,37 @@ class BluetoothFriendViewModel extends ChangeNotifier {
         _resolveNearbyQueue();
       }
     }
+  }
+
+  Future<User> _nearbyUser(String userId) async {
+    final cached = _userRepository.cachedUser(
+      userId,
+      allowStale: !_userRepository.isOnline,
+    );
+    if (cached != null) return cached;
+
+    try {
+      final people = await _userRepository.cachedUsersByIds([userId]);
+      if (people.isNotEmpty) return people.first;
+    } catch (_) {
+      //continue to online lookup or generic nearby label
+    }
+
+    try {
+      final user = await _userRepository.getUser(userId);
+      if (user != null) return user;
+    } catch (_) {
+      //profile lookup failure should not hide a detected nearby device
+    }
+
+    return User(
+      id: userId,
+      name: 'PlanSync user nearby.',
+      lastName: '',
+      username: '',
+      email: '',
+      phone: '',
+    );
   }
 
   void _queueIncomingRequest(FriendRequestMessage message) {

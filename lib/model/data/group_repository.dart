@@ -3,10 +3,12 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/crew_write_queue.dart';
 import 'package:plansync/model/data/local/crew_local_store.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/group_invitation.dart';
+import 'package:plansync/model/models/pending_write.dart';
 
 class GroupRepository {
   final _db = FirebaseFirestore.instance;
@@ -101,53 +103,99 @@ class GroupRepository {
   }) {
     final groupRef = _groups.doc();
     final group = Group(id: groupRef.id, name: name, description: description);
-    final batch = _db.batch();
-    batch.set(groupRef, group.toMap());
-    batch.set(_members.doc(_memberId(groupRef.id, creatorUid)), {
-      'groupId': groupRef.id,
-      'userId': creatorUid,
+    return _local.saveOptimisticGroup(group, creatorUid).then((_) {
+      unawaited(
+        CrewWriteQueue.instance.submit(
+          PendingWrite(
+            kind: CrewWriteKind.groupCreate,
+            docId: groupRef.id,
+            payload: {
+              'name': name,
+              'description': description,
+              'creatorUid': creatorUid,
+            },
+          ),
+        ),
+      );
+      return group;
     });
-    return batch.commit().then((_) => group);
   }
 
-  Future<void> inviteUser(String groupId, String userId) {
-    return _members.doc(_memberId(groupId, userId)).get().then((
-      membership,
-    ) async {
-      if (membership.exists) {
-        throw StateError('This friend is already a group member.');
+  Future<({bool synced, String invitationId})> inviteUser(
+    String groupId,
+    String userId,
+  ) async {
+    final localStatus = await _local.membershipStatus(groupId, userId);
+    if (localStatus == 'member') {
+      throw StateError('This friend is already a group member.');
+    }
+    if (localStatus == 'invited') {
+      throw StateError('This friend already has a pending invitation.');
+    }
+    if (ConnectivityRepository.instance.isOnline) {
+      try {
+        final membership = await _members
+            .doc(_memberId(groupId, userId))
+            .get(const GetOptions(source: Source.server));
+        if (membership.exists) {
+          throw StateError('This friend is already a group member.');
+        }
+        final sentInvitations = await _invitations
+            .where('groupId', isEqualTo: groupId)
+            .get(const GetOptions(source: Source.server));
+        if (sentInvitations.docs.any((doc) {
+          final data = doc.data();
+          return data['userId'] == userId &&
+              data['status'] == InvitationStatus.pending.name;
+        })) {
+          throw StateError('This friend already has a pending invitation.');
+        }
+      } on StateError {
+        rethrow;
+      } catch (_) {
+        // The durable queue will retry the write if validation cannot reach
+        // the server. Local membership and invitation state remains the guard.
       }
+    }
 
-      final groupInvitations = await _invitations
-          .where('groupId', isEqualTo: groupId)
-          .get();
-      final hasPendingInvitation = groupInvitations.docs.any((doc) {
-        final data = doc.data();
-        return data['userId'] == userId &&
-            data['status'] == InvitationStatus.pending.name;
-      });
-      if (hasPendingInvitation) {
-        throw StateError('This friend already has a pending invitation.');
-      }
-
-      final invitation = GroupInvitation(
-        id: '',
-        groupId: groupId,
-        userId: userId,
-        sentOn: DateTime.now(),
-      );
-      await _invitations.add(invitation.toMap());
-    });
+    final sentOn = DateTime.now();
+    final invitationRef = _invitations.doc();
+    final friends = await _local.peopleByIds([userId]);
+    final friend = friends.isEmpty ? null : friends.first;
+    final friendName = friend == null
+        ? userId
+        : '${friend.name} ${friend.lastName}'.trim();
+    await _local.saveInvitedMember(groupId, userId);
+    final synced = await CrewWriteQueue.instance.submit(
+      PendingWrite(
+        kind: CrewWriteKind.groupInvite,
+        docId: invitationRef.id,
+        payload: {
+          'invitationId': invitationRef.id,
+          'name': friendName,
+          'groupId': groupId,
+          'userId': userId,
+          'sentOn': sentOn.toIso8601String(),
+        },
+      ),
+    );
+    return (synced: synced, invitationId: invitationRef.id);
   }
 
   Future<Set<String>> pendingInviteeIdsForGroup(String groupId) async {
-    final snapshot = await _invitations
-        .where('groupId', isEqualTo: groupId)
-        .get();
-    return snapshot.docs
-        .where((doc) => doc.data()['status'] == InvitationStatus.pending.name)
-        .map((doc) => doc.data()['userId'] as String)
-        .toSet();
+    final localIds = await _local.invitedIds(groupId);
+    try {
+      ConnectivityRepository.instance.ensureOnline();
+      final snapshot = await _invitations
+          .where('groupId', isEqualTo: groupId)
+          .get(const GetOptions(source: Source.server));
+      return snapshot.docs
+          .where((doc) => doc.data()['status'] == InvitationStatus.pending.name)
+          .map((doc) => doc.data()['userId'] as String)
+          .toSet();
+    } catch (_) {
+      return localIds;
+    }
   }
 
   Stream<List<GroupInvitation>> pendingInvitationsForUser(String uid) {
@@ -232,21 +280,46 @@ class GroupRepository {
   Future<List<Group>> cachedGroupsByIds(List<String> ids) =>
       _local.groupsByIds(ids);
 
-  Future<void> acceptInvitation(GroupInvitation invitation) {
-    final batch = _db.batch();
-    batch.update(_invitations.doc(invitation.id), {
-      'status': InvitationStatus.accepted.name,
-    });
-    batch.set(_members.doc(_memberId(invitation.groupId, invitation.userId)), {
-      'groupId': invitation.groupId,
-      'userId': invitation.userId,
-    });
-    return batch.commit();
+  Future<bool> acceptInvitation(
+    GroupInvitation invitation, {
+    Group? group,
+    String? itemName,
+  }) async {
+    if (group == null) {
+      await _local.setMembershipStatus(
+        invitation.groupId,
+        invitation.userId,
+        'member',
+      );
+    } else {
+      await _local.saveOptimisticGroup(group, invitation.userId);
+    }
+    final synced = await CrewWriteQueue.instance.submit(
+      PendingWrite(
+        kind: CrewWriteKind.inviteAccept,
+        docId: invitation.id,
+        payload: {
+          'name': itemName ?? group?.name ?? invitation.groupId,
+          'groupId': invitation.groupId,
+          'userId': invitation.userId,
+        },
+      ),
+    );
+    return synced;
   }
 
-  Future<void> denyInvitation(String invitationId) {
-    return _invitations.doc(invitationId).update({
-      'status': InvitationStatus.denied.name,
-    });
+  Future<bool> denyInvitation(
+    GroupInvitation invitation, {
+    String? itemName,
+  }) async {
+    await _local.removeMembership(invitation.groupId, invitation.userId);
+    final synced = await CrewWriteQueue.instance.submit(
+      PendingWrite(
+        kind: CrewWriteKind.inviteDeny,
+        docId: invitation.id,
+        payload: {'name': itemName ?? invitation.groupId},
+      ),
+    );
+    return synced;
   }
 }

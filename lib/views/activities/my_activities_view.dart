@@ -84,6 +84,7 @@ class _MyActivitiesBody extends StatelessWidget {
                       final activity = vm.activities[index];
                       return ActivityCard(
                         activity: activity,
+                        localPhoto: vm.localPhotos[activity.id],
                         pending: pending.contains(activity.id),
                       );
                     },

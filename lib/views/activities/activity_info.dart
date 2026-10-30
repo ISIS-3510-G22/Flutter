@@ -4,9 +4,10 @@ import 'package:plansync/views/formatters/text_format.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
 
 class ActivityInfo extends StatelessWidget {
-  const ActivityInfo({required this.activity, super.key});
+  const ActivityInfo({required this.activity, this.localPhoto, super.key});
 
   final Activity activity;
+  final String? localPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +20,11 @@ class ActivityInfo extends StatelessWidget {
         children: [
           Stack(
             children: [
-              ActivityPhoto(url: activity.photoUrl, height: 200),
+              ActivityPhoto(
+                url: activity.photoUrl,
+                file: localPhoto,
+                height: 200,
+              ),
               if (activity.tags.isNotEmpty)
                 Positioned(
                   left: 12,

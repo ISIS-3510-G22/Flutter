@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/activities/activity_detail_viewmodel.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/views/activities/activity_info.dart';
 import 'package:plansync/views/activities/add_to_plan_view.dart';
 import 'package:plansync/views/activities/create_edit_activity_view.dart';
@@ -95,7 +95,12 @@ class _ActivityDetailBody extends StatelessWidget {
               message:
                   "You're offline. Likes and changes are saved on your phone and sync when you're back online.",
             ),
-          Expanded(child: ActivityInfo(activity: vm.activity)),
+          Expanded(
+            child: ActivityInfo(
+              activity: vm.activity,
+              localPhoto: vm.localPhotoPath,
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: showAddToPlan

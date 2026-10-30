@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/data/crew_write_queue.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/friend_repository.dart';
 import 'package:plansync/model/data/group_repository.dart';
@@ -34,6 +35,13 @@ class PlanDetailViewModel extends ChangeNotifier {
   final _groupRepository = GroupRepository();
   late final StreamSubscription<Plan> _sub;
   late final StreamSubscription<void> _queueSub;
+  late final StreamSubscription<void> _crewQueueSub = CrewWriteQueue
+      .instance
+      .changes
+      .listen((_) {
+        waitingToSync = CrewWriteQueue.instance.pendingDocIds.contains(plan.id);
+        notifyListeners();
+      });
 
   final String _uid;
   Plan plan;
@@ -41,6 +49,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   List<User> invitees = [];
   bool isLoading = true;
   bool showInvitees = true;
+  bool waitingToSync = false;
 
   bool get isCreator => plan.creatorId == _uid;
 
@@ -93,8 +102,24 @@ class PlanDetailViewModel extends ChangeNotifier {
     return friends.where((f) => !invited.contains(f.id)).toList();
   }
 
-  Future<void> invite(List<String> userIds) =>
-      _planRepository.invite(plan.id, userIds);
+  Future<void> invite(List<String> userIds) async {
+    final invitedAt = DateTime.now();
+    plan = plan.withInvitations([
+      ...plan.invitations.where((i) => !userIds.contains(i.userId)),
+      for (final id in userIds)
+        Invitation(userId: id, rsvp: RsvpStatus.invited, invitedAt: invitedAt),
+    ]);
+    waitingToSync = true;
+    notifyListeners();
+    final synced = await _planRepository.invite(
+      _uid,
+      plan,
+      userIds,
+      invitedAt: invitedAt,
+    );
+    waitingToSync = !synced;
+    notifyListeners();
+  }
 
   Future<bool> respondRsvp(bool going) async {
     try {
@@ -196,6 +221,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   void dispose() {
     _sub.cancel();
     _queueSub.cancel();
+    _crewQueueSub.cancel();
     super.dispose();
   }
 }

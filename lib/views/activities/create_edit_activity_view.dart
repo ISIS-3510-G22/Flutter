@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/place.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/activities/create_edit_activity_viewmodel.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/views/formatters/text_format.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
@@ -70,6 +70,7 @@ class _CreateEditActivityForm extends StatelessWidget {
                               )
                             : ActivityPhoto(
                                 url: vm.currentPhotoUrl,
+                                file: vm.localPhotoPath,
                                 height: 180,
                                 radius: 16,
                               ),

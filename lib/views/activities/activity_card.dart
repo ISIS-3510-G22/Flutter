@@ -11,9 +11,11 @@ class ActivityCard extends StatelessWidget {
     this.onTap,
     this.trailing,
     this.pending = false,
+    this.localPhoto,
     super.key,
   });
 
+  final String? localPhoto;
   final Activity activity;
   final VoidCallback? onTap;
   final Widget? trailing;
@@ -43,7 +45,12 @@ class ActivityCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ActivityPhoto(url: activity.photoUrl, width: 64, height: 64),
+              ActivityPhoto(
+                url: activity.photoUrl,
+                file: localPhoto,
+                width: 64,
+                height: 64,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

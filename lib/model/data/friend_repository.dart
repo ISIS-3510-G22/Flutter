@@ -3,11 +3,13 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/crew_write_queue.dart';
 import 'package:plansync/model/data/local/crew_local_store.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/models/friend_request.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/models/pending_write.dart';
 
 class FriendRepository {
   final _db = FirebaseFirestore.instance;
@@ -29,12 +31,7 @@ class FriendRepository {
     );
   }
 
-  Map<String, dynamic> _toMap(FriendRequest request) => {
-    'fromUserId': request.fromUserId,
-    'toUserId': request.toUserId,
-    'sentOn': Timestamp.fromDate(request.sentOn),
-    'status': request.status.name,
-  };
+  Future<void> saveAcceptedFriend(User user) => _local.addFriend(user);
 
   Future<void> saveRequestsForUser(
     String uid, {
@@ -64,6 +61,25 @@ class FriendRepository {
         .catchError((Object _) {})
         .then((_) => _files.write('friend_requests_$uid.json', contents));
     return _requestFileWrite;
+  }
+
+  Future<bool> hasPendingOutgoingRequest(
+    String uid,
+    String targetUserId,
+  ) async {
+    final contents = await _files.read('friend_requests_$uid.json');
+    if (contents == null) return false;
+    try {
+      final data = jsonDecode(contents) as Map<String, dynamic>;
+      final outgoing = data['outgoing'] as List<dynamic>? ?? const [];
+      return outgoing.any((entry) {
+        final request = Map<String, dynamic>.from(entry as Map);
+        return request['toUserId'] == targetUserId &&
+            request['status'] == FriendRequestStatus.pending.name;
+      });
+    } catch (_) {
+      return false;
+    }
   }
 
   Map<String, dynamic> _requestToJson(FriendRequest request) => {
@@ -96,14 +112,31 @@ class FriendRepository {
     );
   }
 
-  Future<void> sendRequest(String fromUserId, String toUserId) {
-    final request = FriendRequest(
-      id: '',
-      fromUserId: fromUserId,
-      toUserId: toUserId,
-      sentOn: DateTime.now(),
+  String newRequestId() => _requests.doc().id;
+
+  Future<bool> sendRequest(
+    String fromUserId,
+    String toUserId, [
+    String? requestId,
+    DateTime? sentOn,
+    String? itemName,
+  ]) {
+    requestId ??= newRequestId();
+    final requestRef = _requests.doc(requestId);
+    sentOn ??= DateTime.now();
+    return CrewWriteQueue.instance.submit(
+      PendingWrite(
+        kind: CrewWriteKind.requestSend,
+        docId: requestRef.id,
+        payload: {
+          'requestId': requestRef.id,
+          'name': itemName ?? toUserId,
+          'fromUserId': fromUserId,
+          'toUserId': toUserId,
+          'sentOn': sentOn.toIso8601String(),
+        },
+      ),
     );
-    return _requests.add(_toMap(request));
   }
 
   Stream<List<FriendRequest>> pendingRequestsForUser(String uid) {
@@ -122,16 +155,24 @@ class FriendRepository {
         .map((s) => s.docs.map((d) => _fromData(d.id, d.data())).toList());
   }
 
-  Future<void> acceptRequest(String requestId) {
-    return _requests.doc(requestId).update({
-      'status': FriendRequestStatus.accepted.name,
-    });
+  Future<bool> acceptRequest(String requestId, {String? itemName}) {
+    return CrewWriteQueue.instance.submit(
+      PendingWrite(
+        kind: CrewWriteKind.requestAccept,
+        docId: requestId,
+        payload: {'name': itemName ?? requestId},
+      ),
+    );
   }
 
-  Future<void> denyRequest(String requestId) {
-    return _requests.doc(requestId).update({
-      'status': FriendRequestStatus.denied.name,
-    });
+  Future<bool> denyRequest(String requestId, {String? itemName}) {
+    return CrewWriteQueue.instance.submit(
+      PendingWrite(
+        kind: CrewWriteKind.requestDeny,
+        docId: requestId,
+        payload: {'name': itemName ?? requestId},
+      ),
+    );
   }
 
   Stream<List<User>> friendsForUser(String uid) async* {

@@ -43,7 +43,7 @@ class _NearbyFriendsBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
-                  onPressed: vm.isLoading
+                  onPressed: vm.isLoading || (!vm.isOnline && !vm.isSharing)
                       ? null
                       : vm.isSharing
                       ? vm.stopSharing
@@ -59,6 +59,13 @@ class _NearbyFriendsBody extends StatelessWidget {
                         : 'Share my location',
                   ),
                 ),
+                if (vm.sharingMessage != null) ...[
+                  const SizedBox(height: 8),
+                  Text(vm.sharingMessage!),
+                ] else if (!vm.isOnline) ...[
+                  const SizedBox(height: 8),
+                  const Text('Sharing needs a connection.'),
+                ],
                 if (vm.locationError != null) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -121,10 +128,10 @@ class _NearbyFriendsBody extends StatelessWidget {
                 trailing: IconButton(
                   tooltip: 'Make a plan',
                   onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const CreateEditPlanView(),
-                      ),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const CreateEditPlanView(),
                     ),
+                  ),
                   icon: const Icon(Icons.add_circle_outline),
                 ),
               ),

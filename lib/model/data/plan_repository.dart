@@ -3,12 +3,13 @@ import 'dart:isolate';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/crew_write_queue.dart';
 import 'package:plansync/model/data/local/json_file_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/invite_suggestion_ids.dart';
-import 'package:plansync/model/models/pending_write.dart';
 import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/pending_write.dart';
 
 class PlanRepository {
   final _plans = FirebaseFirestore.instance.collection('plans');
@@ -204,19 +205,36 @@ class PlanRepository {
     return List.generate(map.length, (i) => map['$i'] as String);
   }
 
-  Future<void> invite(String planId, List<String> userIds) {
-    final invitedAt = Timestamp.now();
-    return _plans.doc(planId).update({
-      'participantsIds': FieldValue.arrayUnion(userIds),
-      'invitations': FieldValue.arrayUnion([
-        for (final id in userIds)
-          {
-            'userId': id,
-            'rsvp': RsvpStatus.invited.name,
-            'invitedAt': invitedAt,
-          },
-      ]),
-    });
+  Future<bool> invite(
+    String uid,
+    Plan plan,
+    List<String> userIds, {
+    required DateTime invitedAt,
+  }) async {
+    final invitedIds = userIds.toSet();
+    final optimistic = plan.withInvitations([
+      ...plan.invitations.where(
+        (invitation) => !invitedIds.contains(invitation.userId),
+      ),
+      for (final userId in invitedIds)
+        Invitation(
+          userId: userId,
+          rsvp: RsvpStatus.invited,
+          invitedAt: invitedAt,
+        ),
+    ]);
+    await _saveLocal(uid, optimistic);
+    return CrewWriteQueue.instance.submit(
+      PendingWrite(
+        kind: CrewWriteKind.planInvite,
+        docId: plan.id,
+        payload: {
+          'name': plan.name,
+          'userIds': invitedIds.toList(),
+          'invitedAt': invitedAt.toIso8601String(),
+        },
+      ),
+    );
   }
 
   List<dynamic> _listFromFirestore(dynamic raw) {

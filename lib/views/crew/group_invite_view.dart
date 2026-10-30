@@ -23,6 +23,11 @@ class GroupInviteView extends StatelessWidget {
       ).showSnackBar(SnackBar(content: Text(vm.error!)));
       return;
     }
+    if (vm.isWaitingToSync(invitation.id)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Waiting to sync')));
+    }
     Navigator.of(context).pop(group);
   }
 
@@ -33,7 +38,14 @@ class GroupInviteView extends StatelessWidget {
   ) async {
     vm.clearError();
     await vm.denyInvitation(invitation);
-    if (!context.mounted || vm.error == null) return;
+    if (!context.mounted) return;
+    if (vm.isWaitingToSync(invitation.id)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Waiting to sync')));
+      return;
+    }
+    if (vm.error == null) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(vm.error!)));

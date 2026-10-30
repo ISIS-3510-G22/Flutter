@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:plansync/firebase_options.dart';
 import 'package:plansync/model/data/auth_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/crew_write_queue.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/data/theme_repository.dart';
@@ -36,6 +37,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeViewModel(savedTheme)),
         ChangeNotifierProvider(create: (_) => ConnectivityViewModel()),
+        Provider<CrewWriteQueue>.value(value: CrewWriteQueue.instance),
       ],
       child: const AuthGate(),
     ),
@@ -66,6 +68,7 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
     _listenForDropped(PendingWriteRepository.instance);
+    _listenForDropped(CrewWriteQueue.instance);
     _listenForDropped(SplitOutboxRepository.instance);
     _connectivity = context.read<ConnectivityViewModel>()
       ..addListener(_retryWhenOnline);
@@ -231,6 +234,7 @@ class _AuthGateState extends State<AuthGate> {
     _activeUserId = user.id;
     _registerNotificationsOnce(user);
     unawaited(PendingWriteRepository.instance.start());
+    unawaited(CrewWriteQueue.instance.start());
     unawaited(SplitOutboxRepository.instance.start());
     if (_pendingNotificationType != null) _scheduleNotificationRoute();
     return HomeShell(
