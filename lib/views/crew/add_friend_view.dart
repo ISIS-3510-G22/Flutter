@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/bluetooth_friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/views/theme/app_theme.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class AddFriendView extends StatefulWidget {
@@ -56,6 +58,7 @@ class _AddFriendViewState extends State<AddFriendView> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<FriendsViewModel>();
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -95,6 +98,11 @@ class _AddFriendViewState extends State<AddFriendView> {
                 ],
               ),
             ),
+            if (!online)
+              const OfflineBanner(
+                message:
+                    "Offline: searching people saved on your phone. New users won't show up.",
+              ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
@@ -217,6 +225,7 @@ class _BluetoothInviteSheetState extends State<_BluetoothInviteSheet> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return FractionallySizedBox(
       heightFactor: 0.82,
@@ -273,6 +282,11 @@ class _BluetoothInviteSheetState extends State<_BluetoothInviteSheet> {
                 ),
               ),
               Divider(height: 1, color: colors.outline),
+              if (!online)
+                const OfflineBanner(
+                  message:
+                      "Bluetooth works offline. Requests are sent when you're back online.",
+                ),
               Consumer<BluetoothFriendViewModel>(
                 builder: (context, vm, _) {
                   if (vm.error != null) {
