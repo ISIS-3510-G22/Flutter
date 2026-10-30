@@ -116,7 +116,7 @@ class _InviteFriendsViewState extends State<InviteFriendsView> {
                       if (membersSnapshot.hasError) {
                         return Center(
                           child: Text(
-                            'Could not load group members: ${membersSnapshot.error}',
+                            'Could not load group members. Check your connection and try again.',
                           ),
                         );
                       }
@@ -136,7 +136,7 @@ class _InviteFriendsViewState extends State<InviteFriendsView> {
                           if (invitationsSnapshot.hasError) {
                             return Center(
                               child: Text(
-                                'Could not load pending invitations: ${invitationsSnapshot.error}',
+                                'Could not load pending invitations. Check your connection and try again.',
                               ),
                             );
                           }

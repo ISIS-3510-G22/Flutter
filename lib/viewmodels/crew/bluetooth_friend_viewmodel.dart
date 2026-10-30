@@ -46,8 +46,8 @@ class BluetoothFriendViewModel extends ChangeNotifier {
             _friendsLoaded = true;
             _drainIncomingQueue();
           },
-          onError: (Object error) {
-            _error = 'Could not load friends: $error';
+          onError: (Object _) {
+            _error = 'Could not load your friends. Please try again.';
             _friendsLoaded = true;
             _drainIncomingQueue();
           },
@@ -62,8 +62,9 @@ class BluetoothFriendViewModel extends ChangeNotifier {
             _incomingRequestsLoaded = true;
             _drainIncomingQueue();
           },
-          onError: (Object error) {
-            _error = 'Could not load pending friend requests: $error';
+          onError: (Object _) {
+            _error =
+                'Could not load pending friend requests. Please try again.';
             _incomingRequestsLoaded = true;
             _drainIncomingQueue();
           },
@@ -78,8 +79,8 @@ class BluetoothFriendViewModel extends ChangeNotifier {
             _outgoingRequestsLoaded = true;
             _notify();
           },
-          onError: (Object error) {
-            _error = 'Could not load sent friend requests: $error';
+          onError: (Object _) {
+            _error = 'Could not load sent friend requests. Please try again.';
             _outgoingRequestsLoaded = true;
             _notify();
           },
@@ -166,8 +167,8 @@ class BluetoothFriendViewModel extends ChangeNotifier {
         _error = 'Could not start Bluetooth scanning and advertising.';
       }
       return started;
-    } catch (error) {
-      _error = 'Could not start Bluetooth: $error';
+    } catch (_) {
+      _error = 'Could not start Bluetooth. Check permissions and try again.';
       return false;
     } finally {
       _isStarting = false;
@@ -178,8 +179,8 @@ class BluetoothFriendViewModel extends ChangeNotifier {
   Future<void> stop() async {
     try {
       await _service.stop();
-    } catch (error) {
-      _error = 'Could not stop Bluetooth: $error';
+    } catch (_) {
+      _error = 'Could not stop Bluetooth. Please try again.';
     } finally {
       _isScanning = false;
       _isAdvertising = false;
@@ -210,8 +211,8 @@ class BluetoothFriendViewModel extends ChangeNotifier {
         _error ??= 'Could not send the Bluetooth friend request.';
       }
       return sent;
-    } catch (error) {
-      _error = 'Could not send the Bluetooth friend request: $error';
+    } catch (_) {
+      _error = 'Could not send the Bluetooth friend request. Please try again.';
       return false;
     } finally {
       _sendingToDevices.remove(deviceId);
@@ -282,8 +283,8 @@ class BluetoothFriendViewModel extends ChangeNotifier {
         );
         _notify();
       }
-    } catch (error) {
-      _error = 'Could not identify a nearby PlanSync user: $error';
+    } catch (_) {
+      _error = 'Could not identify the nearby PlanSync user. Please try again.';
     } finally {
       _isResolvingDevices = false;
       if (!_disposed && _identificationQueue.isNotEmpty) {
@@ -377,8 +378,8 @@ class BluetoothFriendViewModel extends ChangeNotifier {
       await _friendRepository.sendRequest(senderId, _userId);
       _pendingIncomingUserIds.add(senderId);
       _statusMessage = 'Friend request received from ${sender.name}.';
-    } catch (error) {
-      _error = 'Could not save the received friend request: $error';
+    } catch (_) {
+      _error = 'Could not save the received friend request. Please try again.';
     } finally {
       _processingIncoming.remove(senderId);
       _notify();

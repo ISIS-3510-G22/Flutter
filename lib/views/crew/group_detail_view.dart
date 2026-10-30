@@ -152,7 +152,7 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                     }
                     if (snapshot.hasError) {
                       return Text(
-                        'Could not load group members: ${snapshot.error}',
+                        'Could not load group members. Check your connection and try again.',
                       );
                     }
                     final members = snapshot.data ?? const <User>[];
