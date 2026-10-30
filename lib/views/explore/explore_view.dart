@@ -43,193 +43,200 @@ class _ExploreBody extends StatelessWidget {
                 'dates and ratings may have changed.',
           ),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 16),
-            children: [
-              Row(
-                children: [
-                  const Expanded(child: ViewHeader(title: 'Explore')),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: SegmentedButton<bool>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(
-                          value: false,
-                          icon: Icon(Icons.view_list_outlined),
-                          label: Text('List'),
-                        ),
-                        ButtonSegment(
-                          value: true,
-                          icon: Icon(Icons.map_outlined),
-                          label: Text('Map'),
-                        ),
-                      ],
-                      selected: const {false},
-                      onSelectionChanged: (selection) {
-                        if (!selection.first) return;
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const NearbyMapView(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: _SearchRow(
-                  controller: vm.searchController,
-                  onQueryChange: vm.onSearchQueryChange,
-                ),
-              ),
-              if (vm.tagOptions.length > 1)
-                _TagChipsRow(
-                  options: vm.tagOptions,
-                  selected: vm.selectedTag,
-                  onSelect: vm.onTagSelect,
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: RefreshIndicator(
+            onRefresh: vm.refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 16),
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _FilterGroupCard(
-                            title: 'WHEN',
-                            icon: Icons.calendar_today_outlined,
-                            options: ExploreViewModel.whenOptions,
-                            selected: vm.selectedWhen,
-                            onSelect: vm.onWhenSelect,
+                    const Expanded(child: ViewHeader(title: 'Explore')),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: SegmentedButton<bool>(
+                        showSelectedIcon: false,
+                        segments: const [
+                          ButtonSegment(
+                            value: false,
+                            icon: Icon(Icons.view_list_outlined),
+                            label: Text('List'),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _FilterGroupCard(
-                            title: 'PRICE',
-                            icon: Icons.sell_outlined,
-                            options: ExploreViewModel.priceOptions,
-                            selected: vm.selectedPrice,
-                            onSelect: vm.onPriceSelect,
+                          ButtonSegment(
+                            value: true,
+                            icon: Icon(Icons.map_outlined),
+                            label: Text('Map'),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _FilterGroupCard(
-                      title: 'RATING',
-                      icon: Icons.star_outline,
-                      options: ExploreViewModel.ratingOptions,
-                      selected: vm.selectedRating,
-                      onSelect: vm.onRatingSelect,
+                        ],
+                        selected: const {false},
+                        onSelectionChanged: (selection) {
+                          if (!selection.first) return;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NearbyMapView(),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: _SearchRow(
+                    controller: vm.searchController,
+                    onQueryChange: vm.onSearchQueryChange,
+                  ),
                 ),
-                child: _DashedDivider(color: colors.primary),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Text(
-                  'Featured Plans',
-                  style: text.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ),
-              if (!vm.hasSnapshot && vm.isLoading)
-                const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (!vm.hasSnapshot)
+                if (vm.tagOptions.length > 1)
+                  _TagChipsRow(
+                    options: vm.tagOptions,
+                    selected: vm.selectedTag,
+                    onSelect: vm.onTagSelect,
+                  ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 8,
+                    vertical: 12,
                   ),
-                  child: Text(
-                    'Connect to discover plans',
-                    style: text.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                )
-              else if (vm.filteredPlans.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    vm.hasPlans
-                        ? 'No plans match your filters.'
-                        : 'No public plans',
-                    style: text.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                )
-              else
-                for (final item in vm.filteredPlans)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: _FeaturedPlanCard(
-                      item: item,
-                      recommended: vm.isRecommended(item),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PublicPlanDetailView(plan: item.plan),
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _FilterGroupCard(
+                              title: 'WHEN',
+                              icon: Icons.calendar_today_outlined,
+                              options: ExploreViewModel.whenOptions,
+                              selected: vm.selectedWhen,
+                              onSelect: vm.onWhenSelect,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _FilterGroupCard(
+                              title: 'PRICE',
+                              icon: Icons.sell_outlined,
+                              options: ExploreViewModel.priceOptions,
+                              selected: vm.selectedPrice,
+                              onSelect: vm.onPriceSelect,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+                      const SizedBox(height: 10),
+                      _FilterGroupCard(
+                        title: 'RATING',
+                        icon: Icons.star_outline,
+                        options: ExploreViewModel.ratingOptions,
+                        selected: vm.selectedRating,
+                        onSelect: vm.onRatingSelect,
+                      ),
+                    ],
                   ),
-              if (vm.hasSnapshot) ...[
+                ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: _DashedDivider(color: colors.primary),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Text(
-                    'Activities',
+                    'Featured Plans',
                     style: text.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                if (vm.filteredActivities.isEmpty)
+                if (!vm.hasSnapshot && vm.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (!vm.hasSnapshot)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
                     child: Text(
-                      'No activities match your filters.',
+                      'Connect to discover plans',
+                      style: text.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                else if (vm.filteredPlans.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      vm.hasPlans
+                          ? 'No plans match your filters.'
+                          : 'No public plans',
                       style: text.bodyMedium?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),
                     ),
                   )
                 else
-                  for (final activity in vm.filteredActivities)
-                    ActivityCard(activity: activity),
+                  for (final item in vm.filteredPlans)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: _FeaturedPlanCard(
+                        item: item,
+                        recommended: vm.isRecommended(item),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PublicPlanDetailView(plan: item.plan),
+                          ),
+                        ),
+                      ),
+                    ),
+                if (vm.hasSnapshot) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Text(
+                      'Activities',
+                      style: text.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (vm.filteredActivities.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        'No activities match your filters.',
+                        style: text.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    )
+                  else
+                    for (final activity in vm.filteredActivities)
+                      ActivityCard(activity: activity),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ],

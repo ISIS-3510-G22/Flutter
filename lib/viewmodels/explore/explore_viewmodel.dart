@@ -66,7 +66,12 @@ class ExploreViewModel extends ChangeNotifier {
     if (ratingOptions.contains(saved.rating)) selectedRating = saved.rating!;
   }
 
-  void _loadSnapshot() {
+  Future<void> refresh() => _loadSnapshot();
+
+  Completer<void>? _loadDone;
+
+  Future<void> _loadSnapshot() {
+    final done = _loadDone ??= Completer<void>();
     isLoading = true;
     notifyListeners();
     _snapshotSub?.cancel();
@@ -76,9 +81,12 @@ class ExploreViewModel extends ChangeNotifier {
           _show,
           onDone: () {
             isLoading = false;
+            _loadDone = null;
+            done.complete();
             notifyListeners();
           },
         );
+    return done.future;
   }
 
   void _show(ExploreSnapshot snapshot) {

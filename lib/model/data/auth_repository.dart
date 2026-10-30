@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuthException;
+import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/auth_failure.dart';
 import 'package:plansync/model/models/user.dart';
@@ -28,7 +29,12 @@ class AuthRepository {
   }
 
   Future<void> sendPasswordResetEmail({required String email}) {
-    return _translate(() => _authService.sendPasswordResetEmail(email: email));
+    return _translate(() {
+      ConnectivityRepository.instance.ensureOnline();
+      return _authService
+          .sendPasswordResetEmail(email: email)
+          .timeout(const Duration(seconds: 8));
+    });
   }
 
   Future<void> signOut() => _translate(_authService.signOut);

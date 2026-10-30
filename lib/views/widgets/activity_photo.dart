@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 class ActivityPhoto extends StatelessWidget {
@@ -29,12 +30,13 @@ class ActivityPhoto extends StatelessWidget {
 
     final network = url == null
         ? placeholder
-        : Image.network(
-            url!,
+        : CachedNetworkImage(
+            imageUrl: url!,
             width: width ?? double.infinity,
             height: height,
             fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => placeholder,
+            placeholder: (_, _) => placeholder,
+            errorWidget: (_, _, _) => placeholder,
           );
 
     return ClipRRect(
