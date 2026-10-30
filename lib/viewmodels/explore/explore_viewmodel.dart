@@ -66,7 +66,17 @@ class ExploreViewModel extends ChangeNotifier {
     if (ratingOptions.contains(saved.rating)) selectedRating = saved.rating!;
   }
 
-  void _loadSnapshot() {
+  /// Pull to refresh: the same load as on open (saved file, then server).
+  /// Completes when the load finishes; offline that's right after the file.
+  Future<void> refresh() => _loadSnapshot();
+
+  // Shared by every load that overlaps: a load cancelled by a newer one
+  // never reaches `onDone`, so the newer one completes the same future and
+  // the refresh spinner never hangs.
+  Completer<void>? _loadDone;
+
+  Future<void> _loadSnapshot() {
+    final done = _loadDone ??= Completer<void>();
     isLoading = true;
     notifyListeners();
     _snapshotSub?.cancel();
@@ -76,9 +86,12 @@ class ExploreViewModel extends ChangeNotifier {
           _show,
           onDone: () {
             isLoading = false;
+            _loadDone = null;
+            done.complete();
             notifyListeners();
           },
         );
+    return done.future;
   }
 
   void _show(ExploreSnapshot snapshot) {
