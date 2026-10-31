@@ -27,6 +27,9 @@ class PlanDetailViewModel extends ChangeNotifier {
     _splitQueueSub = SplitOutboxRepository.instance.changes.listen(
       (_) => _loadSaved(),
     );
+    _crewQueueSub = CrewWriteQueue.instance.changes.listen(
+      (_) => notifyListeners(),
+    );
     _onPlanUpdate(plan);
     _sub = _planRepository.planById(plan.id).listen(_onPlanUpdate);
     loadSuggestions();
@@ -39,12 +42,7 @@ class PlanDetailViewModel extends ChangeNotifier {
   final _groupRepository = GroupRepository();
   late final StreamSubscription<Plan> _sub;
   late final StreamSubscription<void> _queueSub;
-  late final StreamSubscription<void> _crewQueueSub = CrewWriteQueue
-      .instance
-      .changes
-      .listen((_) {
-        notifyListeners();
-      });
+  late final StreamSubscription<void> _crewQueueSub;
   late final StreamSubscription<void> _splitQueueSub;
 
   final String _uid;
