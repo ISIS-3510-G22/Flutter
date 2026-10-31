@@ -3,6 +3,7 @@ import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/formatters/text_format.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
+import 'package:plansync/views/widgets/private_tag.dart';
 import 'package:plansync/views/widgets/waiting_to_sync.dart';
 
 class ActivityCard extends StatelessWidget {
@@ -86,6 +87,10 @@ class ActivityCard extends StatelessWidget {
                         color: colors.onSurfaceVariant,
                       ),
                     ),
+                    if (activity.visibility == ActivityVisibility.private) ...[
+                      const SizedBox(height: 4),
+                      const PrivateTag(),
+                    ],
                     if (pending) ...[
                       const SizedBox(height: 4),
                       const WaitingToSync(),

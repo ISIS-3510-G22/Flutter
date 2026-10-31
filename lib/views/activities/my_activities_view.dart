@@ -61,7 +61,7 @@ class _MyActivitiesBody extends StatelessWidget {
                   onPressed: () => vm.selectTab(ActivitiesTab.liked),
                 ),
                 TabButton(
-                  label: 'Private',
+                  label: 'Owned',
                   selected: vm.currentTab == ActivitiesTab.private,
                   onPressed: () => vm.selectTab(ActivitiesTab.private),
                 ),
