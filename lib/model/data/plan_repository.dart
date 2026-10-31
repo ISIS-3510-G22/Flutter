@@ -111,6 +111,11 @@ class PlanRepository {
     });
   }
 
+  /// Replaces the whole list with a fixed value, so sending it twice is safe.
+  Future<void> setActivityOrder(String planId, List<String> activityIds) {
+    return _plans.doc(planId).update({'activityIds': activityIds});
+  }
+
   Future<void> _saveLocal(String uid, Plan plan) async {
     final saved = await _readPlans(_plansFile(uid)) ?? [];
     final plans = <Plan>[];
@@ -123,6 +128,8 @@ class PlanRepository {
       jsonEncode([for (final p in plans) p.toJson()]),
     );
   }
+
+  Future<void> saveLocal(String uid, Plan plan) => _saveLocal(uid, plan);
 
   Future<bool> save(String uid, Plan plan, {required bool isNew}) async {
     await _saveLocal(uid, plan);
