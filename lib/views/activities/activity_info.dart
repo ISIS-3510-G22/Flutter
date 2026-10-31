@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/views/formatters/text_format.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
+import 'package:plansync/views/widgets/private_tag.dart';
 
 class ActivityInfo extends StatelessWidget {
   const ActivityInfo({required this.activity, this.localPhoto, super.key});
@@ -48,6 +49,12 @@ class ActivityInfo extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(activity.name, style: Theme.of(context).textTheme.headlineSmall),
+          Text(activity.name, style: Theme.of(context).textTheme.headlineSmall),
+          if (activity.visibility == ActivityVisibility.private) ...[
+            const SizedBox(height: 4),
+            const PrivateTag(),
+          ],
+          const SizedBox(height: 8),
           const SizedBox(height: 8),
           Text(
             activity.notes,
