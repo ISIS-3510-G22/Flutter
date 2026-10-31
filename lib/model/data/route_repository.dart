@@ -5,7 +5,11 @@ import 'dart:isolate';
 import 'package:latlong2/latlong.dart';
 import 'package:plansync/model/data/cache/route_cache.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/saved_route_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
+import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/plan_route.dart';
 
 PlanRoute? parseGeoapifyRoute(Map<String, dynamic> json) {
@@ -52,6 +56,26 @@ class RouteRepository {
   static final _cache = RouteCache(maxPoints: 20000);
   final _saved = SavedRouteRepository();
   final _connectivity = ConnectivityRepository.instance;
+  final _plans = PlanRepository();
+
+  // A getter, never a field: the queue's constructor creates repositories.
+  SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
+
+  /// Local copy first, then sent or queued. `true` sent, `false` queued.
+  Future<bool> saveStopOrder(String uid, Plan plan) async {
+    await _plans.saveLocal(uid, plan);
+    return _queue.submit(
+      PendingWrite(
+        kind: SplitWriteKind.planReorder,
+        docId: SplitOutboxRepository.docId(plan.id, 'order'),
+        payload: {
+          'planId': plan.id,
+          'activityIds': plan.activityIds,
+          'planName': plan.name,
+        },
+      ),
+    );
+  }
 
   /// The stops' coordinates joined in order: same stops and mode give the
   /// same route, whichever plan they belong to.
