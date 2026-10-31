@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:plansync/data/route_repository.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/models/plan.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/plan_route.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/plan_route_viewmodel.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
 import 'package:plansync/views/widgets/circle_back_button.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
+import 'package:plansync/views/widgets/waiting_to_sync.dart';
 import 'package:provider/provider.dart';
 
 const _geoapifyKey = String.fromEnvironment('GEOAPIFY_KEY');
@@ -23,7 +27,8 @@ class PlanRouteView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => PlanRouteViewModel(plan, activities),
+      create: (context) =>
+          PlanRouteViewModel(context.read<User>().id, plan, activities),
       child: const _PlanRouteBody(),
     );
   }
@@ -34,6 +39,7 @@ class _PlanRouteBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final vm = context.watch<PlanRouteViewModel>();
 
     Widget content;
@@ -49,7 +55,7 @@ class _PlanRouteBody extends StatelessWidget {
         ),
       );
     } else {
-      content = _RouteMap(vm: vm);
+      content = _RouteMap(vm: vm, online: online);
     }
 
     return Scaffold(
@@ -63,7 +69,22 @@ class _PlanRouteBody extends StatelessWidget {
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: _TopBar(vm: vm),
+                child: Column(
+                  children: [
+                    _TopBar(vm: vm),
+                    if (!online && vm.shown == RouteShown.saved) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: const OfflineBanner(
+                          message:
+                              "You're offline. Showing the saved route; areas "
+                              "you haven't viewed may look blank.",
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -110,9 +131,10 @@ class _TopBar extends StatelessWidget {
 }
 
 class _RouteMap extends StatelessWidget {
-  const _RouteMap({required this.vm});
+  const _RouteMap({required this.vm, required this.online});
 
   final PlanRouteViewModel vm;
+  final bool online;
 
   static const _topOverlay = 72.0;
   static const _bottomOverlay = 230.0;
@@ -153,6 +175,11 @@ class _RouteMap extends StatelessWidget {
                   'https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}',
               additionalOptions: const {'apiKey': _geoapifyKey},
               userAgentPackageName: 'com.example.plansync',
+              tileProvider: NetworkTileProvider(
+                cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
+                  overrideFreshAge: const Duration(days: 30),
+                ),
+              ),
             ),
             if (vm.stops.length > 1)
               PolylineLayer(
@@ -194,7 +221,10 @@ class _RouteMap extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 0,
-          child: SafeArea(top: false, child: _RouteSummary(vm: vm)),
+          child: SafeArea(
+            top: false,
+            child: _RouteSummary(vm: vm, online: online),
+          ),
         ),
       ],
     );
@@ -245,9 +275,10 @@ class _StopMarker extends StatelessWidget {
 }
 
 class _RouteSummary extends StatelessWidget {
-  const _RouteSummary({required this.vm});
+  const _RouteSummary({required this.vm, required this.online});
 
   final PlanRouteViewModel vm;
+  final bool online;
 
   @override
   Widget build(BuildContext context) {
@@ -271,7 +302,9 @@ class _RouteSummary extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Expanded(child: _RouteTotals(vm: vm)),
+                  Expanded(
+                    child: _RouteTotals(vm: vm, online: online),
+                  ),
                   SegmentedButton<TravelMode>(
                     showSelectedIcon: false,
                     segments: const [
@@ -299,6 +332,22 @@ class _RouteSummary extends StatelessWidget {
                 'no location and ${vm.missingLocation.length == 1 ? 'is' : 'are'} '
                 'not on the map.',
                 style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ),
+          if (vm.orderPending || (vm.canReorder && vm.stops.length > 1))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
+              child: Row(
+                children: [
+                  if (vm.canReorder && vm.stops.length > 1)
+                    TextButton.icon(
+                      onPressed: () => _openReorderSheet(context, vm),
+                      icon: const Icon(Icons.swap_vert),
+                      label: const Text('Reorder stops'),
+                    ),
+                  const Spacer(),
+                  if (vm.orderPending) const WaitingToSync(),
+                ],
               ),
             ),
           const SizedBox(height: 8),
@@ -329,10 +378,102 @@ class _RouteSummary extends StatelessWidget {
   }
 }
 
+Future<void> _openReorderSheet(
+  BuildContext context,
+  PlanRouteViewModel vm,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final save = await showModalBottomSheet<bool>(
+    context: context,
+    builder: (_) =>
+        ChangeNotifierProvider.value(value: vm, child: const _ReorderSheet()),
+  );
+  if (save != true) {
+    vm.cancelReorder();
+    return;
+  }
+  final message = await vm.saveOrder();
+  if (message != null) {
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _ReorderSheet extends StatelessWidget {
+  const _ReorderSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<PlanRouteViewModel>();
+    final colors = Theme.of(context).colorScheme;
+
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Reorder stops',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Flexible(
+            child: ReorderableListView(
+              shrinkWrap: true,
+              buildDefaultDragHandles: false,
+              onReorderItem: vm.moveStop,
+              children: [
+                for (var i = 0; i < vm.stops.length; i++)
+                  ListTile(
+                    key: ValueKey(vm.stops[i].activity.id),
+                    leading: CircleAvatar(
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.onPrimary,
+                      child: Text('${vm.stops[i].number}'),
+                    ),
+                    title: Text(vm.stops[i].activity.name),
+                    trailing: ReorderableDragStartListener(
+                      index: i,
+                      child: const Icon(Icons.drag_handle),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Save'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RouteTotals extends StatelessWidget {
-  const _RouteTotals({required this.vm});
+  const _RouteTotals({required this.vm, required this.online});
 
   final PlanRouteViewModel vm;
+  final bool online;
 
   @override
   Widget build(BuildContext context) {
@@ -352,7 +493,10 @@ class _RouteTotals extends StatelessWidget {
     }
     if (route == null) {
       return Text(
-        'Route unavailable, showing straight lines',
+        online
+            ? "Couldn't load the real route. Showing straight lines between "
+                  'stops.'
+            : 'The real route needs a connection.',
         style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
       );
     }

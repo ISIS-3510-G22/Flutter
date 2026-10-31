@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/data/expense_repository.dart';
-import 'package:plansync/models/expense.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/data/expense_repository.dart';
+import 'package:plansync/model/logic/custom_split.dart';
+import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/split_method.dart';
+import 'package:plansync/model/models/user.dart';
 
 class CreateEditExpenseViewModel extends ChangeNotifier {
   CreateEditExpenseViewModel(
@@ -13,16 +15,24 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
            ? payerId
            : participants.first.id {
     splitAmongIds = participants.map((p) => p.id).toSet();
+    amountControllers = {
+      for (final p in participants) p.id: TextEditingController(),
+    };
     if (_editingExpense case final expense?) {
       nameController.text = expense.name;
-      valueController.text = expense.value % 1 == 0
-          ? expense.value.toStringAsFixed(0)
-          : expense.value.toString();
+      valueController.text = _amountText(expense.value);
       if (expense.splitAmongIds.isNotEmpty) {
         splitAmongIds = expense.splitAmongIds.toSet();
       }
+      splitMethod = expense.splitMethod;
+      expense.customAmounts.forEach((id, amount) {
+        amountControllers[id]?.text = _amountText(amount);
+      });
     }
   }
+
+  static String _amountText(double amount) =>
+      amount % 1 == 0 ? amount.toStringAsFixed(0) : amount.toString();
 
   final String _planId;
   final List<User> participants;
@@ -37,8 +47,14 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
   String paidById;
   Set<String> splitAmongIds = {};
 
+  SplitMethod splitMethod = SplitMethod.equal;
+
+  late final Map<String, TextEditingController> amountControllers;
+
   bool isLoading = false;
   String? errorMessage;
+
+  String? queuedMessage;
 
   bool get isForEveryone =>
       participants.every((p) => splitAmongIds.contains(p.id));
@@ -56,6 +72,36 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
       splitAmongIds = {};
     }
     notifyListeners();
+  }
+
+  void selectMethod(SplitMethod method) {
+    splitMethod = method;
+    errorMessage = null;
+    notifyListeners();
+  }
+
+  void onAmountChanged() => notifyListeners();
+
+  Map<String, double> get _customAmounts => {
+    for (final id in splitAmongIds)
+      id: double.tryParse(amountControllers[id]?.text.trim() ?? '') ?? 0,
+  };
+
+  int get remaining => remainingCents(
+    double.tryParse(valueController.text.trim()) ?? 0,
+    _customAmounts,
+  );
+
+  bool get amountsAddUp => splitMethod == SplitMethod.equal || remaining == 0;
+
+  String? get _customError {
+    if (_customAmounts.values.any((amount) => amount < 0)) {
+      return "Amounts can't be negative.";
+    }
+    final money = '\$${(remaining.abs() / 100).toStringAsFixed(2)}';
+    if (remaining > 0) return 'Assign the remaining $money before saving.';
+    if (remaining < 0) return 'The amounts are over the total by $money.';
+    return null;
   }
 
   void toggleParticipant(String userId) {
@@ -84,13 +130,19 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    final custom = splitMethod == SplitMethod.custom;
+    if (custom && _customError != null) {
+      errorMessage = _customError;
+      notifyListeners();
+      return false;
+    }
 
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      var id = '';
+      var id = _repository.newId(_planId);
       var createdAt = DateTime.now();
       if (_editingExpense case final editing?) {
         id = editing.id;
@@ -103,15 +155,21 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
         paidById: paidById,
         createdAt: createdAt,
         splitAmongIds: splitAmongIds.toList(),
+        splitMethod: splitMethod,
+        customAmounts: custom ? _customAmounts : const {},
       );
-      if (_editingExpense == null) {
-        await _repository.create(_planId, expense);
-      } else {
-        await _repository.update(_planId, expense);
-      }
+      final sent = await _repository.save(
+        _planId,
+        expense,
+        isNew: _editingExpense == null,
+      );
+      queuedMessage = sent
+          ? null
+          : "Expense saved on your phone. Everyone sees it when you're back "
+                'online.';
       return true;
     } catch (_) {
-      errorMessage = 'Something went wrong. Try again.';
+      errorMessage = "Couldn't save this expense on your phone.";
       return false;
     } finally {
       isLoading = false;
@@ -128,10 +186,14 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.delete(_planId, expense.id);
+      final sent = await _repository.remove(_planId, expense);
+      queuedMessage = sent
+          ? null
+          : "Expense deleted on your phone. It's removed for everyone when "
+                "you're back online.";
       return true;
     } catch (_) {
-      errorMessage = 'Something went wrong. Try again.';
+      errorMessage = "Couldn't delete this expense on your phone.";
       return false;
     } finally {
       isLoading = false;
@@ -139,10 +201,21 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
     }
   }
 
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     nameController.dispose();
     valueController.dispose();
+    for (final controller in amountControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 }

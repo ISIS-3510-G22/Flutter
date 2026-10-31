@@ -1,16 +1,40 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:plansync/data/plan_repository.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/app_notification.dart';
-import 'package:plansync/models/invitations.dart';
-import 'package:plansync/models/plan.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/app_notification.dart';
+import 'package:plansync/model/models/invitations.dart';
+import 'package:plansync/model/models/plan.dart';
 
 enum PlanTab { upcoming, pendingInvite, past }
 
 class MyPlansViewModel extends ChangeNotifier {
   MyPlansViewModel(this._userId) {
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => _loadPlans(),
+    );
+    _loadPlans();
+  }
+
+  final String _userId;
+  final _planRepository = PlanRepository();
+  final _userRepository = UserRepository();
+
+  StreamSubscription<List<Plan>>? _sub;
+  late final StreamSubscription<void> _queueSub;
+
+  bool isLoading = true;
+  PlanTab selectedTab = PlanTab.upcoming;
+  List<Plan> _plans = [];
+
+  Map<String, String?> _photoUrls = {};
+
+  Set<String> get pendingIds => PendingWriteRepository.instance.pendingDocIds;
+
+  void _loadPlans() {
+    _sub?.cancel();
     _sub = _planRepository.plansForUser(_userId).listen((plans) {
       _plans = plans;
       isLoading = false;
@@ -19,27 +43,17 @@ class MyPlansViewModel extends ChangeNotifier {
     });
   }
 
-  final String _userId;
-  final _planRepository = PlanRepository();
-  final _userRepository = UserRepository();
-
-  late final StreamSubscription<List<Plan>> _sub;
-
-  bool isLoading = true;
-  PlanTab selectedTab = PlanTab.upcoming;
-  List<Plan> _plans = [];
-
-  Map<String, String?> _photoUrls = {};
-
   Future<void> _loadPhotos() async {
     final ids = _plans
         .expand((p) => p.goingIds.take(2))
         .toSet()
         .take(30)
         .toList();
-    final users = await _userRepository.getUsers(ids);
-    _photoUrls = {for (final u in users) u.id: u.photoUrl};
-    notifyListeners();
+    try {
+      final users = await _userRepository.getUsers(ids);
+      _photoUrls = {for (final u in users) u.id: u.photoUrl};
+      notifyListeners();
+    } catch (_) {}
   }
 
   bool isGoing(Plan plan) => plan.rsvpFor(_userId) == RsvpStatus.going;
@@ -49,12 +63,6 @@ class MyPlansViewModel extends ChangeNotifier {
   ];
 
   static const _lateAfter = Duration(days: 2);
-
-  @override
-  void dispose() {
-    _sub.cancel();
-    super.dispose();
-  }
 
   List<Plan> get visiblePlans =>
       _plans.where((p) => _tabFor(p) == selectedTab).toList();
@@ -82,5 +90,12 @@ class MyPlansViewModel extends ChangeNotifier {
     }
     if (DateTime.now().difference(invitedAt) < _lateAfter) return null;
     return AppNotification.rsvpReminder(invitedAt);
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _queueSub.cancel();
+    super.dispose();
   }
 }

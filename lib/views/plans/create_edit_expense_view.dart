@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/expense.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/split_method.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/create_edit_expense_viewmodel.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class CreateEditExpenseView extends StatelessWidget {
@@ -35,6 +38,7 @@ class _CreateEditExpenseForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final vm = context.watch<CreateEditExpenseViewModel>();
 
     return Scaffold(
@@ -46,6 +50,14 @@ class _CreateEditExpenseForm extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (!online) ...[
+              const OfflineBanner(
+                message:
+                    "You're offline. Expenses you save or delete stay on your "
+                    "phone and sync when you're back online.",
+              ),
+              const SizedBox(height: 16),
+            ],
             const Text('NAME'),
             TextField(
               controller: vm.nameController,
@@ -55,6 +67,7 @@ class _CreateEditExpenseForm extends StatelessWidget {
             const Text('VALUE'),
             TextField(
               controller: vm.valueController,
+              onChanged: (_) => vm.onAmountChanged(),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
@@ -94,6 +107,63 @@ class _CreateEditExpenseForm extends StatelessWidget {
                   ),
               ],
             ),
+            const SizedBox(height: 16),
+            const Text('HOW'),
+            const SizedBox(height: 8),
+            SegmentedButton<SplitMethod>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(
+                  value: SplitMethod.equal,
+                  label: Text('Split equally'),
+                ),
+                ButtonSegment(
+                  value: SplitMethod.custom,
+                  label: Text('Custom amounts'),
+                ),
+              ],
+              selected: {vm.splitMethod},
+              onSelectionChanged: (selection) =>
+                  vm.selectMethod(selection.first),
+            ),
+            if (vm.splitMethod == SplitMethod.custom) ...[
+              const SizedBox(height: 8),
+              for (final p in vm.participants)
+                if (vm.splitAmongIds.contains(p.id))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text('${p.name} ${p.lastName}')),
+                        SizedBox(
+                          width: 120,
+                          child: TextField(
+                            controller: vm.amountControllers[p.id],
+                            onChanged: (_) => vm.onAmountChanged(),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: '0',
+                              prefixText: '\$',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              const SizedBox(height: 12),
+              Text(
+                vm.remaining < 0
+                    ? 'Over by: \$${(-vm.remaining / 100).toStringAsFixed(2)}'
+                    : 'Remaining: \$${(vm.remaining / 100).toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: vm.amountsAddUp
+                      ? null
+                      : Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ],
             if (vm.isEditing) ...[
               const SizedBox(height: 24),
               SizedBox(
@@ -106,12 +176,13 @@ class _CreateEditExpenseForm extends StatelessWidget {
                   onPressed: vm.isLoading
                       ? null
                       : () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           final confirmed = await _confirmDelete(context);
                           if (!confirmed) return;
                           final deleted = await vm.delete();
-                          if (deleted && context.mounted) {
-                            Navigator.pop(context);
-                          }
+                          if (!deleted || !context.mounted) return;
+                          _showQueued(messenger, vm.queuedMessage);
+                          Navigator.pop(context);
                         },
                   child: const Text('Delete Expense'),
                 ),
@@ -136,13 +207,14 @@ class _CreateEditExpenseForm extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton(
-                    onPressed: vm.isLoading
+                    onPressed: vm.isLoading || !vm.amountsAddUp
                         ? null
                         : () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             final saved = await vm.save();
-                            if (saved && context.mounted) {
-                              Navigator.pop(context);
-                            }
+                            if (!saved || !context.mounted) return;
+                            _showQueued(messenger, vm.queuedMessage);
+                            Navigator.pop(context);
                           },
                     child: vm.isLoading
                         ? const SizedBox(
@@ -159,6 +231,11 @@ class _CreateEditExpenseForm extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showQueued(ScaffoldMessengerState messenger, String? message) {
+    if (message == null) return;
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<bool> _confirmDelete(BuildContext context) async {

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/app_notification.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/utils/avatar.dart';
-import 'package:plansync/utils/date_format.dart';
+import 'package:plansync/model/models/app_notification.dart';
+import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/viewmodels/plans/plan_viewmodel.dart';
+import 'package:plansync/views/formatters/date_format.dart';
 import 'package:plansync/views/plans/leave_review_view.dart';
 import 'package:plansync/views/plans/manage_splits_view.dart';
 import 'package:plansync/views/plans/plan_detail_view.dart';
+import 'package:plansync/views/widgets/avatar.dart';
+import 'package:plansync/views/widgets/waiting_to_sync.dart';
 
 class PlanCard extends StatelessWidget {
   const PlanCard({
@@ -16,6 +17,7 @@ class PlanCard extends StatelessWidget {
     required this.going,
     required this.notification,
     required this.photoUrls,
+    this.pending = false,
   });
 
   final Plan plan;
@@ -23,6 +25,7 @@ class PlanCard extends StatelessWidget {
   final bool going;
   final AppNotification? notification;
   final List<String?> photoUrls;
+  final bool pending;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +83,10 @@ class PlanCard extends StatelessWidget {
                             color: colors.onSurfaceVariant,
                           ),
                         ),
+                        if (pending) ...[
+                          const SizedBox(height: 4),
+                          const WaitingToSync(),
+                        ],
                       ],
                     ),
                   ),

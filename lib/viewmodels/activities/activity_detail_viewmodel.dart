@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/data/activity_repository.dart';
-import 'package:plansync/models/activity.dart';
+import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/models/activity.dart';
 
 class ActivityDetailViewmodel extends ChangeNotifier {
-  ActivityDetailViewmodel(this.activity, this._uid);
+  ActivityDetailViewmodel(this.activity, this._uid) {
+    _loadLocalPhoto();
+  }
 
   Activity activity;
   final String _uid;
@@ -14,15 +16,24 @@ class ActivityDetailViewmodel extends ChangeNotifier {
   bool get isOwner => activity.ownerId == _uid;
   bool get isLiked => activity.likedBy.contains(_uid);
 
-  void applyUpdate(Activity updated) {
-    activity = updated;
+  String? localPhotoPath;
+
+  Future<void> _loadLocalPhoto() async {
+    localPhotoPath = await _repository.pendingPhoto(activity.id);
     notifyListeners();
   }
 
-  Future<void> toggleLike() async {
-    final liked = !isLiked;
-    await _repository.toggleLiked(activity.id, _uid, liked);
+  Future<void> applyUpdate(Activity updated) async {
+    activity = updated;
+    notifyListeners();
+    final fresh = await _repository.planActivities(_uid, [updated.id]);
+    if (fresh.isNotEmpty) activity = fresh.first;
+    await _loadLocalPhoto();
+  }
 
+  Future<bool> toggleLike() {
+    final liked = !isLiked;
+    final before = activity;
     final likedBy = List<String>.from(activity.likedBy);
     liked ? likedBy.add(_uid) : likedBy.remove(_uid);
     activity = Activity(
@@ -40,22 +51,14 @@ class ActivityDetailViewmodel extends ChangeNotifier {
       lng: activity.lng,
     );
     notifyListeners();
-  }
 
-  Future<bool> delete() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
-    try {
-      await _repository.delete(activity.id);
-      return true;
-    } catch (_) {
-      errorMessage = 'Something went wrong. Try again.';
-      return false;
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+    return _repository
+        .setLiked(_uid, activity, liked: liked)
+        .then((sent) => !sent)
+        .catchError((_) {
+          activity = before;
+          notifyListeners();
+          return false;
+        });
   }
 }

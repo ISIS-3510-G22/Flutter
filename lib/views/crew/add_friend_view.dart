@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/bluetooth_friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
+import 'package:plansync/views/theme/app_theme.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class AddFriendView extends StatefulWidget {
@@ -56,6 +58,7 @@ class _AddFriendViewState extends State<AddFriendView> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<FriendsViewModel>();
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -95,6 +98,11 @@ class _AddFriendViewState extends State<AddFriendView> {
                 ],
               ),
             ),
+            if (!online)
+              const OfflineBanner(
+                message:
+                    "Offline: searching people saved on your phone. New users won't show up.",
+              ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
@@ -142,6 +150,16 @@ class _AddFriendViewState extends State<AddFriendView> {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  if (vm.searchMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        vm.searchMessage!,
+                        style: text.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   if (_searchController.text.trim().isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
@@ -159,6 +177,8 @@ class _AddFriendViewState extends State<AddFriendView> {
                     )
                   else if (vm.error != null)
                     Text(vm.error!, style: text.bodyMedium)
+                  else if (vm.searchDirectoryNeverStored)
+                    const SizedBox.shrink()
                   else if (vm.searchResults.isEmpty)
                     Text(
                       'No users found.',
@@ -205,6 +225,7 @@ class _BluetoothInviteSheetState extends State<_BluetoothInviteSheet> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return FractionallySizedBox(
       heightFactor: 0.82,
@@ -261,6 +282,11 @@ class _BluetoothInviteSheetState extends State<_BluetoothInviteSheet> {
                 ),
               ),
               Divider(height: 1, color: colors.outline),
+              if (!online)
+                const OfflineBanner(
+                  message:
+                      "Bluetooth works offline. Requests are sent when you're back online.",
+                ),
               Consumer<BluetoothFriendViewModel>(
                 builder: (context, vm, _) {
                   if (vm.error != null) {
@@ -412,7 +438,7 @@ class _NearbyFriendCard extends StatelessWidget {
 
     return CrewFriendsCard(
       name: fullName.isEmpty ? user.username : fullName,
-      email: '@${user.username}',
+      email: user.username.isEmpty ? 'Bluetooth user' : '@${user.username}',
       initials: initials.isEmpty ? '?' : initials.toUpperCase(),
       avatarColors: const Color(0xFFFFB5A6),
       photoUrl: user.photoUrl,
@@ -501,6 +527,8 @@ class _SearchResultCard extends StatelessWidget {
             : Text(
                 friend
                     ? 'Friends'
+                    : vm.isWaitingToSync(user.id)
+                    ? 'Waiting to sync'
                     : sent
                     ? 'Sent'
                     : 'Request',

@@ -1,19 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:plansync/data/expense_repository.dart';
-import 'package:plansync/data/overdue_debt_repository.dart';
-import 'package:plansync/data/plan_payment_repository.dart';
-import 'package:plansync/data/plan_repository.dart';
-import 'package:plansync/data/settlement_repository.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/expense.dart';
-import 'package:plansync/models/overdue_debt.dart';
-import 'package:plansync/models/reimbursement_method.dart';
-import 'package:plansync/models/settlement.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/utils/debt_simplifier.dart';
-import 'package:plansync/utils/overdue.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/expense_repository.dart';
+import 'package:plansync/model/data/overdue_debt_repository.dart';
+import 'package:plansync/model/data/plan_payment_repository.dart';
+import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/data/settlement_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
+import 'package:plansync/model/logic/custom_split.dart';
+import 'package:plansync/model/logic/debt_simplifier.dart';
+import 'package:plansync/model/logic/overdue.dart';
+import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/overdue_debt.dart';
+import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/model/models/settlement.dart';
+import 'package:plansync/model/models/split_method.dart';
+import 'package:plansync/model/models/user.dart';
 
 class SplitRow {
   final String userId;
@@ -45,6 +48,16 @@ class ManageSplitsViewModel extends ChangeNotifier {
     } else {
       _loadParticipants(participantIds);
     }
+    _hadPending = _queue.hasPendingFor(_planId);
+    _queueSub = _queue.changes.listen((_) => _onQueueChanged());
+    _listenToServer();
+    _loadPlanDate();
+  }
+
+  void _listenToServer() {
+    _expensesSub?.cancel();
+    _settlementsSub?.cancel();
+    _choicesSub?.cancel();
     _expensesSub = _expenseRepository.expensesForPlan(_planId).listen((e) {
       _expenses = e;
       _expensesLoaded = true;
@@ -57,11 +70,30 @@ class ManageSplitsViewModel extends ChangeNotifier {
       _settlementsLoaded = true;
       _recalculate();
     });
-    _loadPlanDate();
     _choicesSub = _paymentRepository.choicesForPlan(_planId).listen((c) {
       _methodChoices = c;
       notifyListeners();
     });
+  }
+
+  Future<void> _onQueueChanged() async {
+    final pending = _queue.hasPendingFor(_planId);
+    final caughtUp = _hadPending && !pending;
+    _hadPending = pending;
+    if (caughtUp) {
+      _listenToServer();
+      return;
+    }
+    await _reloadLocal();
+  }
+
+  Future<void> _reloadLocal() async {
+    final expenses = await _expenseRepository.savedExpenses(_planId);
+    final settlements = await _settlementRepository.savedSettlements(_planId);
+    if (expenses != null) _expenses = expenses;
+    if (settlements != null) _settlements = settlements;
+    _methodChoices = await _paymentRepository.savedChoices(_planId);
+    _recalculate();
   }
 
   final String _planId;
@@ -70,19 +102,24 @@ class ManageSplitsViewModel extends ChangeNotifier {
   bool _participantsLoaded = false;
   final _expenseRepository = ExpenseRepository();
   final _settlementRepository = SettlementRepository();
-  final _userRepository = UserRepository();
   final _paymentRepository = PlanPaymentRepository();
   final _planRepository = PlanRepository();
   final _overdueRepository = OverdueDebtRepository();
   DateTime? _planDate;
   var _syncedOverdue = '';
-  late final StreamSubscription<List<Expense>> _expensesSub;
-  late final StreamSubscription<List<Settlement>> _settlementsSub;
-  late final StreamSubscription<Map<String, String>> _choicesSub;
+  StreamSubscription<List<Expense>?>? _expensesSub;
+  StreamSubscription<List<Settlement>?>? _settlementsSub;
+  StreamSubscription<Map<String, String>>? _choicesSub;
+  late final StreamSubscription<void> _queueSub;
+  late bool _hadPending;
+
+  SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
+
+  Set<String> get pendingIds => _queue.pendingIdsFor(_planId);
   Map<String, String> _methodChoices = {};
 
-  List<Expense> _expenses = [];
-  List<Settlement> _settlements = [];
+  List<Expense>? _expenses;
+  List<Settlement>? _settlements;
   bool _expensesLoaded = false;
   bool _settlementsLoaded = false;
 
@@ -91,13 +128,20 @@ class ManageSplitsViewModel extends ChangeNotifier {
   List<SplitRow> paidByYou = [];
   List<SplitRow> paidToYou = [];
   bool isLoading = true;
-  String? errorMessage;
 
-  bool get hasExpenses => _expenses.isNotEmpty;
+  bool notSaved = false;
+
+  bool get hasExpenses => _expenses?.isNotEmpty ?? false;
 
   Future<void> _loadPlanDate() async {
     try {
-      final plan = await _planRepository.planById(_planId).first;
+      final saved = await _planRepository.savedPlan(_currentUserId, _planId);
+      final plan =
+          saved ??
+          await _planRepository
+              .planById(_planId)
+              .first
+              .timeout(const Duration(seconds: 8));
       _planDate = plan.date;
       _recalculate();
     } catch (_) {
@@ -112,6 +156,7 @@ class ManageSplitsViewModel extends ChangeNotifier {
   }
 
   Future<void> _syncOverdue(List<Transfer> transfers) async {
+    if (!ConnectivityRepository.instance.isOnline) return;
     final days = _overdueDays();
     if (_planDate == null) return;
     final overdue = [
@@ -137,11 +182,7 @@ class ManageSplitsViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadParticipants(List<String> ids) async {
-    try {
-      _participants = await _userRepository.getUsers(ids);
-    } catch (_) {
-      errorMessage = 'Could not load the participants.';
-    }
+    _participants = await _paymentRepository.participants(_planId, ids);
     _participantsLoaded = true;
     _recalculate();
   }
@@ -194,17 +235,24 @@ class ManageSplitsViewModel extends ChangeNotifier {
       }
     }
 
-    for (final expense in _expenses) {
+    for (final expense in _expenses!) {
+      if (expense.splitMethod == SplitMethod.custom) {
+        add(expense.paidById, toCents(expense.value));
+        customSharesCents(
+          expense.customAmounts,
+        ).forEach((id, cents) => add(id, -cents));
+        continue;
+      }
       final splitIds = _splitIds(expense);
       if (splitIds.isEmpty) continue;
-      final totalCents = (expense.value * 100).round();
+      final totalCents = toCents(expense.value);
       final shares = splitCents(totalCents, splitIds.length);
       add(expense.paidById, totalCents);
       for (var i = 0; i < splitIds.length; i++) {
         add(splitIds[i], -shares[i]);
       }
     }
-    for (final s in _settlements) {
+    for (final s in _settlements!) {
       final cents = (s.amount * 100).round();
       add(s.fromId, cents);
       add(s.toId, -cents);
@@ -214,6 +262,13 @@ class ManageSplitsViewModel extends ChangeNotifier {
 
   void _recalculate() {
     if (!_expensesLoaded || !_settlementsLoaded || !_participantsLoaded) {
+      return;
+    }
+    final settlements = _settlements;
+    notSaved = _expenses == null || settlements == null;
+    if (notSaved) {
+      isLoading = false;
+      notifyListeners();
       return;
     }
 
@@ -242,7 +297,7 @@ class ManageSplitsViewModel extends ChangeNotifier {
 
     paidByYou = [];
     paidToYou = [];
-    for (final s in _settlements) {
+    for (final s in settlements!) {
       if (s.fromId == _currentUserId) {
         paidByYou.add(
           SplitRow(
@@ -268,41 +323,52 @@ class ManageSplitsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> markPaid(SplitRow row) async {
-    errorMessage = null;
-    try {
-      await _settlementRepository.settle(
-        _planId,
-        Settlement(
-          id: '',
-          fromId: _currentUserId,
-          toId: row.userId,
-          amount: row.amount,
-        ),
-      );
-    } catch (_) {
-      errorMessage = 'Something went wrong. Try again.';
-      notifyListeners();
-    }
+  static const _queuedPayment =
+      "Payment saved on your phone. Balances update for everyone when you're "
+      'back online.';
+
+  Future<String?> markPaid(SplitRow row) {
+    final settlement = Settlement(
+      id: _settlementRepository.newId(_planId),
+      fromId: _currentUserId,
+      toId: row.userId,
+      amount: row.amount,
+    );
+    return _settlementRepository
+        .markPaid(_planId, settlement)
+        .then((sent) async {
+          await _reloadLocal();
+          return sent ? null : _queuedPayment;
+        })
+        .catchError((_) => "Couldn't save this payment on your phone.");
   }
 
-  Future<void> undoPaid(SplitRow row) async {
+  Future<String?> undoPaid(SplitRow row) {
     final settlementId = row.settlementId;
-    if (settlementId == null) return;
-    errorMessage = null;
-    try {
-      await _settlementRepository.unsettle(_planId, settlementId);
-    } catch (_) {
-      errorMessage = 'Something went wrong. Try again.';
-      notifyListeners();
-    }
+    if (settlementId == null) return Future.value(null);
+    return _settlementRepository
+        .undoPaid(_planId, settlementId)
+        .then((sent) async {
+          await _reloadLocal();
+          return sent ? null : _queuedPayment;
+        })
+        .catchError((_) => "Couldn't undo this payment on your phone.");
+  }
+
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
   }
 
   @override
   void dispose() {
-    _expensesSub.cancel();
-    _settlementsSub.cancel();
-    _choicesSub.cancel();
+    _disposed = true;
+    _expensesSub?.cancel();
+    _settlementsSub?.cancel();
+    _choicesSub?.cancel();
+    _queueSub.cancel();
     super.dispose();
   }
 }

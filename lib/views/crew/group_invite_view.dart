@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/group.dart';
-import 'package:plansync/models/group_invitation.dart';
+import 'package:plansync/model/models/group.dart';
+import 'package:plansync/model/models/group_invitation.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class GroupInviteView extends StatelessWidget {
@@ -23,6 +25,11 @@ class GroupInviteView extends StatelessWidget {
       ).showSnackBar(SnackBar(content: Text(vm.error!)));
       return;
     }
+    if (vm.isWaitingToSync(invitation.id)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Waiting to sync')));
+    }
     Navigator.of(context).pop(group);
   }
 
@@ -33,7 +40,14 @@ class GroupInviteView extends StatelessWidget {
   ) async {
     vm.clearError();
     await vm.denyInvitation(invitation);
-    if (!context.mounted || vm.error == null) return;
+    if (!context.mounted) return;
+    if (vm.isWaitingToSync(invitation.id)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Waiting to sync')));
+      return;
+    }
+    if (vm.error == null) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(vm.error!)));
@@ -44,6 +58,7 @@ class GroupInviteView extends StatelessWidget {
     final vm = context.watch<CrewViewmodel>();
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return ColoredBox(
       color: colors.surface,
@@ -79,6 +94,11 @@ class GroupInviteView extends StatelessWidget {
             ),
           ),
           Divider(height: 1, color: colors.outline),
+          if (!online)
+            const OfflineBanner(
+              message:
+                  "You're offline. Showing your group invites as last saved.",
+            ),
           Expanded(
             child: vm.isLoading
                 ? const Center(child: CircularProgressIndicator())

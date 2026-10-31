@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/utils/date_format.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/activities/add_to_plan_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
+import 'package:plansync/views/formatters/date_format.dart';
 import 'package:plansync/views/plans/create_edit_plan_view.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class AddToPlanView extends StatelessWidget {
@@ -31,63 +33,80 @@ class _AddToPlanBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<AddToPlanViewModel>();
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Add to Plan')),
-      body: vm.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                ActivityCard(activity: activity, onTap: () {}),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Row(
+      body: Column(
+        children: [
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing your saved upcoming plans.",
+            ),
+          Expanded(
+            child: vm.isLoading
+                ? Center(
+                    child: online
+                        ? const CircularProgressIndicator()
+                        : const Text('Connect to load your plans'),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     children: [
-                      const Icon(Icons.format_list_bulleted, size: 20),
-                      const SizedBox(width: 8),
-                      Text('Choose a plan', style: text.titleMedium),
+                      ActivityCard(activity: activity, onTap: () {}),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.format_list_bulleted, size: 20),
+                            const SizedBox(width: 8),
+                            Text('Choose a plan', style: text.titleMedium),
+                          ],
+                        ),
+                      ),
+                      for (final plan in vm.plans)
+                        _PlanOption(
+                          plan: plan,
+                          selected: vm.selectedPlanId == plan.id,
+                          added: vm.alreadyAdded(plan),
+                          onTap: () => vm.selectPlan(plan.id),
+                        ),
+                      Card.outlined(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: colors.primaryContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Icons.add, color: colors.primary),
+                          ),
+                          title: const Text('Create a new plan'),
+                          subtitle: const Text(
+                            'Start a plan for this activity',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  CreateEditPlanView(activityId: activity.id),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                for (final plan in vm.plans)
-                  _PlanOption(
-                    plan: plan,
-                    selected: vm.selectedPlanId == plan.id,
-                    added: vm.alreadyAdded(plan),
-                    onTap: () => vm.selectPlan(plan.id),
-                  ),
-                Card.outlined(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: colors.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.add, color: colors.primary),
-                    ),
-                    title: const Text('Create a new plan'),
-                    subtitle: const Text('Start a plan for this activity'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            CreateEditPlanView(activityId: activity.id),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          ),
+        ],
+      ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: FilledButton(
@@ -101,9 +120,11 @@ class _AddToPlanBody extends StatelessWidget {
                   messenger.showSnackBar(
                     SnackBar(
                       content: Text(
-                        ok
-                            ? 'Added to plan'
-                            : 'Something went wrong. Try again.',
+                        !ok
+                            ? 'Something went wrong. Try again.'
+                            : vm.queued
+                            ? "Added on your phone. The plan updates when you're back online."
+                            : 'Added to plan',
                       ),
                     ),
                   );

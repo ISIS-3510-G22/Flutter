@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/group.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/model/models/group.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/viewmodels/crew/nearby_friends_viewmodel.dart';
 import 'package:plansync/views/crew/add_friend_view.dart';
 import 'package:plansync/views/crew/create_group_view.dart';
 import 'package:plansync/views/crew/friend_detail_view.dart';
@@ -11,11 +12,12 @@ import 'package:plansync/views/crew/friend_request_view.dart';
 import 'package:plansync/views/crew/group_detail_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
 import 'package:plansync/views/crew/nearby_friends_view.dart';
+import 'package:plansync/views/theme/app_theme.dart';
 import 'package:plansync/views/widgets/crew_friends_card.dart';
 import 'package:plansync/views/widgets/crew_group_card.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/tab_button.dart';
 import 'package:plansync/views/widgets/view_header.dart';
-import 'package:plansync/viewmodels/nearby_friends_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 class MyCrewView extends StatelessWidget {
@@ -138,6 +140,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
   Widget build(BuildContext context) {
     final vm = context.watch<CrewViewmodel>();
     final colors = Theme.of(context).colorScheme;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return ColoredBox(
       color: colors.surface,
@@ -145,6 +148,10 @@ class _MyCrewContentState extends State<_MyCrewContent> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const ViewHeader(title: 'My Crew'),
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing your crew as last saved.",
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: TabTrack(
@@ -164,15 +171,7 @@ class _MyCrewContentState extends State<_MyCrewContent> {
           ),
           Expanded(
             child: _showGroups
-                ? vm.isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : vm.error != null
-                      ? Center(child: Text(vm.error!))
-                      : _GroupsList(
-                          groups: vm.groups,
-                          memberCountFor: vm.memberCountFor,
-                          onGroupTap: (group) => _openGroup(vm, group),
-                        )
+                ? _groupsContent(vm, online)
                 : const _FriendsList(),
           ),
           _showGroups
@@ -268,6 +267,26 @@ class _MyCrewContentState extends State<_MyCrewContent> {
       ),
     );
   }
+
+  Widget _groupsContent(CrewViewmodel vm, bool online) {
+    if (vm.areGroupsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (vm.groups.isEmpty && !vm.hasSavedGroups) {
+      return Center(
+        child: online
+            ? const CircularProgressIndicator()
+            : const Text('Connect to load your crew'),
+      );
+    }
+
+    return _GroupsList(
+      groups: vm.groups,
+      memberCountFor: vm.memberCountFor,
+      onGroupTap: (group) => _openGroup(vm, group),
+    );
+  }
 }
 
 class _GroupsList extends StatelessWidget {
@@ -319,8 +338,17 @@ class _FriendsList extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = context.watch<FriendsViewModel>();
 
-    if (vm.isLoading) {
+    if (vm.areFriendsLoading) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (vm.friends.isEmpty && !vm.hasSavedFriends) {
+      final online = context.watch<ConnectivityViewModel>().isOnline;
+      return Center(
+        child: online
+            ? const CircularProgressIndicator()
+            : const Text('Connect to load your crew'),
+      );
     }
 
     if (vm.error != null) {
@@ -350,9 +378,7 @@ class _FriendsList extends StatelessWidget {
         if (vm.friends.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 32),
-            child: Center(
-              child: Text('Add friends to start building your crew.'),
-            ),
+            child: Center(child: Text('No friends yet')),
           )
         else
           for (final friend in vm.friends) ...[

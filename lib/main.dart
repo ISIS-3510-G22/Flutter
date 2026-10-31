@@ -3,35 +3,41 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:plansync/firebase_options.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/auth_service.dart';
-import 'package:plansync/services/connectivity_service.dart';
-import 'package:plansync/services/notification_service.dart';
-import 'package:plansync/services/theme_service.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/crew_write_queue.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
+import 'package:plansync/model/data/theme_repository.dart';
+import 'package:plansync/model/data/write_queue.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/notification_service.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
+import 'package:plansync/viewmodels/global/theme_viewmodel.dart';
 import 'package:plansync/views/auth/login_view.dart';
 import 'package:plansync/views/crew/friend_request_view.dart';
 import 'package:plansync/views/crew/group_invite_view.dart';
 import 'package:plansync/views/home_shell.dart';
+import 'package:plansync/views/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 final _appNavigatorKey = GlobalKey<NavigatorState>();
+final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 final _homeShellKey = GlobalKey<HomeShellState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final savedTheme = await ThemeService.loadSaved();
+  final savedTheme = await ThemeRepository().loadPreference();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await ConnectivityService.instance.init();
+  await ConnectivityRepository.instance.init();
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => ThemeService()..setPreference(savedTheme),
-        ),
-        ChangeNotifierProvider.value(value: ConnectivityService.instance),
+        ChangeNotifierProvider(create: (_) => ThemeViewModel(savedTheme)),
+        ChangeNotifierProvider(create: (_) => ConnectivityViewModel()),
+        Provider<CrewWriteQueue>.value(value: CrewWriteQueue.instance),
       ],
       child: const AuthGate(),
     ),
@@ -46,7 +52,7 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  final AuthService _authService = AuthService();
+  final AuthRepository _authRepository = AuthRepository();
   late Stream<User?> _authStateChanges;
   final NotificationService _notificationService = NotificationService();
   String? _notificationRegistrationUserId;
@@ -54,10 +60,19 @@ class _AuthGateState extends State<AuthGate> {
   String? _pendingNotificationType;
   bool _notificationRouteScheduled = false;
 
+  bool _loadFailed = false;
+
+  late final ConnectivityViewModel _connectivity;
+
   @override
   void initState() {
     super.initState();
-    _authStateChanges = _authService.authStateChanges;
+    _listenForDropped(PendingWriteRepository.instance);
+    _listenForDropped(CrewWriteQueue.instance);
+    _listenForDropped(SplitOutboxRepository.instance);
+    _connectivity = context.read<ConnectivityViewModel>()
+      ..addListener(_retryWhenOnline);
+    _authStateChanges = _authRepository.authStateChanges;
     unawaited(
       _notificationService.initialize(onTap: _handleNotificationTap).catchError(
         (Object error) {
@@ -74,8 +89,12 @@ class _AuthGateState extends State<AuthGate> {
 
   void _retryAuthState() {
     setState(() {
-      _authStateChanges = _authService.authStateChanges;
+      _authStateChanges = _authRepository.authStateChanges;
     });
+  }
+
+  void _retryWhenOnline() {
+    if (_loadFailed && _connectivity.isOnline) _retryAuthState();
   }
 
   void _scheduleNotificationRoute() {
@@ -132,15 +151,26 @@ class _AuthGateState extends State<AuthGate> {
     if (error != null) debugPrint(error);
   }
 
+  void _listenForDropped(WriteQueue queue) {
+    queue.changes.listen((_) {
+      final message = queue.takeDropped();
+      if (message == null) return;
+      _messengerKey.currentState?.showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    });
+  }
+
   @override
   void dispose() {
     unawaited(_notificationService.dispose());
+    _connectivity.removeListener(_retryWhenOnline);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = context.watch<ThemeService>().mode;
+    final themeMode = context.watch<ThemeViewModel>().mode;
 
     return StreamBuilder<User?>(
       stream: _authStateChanges,
@@ -148,6 +178,7 @@ class _AuthGateState extends State<AuthGate> {
         final user = snapshot.data;
         return MaterialApp(
           navigatorKey: _appNavigatorKey,
+          scaffoldMessengerKey: _messengerKey,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: themeMode,
@@ -161,6 +192,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Widget _home(AsyncSnapshot<User?> snapshot) {
+    _loadFailed = snapshot.hasError;
     if (snapshot.hasError) {
       debugPrint(
         'Could not load the signed-in user profile: ${snapshot.error}',
@@ -174,7 +206,7 @@ class _AuthGateState extends State<AuthGate> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Could not load your account. Check your internet connection and try again.',
+                    'We need a connection once to finish loading your account.',
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -201,6 +233,9 @@ class _AuthGateState extends State<AuthGate> {
     }
     _activeUserId = user.id;
     _registerNotificationsOnce(user);
+    unawaited(PendingWriteRepository.instance.start());
+    unawaited(CrewWriteQueue.instance.start());
+    unawaited(SplitOutboxRepository.instance.start());
     if (_pendingNotificationType != null) _scheduleNotificationRoute();
     return HomeShell(
       key: _homeShellKey,

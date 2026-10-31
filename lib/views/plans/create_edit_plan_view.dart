@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/utils/date_format.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/create_edit_plan_viewmodel.dart';
+import 'package:plansync/views/formatters/date_format.dart';
 import 'package:plansync/views/plans/plan_detail_view.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class CreateEditPlanView extends StatelessWidget {
@@ -51,65 +53,92 @@ class _CreateEditPlanForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CreateEditPlanViewModel>();
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return Scaffold(
       appBar: AppBar(title: Text(vm.isEditing ? 'Edit Plan' : 'Create Plan')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          const Text('PLAN NAME'),
-          TextField(
-            controller: vm.nameController,
-            decoration: const InputDecoration(
-              hintText: 'e.g. Friday dinner',
-              counterText: "",
+          if (!online)
+            const OfflineBanner(
+              message:
+                  "You're offline. Your plan will be saved on your phone and sent when you're back online.",
             ),
-            maxLength: 50,
-          ),
-          const SizedBox(height: 16),
-          const Text('DATE'),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.calendar_today_outlined),
-            title: Text(
-              vm.date == null
-                  ? 'Pick date & time'
-                  : '${formatShortDate(vm.date!)} · ${formatTime(TimeOfDay.fromDateTime(vm.date!))}',
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                const Text('PLAN NAME'),
+                TextField(
+                  controller: vm.nameController,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Friday dinner',
+                    counterText: "",
+                  ),
+                  maxLength: 50,
+                ),
+                const SizedBox(height: 16),
+                const Text('DATE'),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.calendar_today_outlined),
+                  title: Text(
+                    vm.date == null
+                        ? 'Pick date & time'
+                        : '${formatShortDate(vm.date!)} · ${formatTime(TimeOfDay.fromDateTime(vm.date!))}',
+                  ),
+                  onTap: () => _pickDate(context, vm),
+                ),
+                if (vm.errorMessage != null)
+                  Text(
+                    vm.errorMessage!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Public plan'),
+                  subtitle: const Text(
+                    'Anyone can get inspiration from your plan',
+                  ),
+                  value: vm.isPublic,
+                  onChanged: vm.setPublic,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: vm.isLoading
+                      ? null
+                      : () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final plan = await vm.save();
+                          if (plan == null || !context.mounted) return;
+                          if (vm.queued) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  vm.isEditing
+                                      ? "Changes saved on your phone. Others will see them when you're back online."
+                                      : "Plan saved on your phone. Others will see it when you're back online.",
+                                ),
+                              ),
+                            );
+                          }
+                          if (vm.isEditing || vm.queued) {
+                            Navigator.pop(context);
+                          } else {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PlanDetailView(plan: plan),
+                              ),
+                            );
+                          }
+                        },
+                  child: Text(vm.isEditing ? 'Save Changes' : 'Create Plan'),
+                ),
+              ],
             ),
-            onTap: () => _pickDate(context, vm),
-          ),
-          if (vm.errorMessage != null)
-            Text(
-              vm.errorMessage!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Public plan'),
-            subtitle: const Text('Anyone can get inspiration from your plan'),
-            value: vm.isPublic,
-            onChanged: vm.setPublic,
-          ),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: vm.isLoading
-                ? null
-                : () async {
-                    final plan = await vm.save();
-                    if (plan != null && context.mounted) {
-                      if (vm.isEditing) {
-                        Navigator.pop(context);
-                      } else {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PlanDetailView(plan: plan),
-                          ),
-                        );
-                      }
-                    }
-                  },
-            child: Text(vm.isEditing ? 'Save Changes' : 'Create Plan'),
           ),
         ],
       ),

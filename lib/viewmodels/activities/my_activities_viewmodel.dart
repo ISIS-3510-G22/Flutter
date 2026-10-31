@@ -1,40 +1,84 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:plansync/data/activity_repository.dart';
-import 'package:plansync/models/activity.dart';
+import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/models/activity.dart';
 
 enum ActivitiesTab { liked, private, recommended }
 
 class MyActivitiesViewmodel extends ChangeNotifier {
   final _repository = ActivityRepository();
-  late final StreamSubscription<List<Activity>> _ownedSub;
+
+  StreamSubscription<List<Activity>>? _ownedSub;
+  late final StreamSubscription<bool> _connectivitySub;
+  late final StreamSubscription<void> _queueSub;
   List<Activity> _owned = [];
   ActivitiesTab currentTab = ActivitiesTab.private;
 
-  late final StreamSubscription<List<Activity>> _likedSub;
+  StreamSubscription<List<Activity>>? _likedSub;
   List<Activity> _liked = [];
   List<Activity> _recommended = [];
 
-  MyActivitiesViewmodel(String uid) {
-    _ownedSub = _repository.ownedActivities(uid).listen((activities) {
+  Map<String, String> localPhotos = {};
+
+  final String _uid;
+  StreamSubscription<List<Activity>>? _recommendedSub;
+
+  MyActivitiesViewmodel(this._uid) {
+    _connectivitySub = ConnectivityRepository.instance.changes.listen(
+      _onConnectivityChanged,
+    );
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => _loadSaved(),
+    );
+
+    _loadSaved();
+
+    _loadRecommended();
+  }
+
+  Set<String> get pendingIds => PendingWriteRepository.instance.pendingDocIds;
+
+  void _loadRecommended() {
+    _recommendedSub?.cancel();
+    _recommendedSub = _repository.recommended(_uid).listen((activities) {
+      _recommended = activities;
+      notifyListeners();
+    });
+  }
+
+  void _loadSaved() {
+    _ownedSub?.cancel();
+    _ownedSub = _repository.ownedActivities(_uid).listen((activities) {
       _owned = activities;
       notifyListeners();
     });
-
-    _likedSub = _repository.likedActivities(uid).listen((activities) {
+    _likedSub?.cancel();
+    _likedSub = _repository.likedActivities(_uid).listen((activities) {
       _liked = activities;
       notifyListeners();
     });
+    _loadLocalPhotos();
+  }
 
-    _repository.recommended(uid).then((activities) {
-      _recommended = activities;
-      notifyListeners();
-    }, onError: (_) {});
+  void _onConnectivityChanged(bool online) {
+    if (online) _loadRecommended();
   }
 
   void selectTab(ActivitiesTab tab) {
     currentTab = tab;
+    notifyListeners();
+  }
+
+  Future<void> _loadLocalPhotos() async {
+    final photos = <String, String>{};
+    for (final id in pendingIds) {
+      final path = await _repository.pendingPhoto(id);
+      if (path != null) photos[id] = path;
+    }
+    localPhotos = photos;
     notifyListeners();
   }
 
@@ -46,8 +90,11 @@ class MyActivitiesViewmodel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _ownedSub.cancel();
-    _likedSub.cancel();
+    _ownedSub?.cancel();
+    _likedSub?.cancel();
+    _recommendedSub?.cancel();
+    _connectivitySub.cancel();
+    _queueSub.cancel();
     super.dispose();
   }
 }

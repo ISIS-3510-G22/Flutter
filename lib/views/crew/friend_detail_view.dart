@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
+import 'package:plansync/views/theme/app_theme.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
+import 'package:provider/provider.dart';
 
 class FriendDetailView extends StatelessWidget {
   const FriendDetailView({super.key, required this.friend});
@@ -12,6 +16,7 @@ class FriendDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     final fullName = '${friend.name} ${friend.lastName}'.trim();
     final initials =
@@ -39,79 +44,111 @@ class FriendDetailView extends StatelessWidget {
           child: Divider(height: 1, color: colors.outline),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
+      body: Column(
         children: [
-          const SizedBox(height: 24),
-          Center(
-            child: CircleAvatar(
-              radius: 48,
-              backgroundColor: const Color(0xFFFFB5A6),
-              backgroundImage: friend.photoUrl == null
-                  ? null
-                  : NetworkImage(friend.photoUrl!),
-              child: friend.photoUrl == null
-                  ? Text(
-                      initials.isEmpty ? '?' : initials.toUpperCase(),
-                      style: text.headlineSmall?.copyWith(
-                        color: AppTheme.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
+          if (!online)
+            const OfflineBanner(
+              message: "You're offline. Showing your friend's saved details.",
+            ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                const SizedBox(height: 24),
+                Center(
+                  child: CircleAvatar(
+                    radius: 48,
+                    backgroundColor: const Color(0xFFFFB5A6),
+                    child:
+                        friend.photoUrl == null ||
+                            friend.photoUrl!.trim().isEmpty
+                        ? Text(
+                            initials.isEmpty ? '?' : initials.toUpperCase(),
+                            style: text.headlineSmall?.copyWith(
+                              color: AppTheme.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : ClipOval(
+                            child: Image(
+                              image: CachedNetworkImageProvider(
+                                friend.photoUrl!,
+                              ),
+                              width: 96,
+                              height: 96,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Center(
+                                    child: Text(
+                                      initials.isEmpty
+                                          ? '?'
+                                          : initials.toUpperCase(),
+                                      style: text.headlineSmall?.copyWith(
+                                        color: AppTheme.black,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Center(
+                  child: Text(
+                    fullName,
+                    textAlign: TextAlign.center,
+                    style: text.headlineSmall?.copyWith(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Center(
+                  child: Text(
+                    friend.email,
+                    style: text.bodyLarge?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'REIMBURSEMENT METHODS',
+                  style: text.bodyLarge?.copyWith(
+                    color: AppTheme.greyDark,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                if (friend.reimbursementMethods.isEmpty) ...[
+                  Text(
+                    'No reimbursement methods available.',
+                    style: text.bodyLarge?.copyWith(color: AppTheme.greyDark),
+                  ),
+                ] else ...[
+                  Text(
+                    'Send payments to ${friend.name} using any of these methods.',
+                    style: text.bodyLarge?.copyWith(color: AppTheme.greyDark),
+                  ),
+                  const SizedBox(height: 12),
+                  for (
+                    var index = 0;
+                    index < friend.reimbursementMethods.length;
+                    index++
+                  ) ...[
+                    const SizedBox(height: 12),
+                    _ReinbursementInfoTile(
+                      type: friend.reimbursementMethods[index].type,
+                      account: friend.reimbursementMethods[index].account,
+                      colorIndex: index,
+                    ),
+                  ],
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 18),
-          Center(
-            child: Text(
-              fullName,
-              textAlign: TextAlign.center,
-              style: text.headlineSmall?.copyWith(
-                color: colors.onSurface,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Center(
-            child: Text(
-              friend.email,
-              style: text.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'REIMBURSEMENT METHODS',
-            style: text.bodyLarge?.copyWith(
-              color: AppTheme.greyDark,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
-          if (friend.reimbursementMethods.isEmpty) ...[
-            Text(
-              'No reimbursement methods available.',
-              style: text.bodyLarge?.copyWith(color: AppTheme.greyDark),
-            ),
-          ] else ...[
-            Text(
-              'Send payments to ${friend.name} using any of these methods.',
-              style: text.bodyLarge?.copyWith(color: AppTheme.greyDark),
-            ),
-            const SizedBox(height: 12),
-            for (
-              var index = 0;
-              index < friend.reimbursementMethods.length;
-              index++
-            ) ...[
-              const SizedBox(height: 12),
-              _ReinbursementInfoTile(
-                type: friend.reimbursementMethods[index].type,
-                account: friend.reimbursementMethods[index].account,
-                colorIndex: index,
-              ),
-            ],
-          ],
         ],
       ),
     );

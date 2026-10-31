@@ -1,20 +1,36 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:plansync/data/activity_repository.dart';
-import 'package:plansync/data/friend_repository.dart';
-import 'package:plansync/data/group_repository.dart';
-import 'package:plansync/data/plan_repository.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/models/group.dart';
-import 'package:plansync/models/invitations.dart';
-import 'package:plansync/models/invite_suggestion.dart';
-import 'package:plansync/models/plan.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/data/activity_repository.dart';
+import 'package:plansync/model/data/crew_write_queue.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/friend_repository.dart';
+import 'package:plansync/model/data/group_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/models/group.dart';
+import 'package:plansync/model/models/invitations.dart';
+import 'package:plansync/model/models/invite_suggestion.dart';
+import 'package:plansync/model/models/invite_suggestion_ids.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/models/user.dart';
 
 class PlanDetailViewModel extends ChangeNotifier {
   PlanDetailViewModel(this.plan, this._uid) {
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => _loadSaved(),
+    );
+    _splitQueueSub = SplitOutboxRepository.instance.changes.listen(
+      (_) => _loadSaved(),
+    );
+    _crewQueueSub = CrewWriteQueue.instance.changes.listen(
+      (_) => notifyListeners(),
+    );
+    _onPlanUpdate(plan);
     _sub = _planRepository.planById(plan.id).listen(_onPlanUpdate);
     loadSuggestions();
   }
@@ -25,6 +41,9 @@ class PlanDetailViewModel extends ChangeNotifier {
   final _friendRepository = FriendRepository();
   final _groupRepository = GroupRepository();
   late final StreamSubscription<Plan> _sub;
+  late final StreamSubscription<void> _queueSub;
+  late final StreamSubscription<void> _crewQueueSub;
+  late final StreamSubscription<void> _splitQueueSub;
 
   final String _uid;
   Plan plan;
@@ -32,10 +51,19 @@ class PlanDetailViewModel extends ChangeNotifier {
   List<User> invitees = [];
   bool isLoading = true;
   bool showInvitees = true;
+  bool _inviting = false;
+
+  bool get waitingToSync =>
+      _inviting ||
+      PendingWriteRepository.instance.pendingDocIds.contains(plan.id) ||
+      CrewWriteQueue.instance.pendingDocIds.contains(plan.id) ||
+      SplitOutboxRepository.instance.hasPendingFor(plan.id);
 
   bool get isCreator => plan.creatorId == _uid;
 
   RsvpStatus? get myRsvp => plan.rsvpFor(_uid);
+
+  Future<void> refresh() => _onPlanUpdate(plan);
 
   List<User> get participants =>
       invitees.where((u) => plan.rsvpFor(u.id) == RsvpStatus.going).toList();
@@ -45,14 +73,28 @@ class PlanDetailViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _loadSaved() async {
+    final saved = await _planRepository.savedPlan(_uid, plan.id);
+    if (saved != null) _onPlanUpdate(saved);
+  }
+
   Future<void> _onPlanUpdate(Plan updated) async {
     plan = updated;
     final userIds = updated.invitations.map((i) => i.userId).toList();
-    activities = await _activityRepository.getByIds(updated.activityIds);
+    final loaded = await _activityRepository.planActivities(
+      _uid,
+      updated.activityIds,
+    );
+    final position = {
+      for (var i = 0; i < updated.activityIds.length; i++)
+        updated.activityIds[i]: i,
+    };
+    loaded.sort((a, b) => position[a.id]!.compareTo(position[b.id]!));
+    activities = loaded;
     if (!setEquals(tags, updated.tags.toSet())) {
       _planRepository.updateTags(updated.id, tags);
     }
-    invitees = await _userRepository.getUsers(userIds);
+    invitees = await _userRepository.planPeople(updated.id, userIds);
     isLoading = false;
     notifyListeners();
   }
@@ -60,13 +102,13 @@ class PlanDetailViewModel extends ChangeNotifier {
   Set<String> get tags => activities.expand((a) => a.tags).toSet();
 
   double get estimatedCostPerPerson {
-    if (activities.isEmpty || participants.isEmpty) return 0;
-    final total = activities.fold<double>(0, (sum, a) => sum + a.expectedPrice);
-    return total / participants.length;
-  }
-
-  Future<void> addActivity(String activityId) {
-    return _planRepository.addActivity(plan.id, activityId);
+    final going = plan.goingIds.length;
+    if (activities.isEmpty || going == 0) return 0;
+    final total = activities.fold<double>(
+      0,
+      (total, activity) => total + activity.expectedPrice,
+    );
+    return total / going;
   }
 
   int get isActive => plan.date.compareTo(DateTime.now());
@@ -77,16 +119,32 @@ class PlanDetailViewModel extends ChangeNotifier {
     return friends.where((f) => !invited.contains(f.id)).toList();
   }
 
-  Future<void> invite(List<String> userIds) =>
-      _planRepository.invite(plan.id, userIds);
+  Future<void> invite(List<String> userIds) async {
+    final invitedAt = DateTime.now();
+    plan = plan.withInvitations([
+      ...plan.invitations.where((i) => !userIds.contains(i.userId)),
+      for (final id in userIds)
+        Invitation(userId: id, rsvp: RsvpStatus.invited, invitedAt: invitedAt),
+    ]);
+    _inviting = true;
+    notifyListeners();
+    try {
+      await _planRepository.invite(_uid, plan, userIds, invitedAt: invitedAt);
+    } finally {
+      _inviting = false;
+      notifyListeners();
+    }
+  }
 
   Future<bool> respondRsvp(bool going) async {
     try {
-      await _planRepository.setRsvp(
-        plan.id,
-        _uid,
-        going ? RsvpStatus.going : RsvpStatus.notGoing,
-      );
+      await _planRepository
+          .setRsvp(
+            plan.id,
+            _uid,
+            going ? RsvpStatus.going : RsvpStatus.notGoing,
+          )
+          .timeout(const Duration(seconds: 8));
       return true;
     } catch (_) {
       return false;
@@ -95,6 +153,7 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   List<InviteSuggestion> _allSuggestedPeople = [];
   List<Group> suggestedGroups = [];
+  bool suggestionsNeedConnection = false;
 
   List<InviteSuggestion> get suggestedPeople {
     final invited = plan.invitations.map((i) => i.userId).toSet();
@@ -105,9 +164,46 @@ class PlanDetailViewModel extends ChangeNotifier {
 
   Future<void> loadSuggestions() async {
     try {
-      final ids = await _planRepository.inviteSuggestions(_uid);
-      final users = await _userRepository.getUsers(ids.userIds);
-      final groups = await _groupRepository.groupsByIds(ids.groupIds);
+      final online = ConnectivityRepository.instance.isOnline;
+      var useLocalData = !online;
+      InviteSuggestionIds? ids;
+      if (online) {
+        try {
+          ids = await _planRepository.inviteSuggestions(_uid);
+          await _planRepository.saveInviteSuggestions(_uid, ids);
+        } catch (_) {
+          ids = await _planRepository.cachedInviteSuggestions(_uid);
+          useLocalData = true;
+        }
+      } else {
+        ids = await _planRepository.cachedInviteSuggestions(_uid);
+      }
+
+      if (ids == null) {
+        suggestionsNeedConnection = true;
+        _allSuggestedPeople = [];
+        suggestedGroups = [];
+        notifyListeners();
+        return;
+      }
+
+      suggestionsNeedConnection = false;
+      List<User> users;
+      if (useLocalData) {
+        users = await _userRepository.cachedUsersByIds(ids.userIds);
+      } else {
+        try {
+          users = await _userRepository.getUsers(
+            ids.userIds,
+            source: Source.server,
+          );
+        } catch (_) {
+          users = await _userRepository.cachedUsersByIds(ids.userIds);
+        }
+      }
+      final groups = useLocalData
+          ? await _groupRepository.cachedGroupsByIds(ids.groupIds)
+          : await _groupRepository.groupsByIds(ids.groupIds);
       final userById = {for (final u in users) u.id: u};
 
       _allSuggestedPeople = [
@@ -115,14 +211,18 @@ class PlanDetailViewModel extends ChangeNotifier {
           if (userById[ids.userIds[i]] != null)
             InviteSuggestion(
               userById[ids.userIds[i]]!,
-              ids.invitesSent[i],
-              ids.sharedPlans[i],
+              i < ids.invitesSent.length ? ids.invitesSent[i] : 0,
+              i < ids.sharedPlans.length ? ids.sharedPlans[i] : 0,
             ),
       ];
       suggestedGroups = groups;
       notifyListeners();
     } catch (e) {
       debugPrint('Invite suggestions failed: $e');
+      suggestionsNeedConnection = true;
+      _allSuggestedPeople = [];
+      suggestedGroups = [];
+      notifyListeners();
     }
   }
 
@@ -135,6 +235,9 @@ class PlanDetailViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub.cancel();
+    _queueSub.cancel();
+    _crewQueueSub.cancel();
+    _splitQueueSub.cancel();
     super.dispose();
   }
 }

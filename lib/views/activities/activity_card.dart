@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/activity.dart';
-import 'package:plansync/utils/text_format.dart';
+import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
+import 'package:plansync/views/formatters/text_format.dart';
 import 'package:plansync/views/widgets/activity_photo.dart';
+import 'package:plansync/views/widgets/private_tag.dart';
+import 'package:plansync/views/widgets/waiting_to_sync.dart';
 
 class ActivityCard extends StatelessWidget {
   const ActivityCard({
     required this.activity,
     this.onTap,
     this.trailing,
+    this.pending = false,
+    this.localPhoto,
     super.key,
   });
 
+  final String? localPhoto;
   final Activity activity;
   final VoidCallback? onTap;
   final Widget? trailing;
+  final bool pending;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +46,12 @@ class ActivityCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ActivityPhoto(url: activity.photoUrl, width: 64, height: 64),
+              ActivityPhoto(
+                url: activity.photoUrl,
+                file: localPhoto,
+                width: 64,
+                height: 64,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -76,6 +87,14 @@ class ActivityCard extends StatelessWidget {
                         color: colors.onSurfaceVariant,
                       ),
                     ),
+                    if (activity.visibility == ActivityVisibility.private) ...[
+                      const SizedBox(height: 4),
+                      const PrivateTag(),
+                    ],
+                    if (pending) ...[
+                      const SizedBox(height: 4),
+                      const WaitingToSync(),
+                    ],
                   ],
                 ),
               ),

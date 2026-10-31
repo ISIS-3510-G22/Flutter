@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/theme/app_theme.dart';
+import 'package:plansync/views/theme/app_theme.dart';
 
 class CrewGroupCard extends StatelessWidget {
   const CrewGroupCard({

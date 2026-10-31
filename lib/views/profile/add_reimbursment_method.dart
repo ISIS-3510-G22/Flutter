@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/models/reimbursement_method.dart';
+import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
+import 'package:provider/provider.dart';
 
 class AddReimbursementMethodView extends StatefulWidget {
   const AddReimbursementMethodView({super.key});
@@ -36,34 +39,46 @@ class _AddReimbursementMethodViewState
 
   @override
   Widget build(BuildContext context) {
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     return Scaffold(
       appBar: AppBar(title: const Text('Add Reimbursement Method')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _typeController,
-                decoration: const InputDecoration(labelText: 'Account Type'),
-                textInputAction: TextInputAction.next,
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Account type is required.'
-                    : null,
+      body: Column(
+        children: [
+          if (!online)
+            const OfflineBanner(
+              message:
+                  "You're offline. The method is saved with your profile and syncs when you're back online.",
+            ),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _typeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Account Type',
+                    ),
+                    textInputAction: TextInputAction.next,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Account type is required.'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _accountController,
+                    decoration: const InputDecoration(labelText: 'Account'),
+                    textInputAction: TextInputAction.done,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Account is required.'
+                        : null,
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _accountController,
-                decoration: const InputDecoration(labelText: 'Account'),
-                textInputAction: TextInputAction.done,
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Account is required.'
-                    : null,
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(24),

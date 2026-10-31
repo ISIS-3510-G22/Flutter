@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
 
 class CreateGroupView extends StatefulWidget {
@@ -47,6 +49,7 @@ class _CreateGroupViewState extends State<CreateGroupView> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return Material(
       color: colors.surface,
@@ -80,6 +83,11 @@ class _CreateGroupViewState extends State<CreateGroupView> {
             ),
           ),
           Divider(height: 1, color: colors.outline),
+          if (!online)
+            const OfflineBanner(
+              message:
+                  "Group saved on your phone. It'll be created for everyone when you're back online.",
+            ),
           Expanded(
             child: Form(
               key: _formKey,

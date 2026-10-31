@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:plansync/models/reimbursement_method.dart';
-import 'package:plansync/models/user.dart';
+import 'package:plansync/model/models/reimbursement_method.dart';
+import 'package:plansync/model/models/user.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/manage_splits_viewmodel.dart';
+import 'package:plansync/views/widgets/offline_banner.dart';
+import 'package:plansync/views/widgets/waiting_to_sync.dart';
 import 'package:provider/provider.dart';
 
 class ManageSplitsView extends StatelessWidget {
@@ -37,6 +40,7 @@ class _ManageSplitsBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final online = context.watch<ConnectivityViewModel>().isOnline;
     final vm = context.watch<ManageSplitsViewModel>();
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
@@ -46,96 +50,120 @@ class _ManageSplitsBody extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Splits')),
-      body: vm.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : !vm.hasExpenses
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.receipt_long_outlined,
-                      size: 48,
-                      color: colors.onSurfaceVariant,
+      body: Column(
+        children: [
+          if (!online && !vm.notSaved)
+            const OfflineBanner(
+              message:
+                  "You're offline. Balances use the expenses saved on your phone.",
+            ),
+          Expanded(
+            child: vm.isLoading || (vm.notSaved && online)
+                ? const Center(child: CircularProgressIndicator())
+                : vm.notSaved
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        "Connect to load this plan's expenses.",
+                        textAlign: TextAlign.center,
+                        style: text.bodyLarge?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'There are no expenses for this plan yet',
-                      textAlign: TextAlign.center,
-                      style: text.titleMedium,
+                  )
+                : !vm.hasExpenses
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 48,
+                            color: colors.onSurfaceVariant,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'There are no expenses for this plan yet',
+                            textAlign: TextAlign.center,
+                            style: text.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'When someone adds an expense, you will see here '
+                            'who owes whom.',
+                            textAlign: TextAlign.center,
+                            style: text.bodyMedium?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'When someone adds an expense, you will see here '
-                      'who owes whom.',
-                      textAlign: TextAlign.center,
-                      style: text.bodyMedium?.copyWith(
+                  )
+                : vm.isEmpty
+                ? Center(
+                    child: Text(
+                      'You are all settled up',
+                      style: text.bodyLarge?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            )
-          : vm.isEmpty
-          ? Center(
-              child: Text(
-                'You are all settled up',
-                style: text.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
-              ),
-            )
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                if (vm.errorMessage != null) ...[
-                  Text(vm.errorMessage!, style: TextStyle(color: colors.error)),
-                  const SizedBox(height: 8),
-                ],
-                if (vm.youOwe.isEmpty && vm.owedToYou.isEmpty) ...[
-                  Text('You are all settled up', style: sectionStyle),
-                  const SizedBox(height: 16),
-                ],
-                if (vm.youOwe.isNotEmpty) ...[
-                  Text('You owe the following', style: sectionStyle),
-                  const SizedBox(height: 8),
-                  for (final row in vm.youOwe)
-                    _SplitCard(
-                      row: row,
-                      preferredMethod: vm.preferredMethodOf(row.userId),
-                      allMethods: vm.allMethodsOf(row.userId),
-                      paid: false,
-                      onToggle: (_) => vm.markPaid(row),
-                    ),
-                  const SizedBox(height: 16),
-                ],
-                if (vm.owedToYou.isNotEmpty) ...[
-                  Text('Owed to you', style: sectionStyle),
-                  const SizedBox(height: 8),
-                  for (final row in vm.owedToYou)
-                    _SplitCard(
-                      row: row,
-                      subtitle: _owedSubtitle(row),
-                      alert: row.overdueDays != null,
-                    ),
-                  const SizedBox(height: 16),
-                ],
-                if (vm.paidByYou.isNotEmpty || vm.paidToYou.isNotEmpty) ...[
-                  Text('Paid', style: sectionStyle),
-                  const SizedBox(height: 8),
-                  for (final row in vm.paidByYou)
-                    _SplitCard(
-                      row: row,
-                      subtitle: 'You paid',
-                      paid: true,
-                      onToggle: (_) => vm.undoPaid(row),
-                    ),
-                  for (final row in vm.paidToYou)
-                    _SplitCard(row: row, subtitle: 'Paid you'),
-                ],
-              ],
-            ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      if (vm.youOwe.isEmpty && vm.owedToYou.isEmpty) ...[
+                        Text('You are all settled up', style: sectionStyle),
+                        const SizedBox(height: 16),
+                      ],
+                      if (vm.youOwe.isNotEmpty) ...[
+                        Text('You owe the following', style: sectionStyle),
+                        const SizedBox(height: 8),
+                        for (final row in vm.youOwe)
+                          _SplitCard(
+                            row: row,
+                            preferredMethod: vm.preferredMethodOf(row.userId),
+                            allMethods: vm.allMethodsOf(row.userId),
+                            paid: false,
+                            onToggle: (_) => _show(context, vm.markPaid(row)),
+                          ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (vm.owedToYou.isNotEmpty) ...[
+                        Text('Owed to you', style: sectionStyle),
+                        const SizedBox(height: 8),
+                        for (final row in vm.owedToYou)
+                          _SplitCard(
+                            row: row,
+                            subtitle: _owedSubtitle(row),
+                            alert: row.overdueDays != null,
+                          ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (vm.paidByYou.isNotEmpty ||
+                          vm.paidToYou.isNotEmpty) ...[
+                        Text('Paid', style: sectionStyle),
+                        const SizedBox(height: 8),
+                        for (final row in vm.paidByYou)
+                          _SplitCard(
+                            row: row,
+                            subtitle: 'You paid',
+                            paid: true,
+                            pending: vm.pendingIds.contains(row.settlementId),
+                            onToggle: (_) => _show(context, vm.undoPaid(row)),
+                          ),
+                        for (final row in vm.paidToYou)
+                          _SplitCard(row: row, subtitle: 'Paid you'),
+                      ],
+                    ],
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -144,6 +172,14 @@ String _owedSubtitle(SplitRow row) {
   final days = row.overdueDays;
   if (days == null) return 'Pending';
   return 'Overdue · $days days since the plan';
+}
+
+void _show(BuildContext context, Future<String?> result) {
+  final messenger = ScaffoldMessenger.of(context);
+  result.then((message) {
+    if (message == null) return;
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  });
 }
 
 class _SplitCard extends StatelessWidget {
@@ -155,6 +191,7 @@ class _SplitCard extends StatelessWidget {
     this.allMethods,
     this.paid,
     this.onToggle,
+    this.pending = false,
   });
 
   final SplitRow row;
@@ -166,6 +203,7 @@ class _SplitCard extends StatelessWidget {
   final List<ReimbursementMethod>? allMethods;
   final bool? paid;
   final ValueChanged<bool>? onToggle;
+  final bool pending;
 
   @override
   Widget build(BuildContext context) {
@@ -212,6 +250,13 @@ class _SplitCard extends StatelessWidget {
           ],
         );
       }
+    }
+
+    if (pending) {
+      subtitleWidget = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [?subtitleWidget, const WaitingToSync()],
+      );
     }
 
     if (paid != null && onToggle != null) {

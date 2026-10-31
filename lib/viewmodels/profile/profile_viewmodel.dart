@@ -1,53 +1,92 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:plansync/data/user_repository.dart';
-import 'package:plansync/models/user.dart';
-import 'package:plansync/services/storage_service.dart';
+import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
+import 'package:plansync/model/data/user_repository.dart';
+import 'package:plansync/model/models/user.dart';
 
 class ProfileViewModel extends ChangeNotifier {
-  ProfileViewModel(this.user);
+  ProfileViewModel(this.user) {
+    _queueSub = PendingWriteRepository.instance.changes.listen(
+      (_) => refreshUser(),
+    );
+    _loadLocalPhoto();
+  }
 
   User user;
   final _userRepository = UserRepository();
-  final _storageService = StorageService();
   final _picker = ImagePicker();
   bool isUploadingPhoto = false;
+  String? localPhotoPath;
+  late final StreamSubscription<void> _queueSub;
+
+  String? get signOutWarning {
+    if (PendingWriteRepository.instance.hasPending ||
+        SplitOutboxRepository.instance.hasPending) {
+      return "You have changes that haven't synced yet. If you log out now, they'll be lost.";
+    }
+    if (!ConnectivityRepository.instance.isOnline) {
+      return "You can't log back in until you're online. Log out anyway?";
+    }
+    return null;
+  }
+
+  bool get isPending =>
+      PendingWriteRepository.instance.pendingDocIds.contains(user.id);
+
+  Future<void> _loadLocalPhoto() async {
+    localPhotoPath = await _userRepository.pendingPhoto(user.id);
+    notifyListeners();
+  }
+
+  Future<void> signOut() async {
+    _queueSub.cancel();
+    await PendingWriteRepository.instance.clear();
+    await SplitOutboxRepository.instance.clear();
+    await AuthRepository().signOut();
+  }
 
   Future<void> refreshUser() async {
-    final refreshedUser = await _userRepository.getUser(user.id);
+    await _loadLocalPhoto();
+    final refreshedUser = await _userRepository.currentUser(user.id);
     if (refreshedUser == null) return;
     user = refreshedUser;
     notifyListeners();
   }
 
-  Future<void> pickAndUploadPhoto(ImageSource source) async {
-    final picked = await _picker.pickImage(source: source);
-    if (picked == null) return;
+  Future<bool> pickAndUploadPhoto(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 1080,
+      imageQuality: 80,
+    );
+    if (picked == null) return false;
 
     isUploadingPhoto = true;
     notifyListeners();
 
     try {
-      final url = await _storageService.upload(
-        "profile_pictures/${user.id}.jpg",
-        File(picked.path),
-      );
-      await _userRepository.updatePhotoUrl(user.id, url);
-      user = User(
-        id: user.id,
-        name: user.name,
-        lastName: user.lastName,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        photoUrl: url,
-        reimbursementMethods: user.reimbursementMethods,
-      );
+      final sent = await _userRepository.savePhoto(user.id, picked.path);
+      final path = await _userRepository.pendingPhoto(user.id);
+      if (path != null) await FileImage(File(path)).evict();
+      await refreshUser();
+      return !sent;
+    } catch (_) {
+      return false;
     } finally {
       isUploadingPhoto = false;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _queueSub.cancel();
+    super.dispose();
   }
 }
