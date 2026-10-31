@@ -119,12 +119,11 @@ class PlanRouteViewModel extends ChangeNotifier {
       ..addAll(renumbered);
   }
 
-  /// `newIndex` as `ReorderableListView.onReorder` gives it: counted before
-  /// the stop is taken out, so moving down lands one place further.
+  /// `newIndex` is where the stop ends up, as `onReorderItem` gives it.
   void moveStop(int oldIndex, int newIndex) {
     final ordered = List.of(stops);
     final stop = ordered.removeAt(oldIndex);
-    ordered.insert(oldIndex < newIndex ? newIndex - 1 : newIndex, stop);
+    ordered.insert(newIndex, stop);
     _setStops(ordered);
     loadRoute();
   }
