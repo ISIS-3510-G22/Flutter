@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/plan_route.dart';
+import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/plan_route_viewmodel.dart';
 import 'package:plansync/views/activities/activity_detail_view.dart';
@@ -25,7 +26,8 @@ class PlanRouteView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => PlanRouteViewModel(plan, activities),
+      create: (context) =>
+          PlanRouteViewModel(context.read<User>().id, plan, activities),
       child: const _PlanRouteBody(),
     );
   }
