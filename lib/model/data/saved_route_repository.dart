@@ -3,9 +3,6 @@ import 'dart:convert';
 import 'package:plansync/model/services/local/json_file_store.dart';
 import 'package:plansync/model/models/plan_route.dart';
 
-/// Routes saved to `routes/<planId>_<mode>.json`, next to the stops they were
-/// computed for. A file for other stops (the plan's activities changed) is
-/// treated as not saved.
 class SavedRouteRepository {
   final _files = JsonFileStore();
 

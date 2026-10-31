@@ -19,8 +19,6 @@ class PlanExpensesViewModel extends ChangeNotifier {
 
   final String planId;
 
-  /// Starts as the list plan detail passes in (offline it has no payment
-  /// methods) and is replaced by the people from `plan_people` or the server.
   List<User> participants;
   final String _currentUserId;
   final _expenseRepository = ExpenseRepository();
@@ -32,14 +30,11 @@ class PlanExpensesViewModel extends ChangeNotifier {
 
   SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
 
-  /// Expenses and payments of this plan still waiting to sync.
   Set<String> get pendingIds => _queue.pendingIdsFor(planId);
 
   List<Expense> expenses = [];
   bool isLoading = true;
 
-  /// True while nothing is saved for this plan and the server hasn't
-  /// answered: offline that means "Connect to load this plan's expenses."
   bool notSaved = false;
 
   List<ReimbursementMethod> myMethods = [];
@@ -52,9 +47,6 @@ class PlanExpensesViewModel extends ChangeNotifier {
     _choicesSub = _paymentRepository.choicesForPlan(planId).listen(_onChoices);
   }
 
-  /// Every queue change re-reads the local copy (labels, offline saves). Only
-  /// when this plan's last queued write is gone does it listen to the server
-  /// again: that full snapshot brings others' changes and drops dropped edits.
   Future<void> _onQueueChanged() async {
     final pending = _queue.hasPendingFor(planId);
     final caughtUp = _hadPending && !pending;
@@ -83,7 +75,6 @@ class PlanExpensesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Also loads the signed-in user, who may not be among the people going.
   Future<void> _loadMyMethods() async {
     final ids = {...participants.map((p) => p.id), _currentUserId}.toList();
     final people = await _paymentRepository.participants(planId, ids);
@@ -105,8 +96,6 @@ class PlanExpensesViewModel extends ChangeNotifier {
     return null;
   }
 
-  /// The screen doesn't wait: `.then` picks the message from whether it was
-  /// sent or kept on the phone, `.catchError` covers a local save failure.
   Future<String?> chooseMethod(String? methodId) {
     if (methodId == null) return Future.value(null);
     final before = myMethodId;
@@ -148,8 +137,6 @@ class PlanExpensesViewModel extends ChangeNotifier {
     return 'For ${ids.length} people';
   }
 
-  // Set in dispose: async work (queue reloads, `.then` / `.catchError`,
-  // awaited saves) can finish after the view closed, so stop notifying then.
   bool _disposed = false;
 
   @override

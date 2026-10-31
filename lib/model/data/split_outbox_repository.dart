@@ -16,8 +16,6 @@ enum SplitWriteKind {
   planReorder,
 }
 
-/// Every `docId` is `'<planId>/<id>'`, so a repository can tell whether a
-/// plan has writes waiting without reading the payloads.
 class SplitOutboxRepository extends WriteQueue<SplitWriteKind> {
   SplitOutboxRepository._internal()
     : super('split_outbox', SplitWriteKind.values);
@@ -34,7 +32,6 @@ class SplitOutboxRepository extends WriteQueue<SplitWriteKind> {
   bool hasPendingFor(String planId) =>
       pendingDocIds.any((id) => id.startsWith('$planId/'));
 
-  /// The pending IDs of one plan, without the plan prefix (for the labels).
   Set<String> pendingIdsFor(String planId) => {
     for (final id in pendingDocIds)
       if (id.startsWith('$planId/')) id.substring(planId.length + 1),
@@ -70,8 +67,6 @@ class SplitOutboxRepository extends WriteQueue<SplitWriteKind> {
     };
   }
 
-  /// New → `set` (safe twice). Edit → `update`, which fails with `not-found`
-  /// if someone deleted the expense meanwhile, so it's dropped, not recreated.
   Future<void> _sendExpense(String planId, Map<String, dynamic> payload) {
     final expense = Expense.fromJson(
       payload['expense'] as Map<String, dynamic>,

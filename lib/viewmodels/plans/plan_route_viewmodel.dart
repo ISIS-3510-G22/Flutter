@@ -10,7 +10,6 @@ import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/plan_route.dart';
 
-/// What the map is drawing, so the view picks the message.
 enum RouteShown { real, saved, straightLines }
 
 class RouteStop {
@@ -63,14 +62,10 @@ class PlanRouteViewModel extends ChangeNotifier {
   late final StreamSubscription<bool> _connectivitySub;
   late final StreamSubscription<void> _queueSub;
 
-  /// The order the plan has saved; Cancel and a failed save go back to it.
   List<RouteStop> _savedStops = [];
 
-  /// The new order is queued, waiting to sync.
   bool orderPending = false;
 
-  /// Same rule as Edit Activities in plan detail: an upcoming plan you're
-  /// going to.
   bool get canReorder =>
       plan.date.isAfter(DateTime.now()) &&
       plan.rsvpFor(_uid) == RsvpStatus.going;
@@ -119,7 +114,6 @@ class PlanRouteViewModel extends ChangeNotifier {
       ..addAll(renumbered);
   }
 
-  /// `newIndex` is where the stop ends up, as `onReorderItem` gives it.
   void moveStop(int oldIndex, int newIndex) {
     final ordered = List.of(stops);
     final stop = ordered.removeAt(oldIndex);
@@ -133,7 +127,6 @@ class PlanRouteViewModel extends ChangeNotifier {
     loadRoute();
   }
 
-  /// The message for the snackbar, or `null` when the order didn't change.
   Future<String?> saveOrder() {
     final placed = [for (final s in stops) s.activity.id];
     if (listEquals(placed, [for (final s in _savedStops) s.activity.id])) {
@@ -141,7 +134,6 @@ class PlanRouteViewModel extends ChangeNotifier {
     }
     final previousPlan = plan;
     final previousStops = _savedStops;
-    // Activities without a location (or not loaded) keep their order, last.
     plan = plan.withActivityIds([
       ...placed,
       ...plan.activityIds.where((id) => !placed.contains(id)),
@@ -166,7 +158,6 @@ class PlanRouteViewModel extends ChangeNotifier {
         });
   }
 
-  // Each call gets a number; an answer for an older order is ignored.
   int _routeRequest = 0;
 
   Future<void> loadRoute() async {
@@ -190,7 +181,6 @@ class PlanRouteViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // The route can finish loading after the view closed.
   bool _disposed = false;
 
   @override

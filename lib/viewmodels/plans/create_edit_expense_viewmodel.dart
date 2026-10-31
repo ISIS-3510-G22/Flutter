@@ -49,14 +49,11 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
 
   SplitMethod splitMethod = SplitMethod.equal;
 
-  /// One per participant; only the selected ones count.
   late final Map<String, TextEditingController> amountControllers;
 
   bool isLoading = false;
   String? errorMessage;
 
-  /// Set when the last save or delete was kept on the phone (queued), for
-  /// the snackbar the form shows as it closes. `null` when it was sent.
   String? queuedMessage;
 
   bool get isForEveryone =>
@@ -83,8 +80,6 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Called as the value or any custom amount is typed, so the remaining
-  /// line and the Save button update.
   void onAmountChanged() => notifyListeners();
 
   Map<String, double> get _customAmounts => {
@@ -92,7 +87,6 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
       id: double.tryParse(amountControllers[id]?.text.trim() ?? '') ?? 0,
   };
 
-  /// Positive: still to assign. Negative: over the total.
   int get remaining => remainingCents(
     double.tryParse(valueController.text.trim()) ?? 0,
     _customAmounts,
@@ -164,8 +158,6 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
         splitMethod: splitMethod,
         customAmounts: custom ? _customAmounts : const {},
       );
-      // The form waits (it closes afterwards), so `await`: at most the 8 s
-      // send timeout online, instantly offline.
       final sent = await _repository.save(
         _planId,
         expense,
@@ -209,8 +201,6 @@ class CreateEditExpenseViewModel extends ChangeNotifier {
     }
   }
 
-  // Set in dispose: async work (queue reloads, `.then` / `.catchError`,
-  // awaited saves) can finish after the view closed, so stop notifying then.
   bool _disposed = false;
 
   @override

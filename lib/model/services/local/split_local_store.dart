@@ -13,7 +13,6 @@ class SplitLocalStore {
   static const _expensesList = 'expenses';
   static const _settlementsList = 'settlements';
 
-  /// `null` when this plan's expenses were never saved on this phone.
   Future<List<Expense>?> expenses(String planId) async {
     final db = await _db;
     if (!await _isSaved(db, planId, _expensesList)) return null;
@@ -64,7 +63,6 @@ class SplitLocalStore {
     await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
   }
 
-  /// `null` when this plan's settlements were never saved on this phone.
   Future<List<Settlement>?> settlements(String planId) async {
     final db = await _db;
     if (!await _isSaved(db, planId, _settlementsList)) return null;
@@ -131,9 +129,6 @@ class SplitLocalStore {
     ];
   }
 
-  /// Adds or updates these people without dropping the others: Plan expenses
-  /// also saves the signed-in user, who may not be going. Each person's
-  /// chosen payment method is kept.
   Future<void> savePeople(String planId, List<User> people) async {
     final db = await _db;
     await db.transaction((txn) async {
@@ -156,8 +151,6 @@ class SplitLocalStore {
   Future<Map<String, String>> choices(String planId) async =>
       _choices(await _db, planId);
 
-  /// Upsert: if the person isn't saved yet, a placeholder row (empty name)
-  /// keeps the choice until `savePeople` fills it in. `people` skips it.
   Future<void> saveChoice(String planId, String userId, String methodId) async {
     final db = await _db;
     await db.transaction((txn) async {

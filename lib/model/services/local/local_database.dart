@@ -100,7 +100,6 @@ class LocalDatabase {
       await _createCrewOutbox(db);
       await _createSplitOutbox(db);
     }
-    // Below 6 the table was just created with these columns.
     if (oldVersion >= 6 && oldVersion < 9) {
       await db.execute(
         "ALTER TABLE expenses ADD COLUMN split_method TEXT NOT NULL "
@@ -189,8 +188,6 @@ class LocalDatabase {
         PRIMARY KEY (plan_id, user_id)
       )
     ''');
-    // One row per plan and list once that list has been saved, so an empty
-    // list ("no expenses yet") can be told apart from "never loaded".
     await db.execute('''
       CREATE TABLE split_saved (
         plan_id TEXT NOT NULL,

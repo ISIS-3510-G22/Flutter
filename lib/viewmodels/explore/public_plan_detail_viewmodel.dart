@@ -18,7 +18,6 @@ class PublicPlanDetailViewModel extends ChangeNotifier {
   final _repository = ExploreRepository();
   late final StreamSubscription<bool> _connectivitySub;
 
-  /// `null` until loaded, and also when offline with no saved Explore snapshot.
   List<Activity>? activities;
   bool isLoading = true;
 
@@ -27,7 +26,6 @@ class PublicPlanDetailViewModel extends ChangeNotifier {
       final loaded = await _repository.planActivities(plan);
       if (loaded != null) activities = loaded;
     } catch (_) {
-      // Keep whatever is on screen.
     } finally {
       isLoading = false;
       notifyListeners();

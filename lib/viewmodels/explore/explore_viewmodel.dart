@@ -46,8 +46,6 @@ class ExploreViewModel extends ChangeNotifier {
   Set<String> recommendedIds = {};
   bool isLoading = true;
 
-  /// False until a snapshot arrives, from the file or the server. Offline
-  /// and still false means Explore was never loaded on this phone.
   bool hasSnapshot = false;
 
   bool get hasPlans => _plans.isNotEmpty;

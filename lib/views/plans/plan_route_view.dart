@@ -175,8 +175,6 @@ class _RouteMap extends StatelessWidget {
                   'https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}',
               additionalOptions: const {'apiKey': _geoapifyKey},
               userAgentPackageName: 'com.example.plansync',
-              // Same config as the Explore map: the provider keeps whichever
-              // configuration it was first created with.
               tileProvider: NetworkTileProvider(
                 cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
                   overrideFreshAge: const Duration(days: 30),
@@ -380,8 +378,6 @@ class _RouteSummary extends StatelessWidget {
   }
 }
 
-/// The map redraws behind the sheet as stops move; Save keeps the order,
-/// Cancel or closing the sheet puts the saved one back.
 Future<void> _openReorderSheet(
   BuildContext context,
   PlanRouteViewModel vm,

@@ -76,9 +76,6 @@ class ManageSplitsViewModel extends ChangeNotifier {
     });
   }
 
-  /// Every queue change re-reads the local copy (labels, offline saves). Only
-  /// when this plan's last queued write is gone does it listen to the server
-  /// again: that full snapshot brings others' changes and drops dropped ones.
   Future<void> _onQueueChanged() async {
     final pending = _queue.hasPendingFor(_planId);
     final caughtUp = _hadPending && !pending;
@@ -118,11 +115,9 @@ class ManageSplitsViewModel extends ChangeNotifier {
 
   SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
 
-  /// Payments of this plan still waiting to sync.
   Set<String> get pendingIds => _queue.pendingIdsFor(_planId);
   Map<String, String> _methodChoices = {};
 
-  // `null` = never saved on this phone and no server answer yet.
   List<Expense>? _expenses;
   List<Settlement>? _settlements;
   bool _expensesLoaded = false;
@@ -134,13 +129,10 @@ class ManageSplitsViewModel extends ChangeNotifier {
   List<SplitRow> paidToYou = [];
   bool isLoading = true;
 
-  /// Balances need both lists: with either one never saved they'd be wrong,
-  /// so the view shows "Connect to load this plan's expenses." instead.
   bool notSaved = false;
 
   bool get hasExpenses => _expenses?.isNotEmpty ?? false;
 
-  /// Tomas's saved copy of the plan first, then the server (8 s).
   Future<void> _loadPlanDate() async {
     try {
       final saved = await _planRepository.savedPlan(_currentUserId, _planId);
@@ -163,7 +155,6 @@ class ManageSplitsViewModel extends ChangeNotifier {
     return overdueDays(date, DateTime.now());
   }
 
-  /// Derived data: skipped offline, rerun on the next recalculation online.
   Future<void> _syncOverdue(List<Transfer> transfers) async {
     if (!ConnectivityRepository.instance.isOnline) return;
     final days = _overdueDays();
@@ -336,9 +327,6 @@ class ManageSplitsViewModel extends ChangeNotifier {
       "Payment saved on your phone. Balances update for everyone when you're "
       'back online.';
 
-  /// The screen doesn't wait: `.then` picks the message (none when sent,
-  /// "saved on your phone" when queued), `.catchError` the local failure.
-  /// The settlement ID is made here, so undo works while it's still queued.
   Future<String?> markPaid(SplitRow row) {
     final settlement = Settlement(
       id: _settlementRepository.newId(_planId),
@@ -367,8 +355,6 @@ class ManageSplitsViewModel extends ChangeNotifier {
         .catchError((_) => "Couldn't undo this payment on your phone.");
   }
 
-  // Set in dispose: async work (queue reloads, `.then` / `.catchError`,
-  // awaited saves) can finish after the view closed, so stop notifying then.
   bool _disposed = false;
 
   @override

@@ -21,7 +21,6 @@ class Expense {
     this.customAmounts = const {},
   });
 
-  // Keys match the `expenses` table columns, so a row is this plus `plan_id`.
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
@@ -40,7 +39,6 @@ class Expense {
     paidById: json['paid_by_id'] as String,
     createdAt: DateTime.fromMillisecondsSinceEpoch(json['created_at'] as int),
     splitAmongIds: (json['split_among'] as List).cast<String>(),
-    // Missing keys (older expenses, payloads already queued) read as equal.
     splitMethod:
         SplitMethod.values.asNameMap()[json['split_method']] ??
         SplitMethod.equal,

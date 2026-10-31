@@ -111,7 +111,6 @@ class PlanRepository {
     });
   }
 
-  /// Replaces the whole list with a fixed value, so sending it twice is safe.
   Future<void> setActivityOrder(String planId, List<String> activityIds) {
     return _plans.doc(planId).update({'activityIds': activityIds});
   }
