@@ -28,8 +28,6 @@ class ExploreRepository {
   static const _ratingKey = 'explore_rating';
   static const _radiusKey = 'map_radius_km';
 
-  /// Strategy 5: the saved snapshot first (if any), then the server's.
-  /// If the server load fails the stream just ends, so the saved one stays.
   Stream<ExploreSnapshot> snapshot(String uid) async* {
     final saved = await savedSnapshot();
     if (saved != null) yield saved;
@@ -41,7 +39,6 @@ class ExploreRepository {
     } catch (_) {}
   }
 
-  /// `null` means Explore was never loaded online on this phone.
   Future<ExploreSnapshot?> savedSnapshot() async {
     final text = await _files.read(_snapshotFile);
     if (text == null) return null;
@@ -60,8 +57,6 @@ class ExploreRepository {
     }
   }
 
-  /// Server first; offline or on failure, the activities saved in the
-  /// snapshot. `null` when nothing was ever saved.
   Future<List<Activity>?> planActivities(Plan plan) async {
     Map<String, Activity> byId;
     try {

@@ -17,10 +17,8 @@ class PlanPaymentRepository {
   final _userRepository = UserRepository();
   final _connectivity = ConnectivityRepository.instance;
 
-  // A getter, never a field: the queue's constructor creates this repository.
   SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
 
-  /// Saved choices first, then each server answer, saved before it's emitted.
   Stream<Map<String, String>> choicesForPlan(String planId) async* {
     yield await _local.choices(planId);
     yield* _choices(planId)
@@ -38,8 +36,6 @@ class PlanPaymentRepository {
         });
   }
 
-  /// The plan's people with their reimbursement methods: from the server
-  /// (saved to `plan_people`), or offline the saved ones among [ids].
   Future<List<User>> participants(String planId, List<String> ids) async {
     try {
       _connectivity.ensureOnline();
@@ -71,8 +67,6 @@ class PlanPaymentRepository {
       ),
     );
   }
-
-  // Server method, called by the queue's `send`.
 
   Future<void> choose(String planId, String userId, String methodId) {
     return _choices(planId).doc(userId).set({'methodId': methodId});

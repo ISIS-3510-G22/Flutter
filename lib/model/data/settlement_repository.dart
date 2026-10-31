@@ -13,13 +13,10 @@ class SettlementRepository {
 
   final _local = SplitLocalStore();
 
-  // A getter, never a field: the queue's constructor creates this repository.
   SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
 
-  /// Generated once on the phone, so undo works while the payment is queued.
   String newId(String planId) => _settlements(planId).doc().id;
 
-  /// Same as `ExpenseRepository.expensesForPlan`: saved copy, then server.
   Stream<List<Settlement>?> settlementsForPlan(String planId) async* {
     yield await _local.settlements(planId);
     yield* _settlements(planId)
@@ -67,8 +64,6 @@ class SettlementRepository {
       ),
     );
   }
-
-  // Server methods, called by the queue's `send`.
 
   Future<void> settle(String planId, Settlement settlement) {
     return _settlements(planId).doc(settlement.id).set({

@@ -5,7 +5,11 @@ import 'dart:isolate';
 import 'package:latlong2/latlong.dart';
 import 'package:plansync/model/data/cache/route_cache.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/saved_route_repository.dart';
+import 'package:plansync/model/data/split_outbox_repository.dart';
+import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/plan_route.dart';
 
 PlanRoute? parseGeoapifyRoute(Map<String, dynamic> json) {
@@ -33,13 +37,9 @@ PlanRoute? parseGeoapifyRoute(Map<String, dynamic> json) {
   );
 }
 
-/// Runs inside the isolate: route geometry can be thousands of coordinates,
-/// the heaviest parse in the app, so it stays off the UI isolate.
 PlanRoute? decodeRoute(String body) =>
     parseGeoapifyRoute(jsonDecode(body) as Map<String, dynamic>);
 
-// Top-level on purpose: the closure only captures `body` (plain text), never
-// the repository with its HttpClient, which can't be sent to an isolate.
 Future<PlanRoute?> _decodeInIsolate(String body) =>
     Isolate.run(() => decodeRoute(body));
 
@@ -47,20 +47,31 @@ class RouteRepository {
   final _client = HttpClient();
   static const _apiKey = String.fromEnvironment('GEOAPIFY_KEY');
 
-  // `static`: repositories are created per view model, so an instance field
-  // would be thrown away every time the route view closes.
   static final _cache = RouteCache(maxPoints: 20000);
   final _saved = SavedRouteRepository();
   final _connectivity = ConnectivityRepository.instance;
+  final _plans = PlanRepository();
 
-  /// The stops' coordinates joined in order: same stops and mode give the
-  /// same route, whichever plan they belong to.
+  SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
+
+  Future<bool> saveStopOrder(String uid, Plan plan) async {
+    await _plans.saveLocal(uid, plan);
+    return _queue.submit(
+      PendingWrite(
+        kind: SplitWriteKind.planReorder,
+        docId: SplitOutboxRepository.docId(plan.id, 'order'),
+        payload: {
+          'planId': plan.id,
+          'activityIds': plan.activityIds,
+          'planName': plan.name,
+        },
+      ),
+    );
+  }
+
   static String _stopsKey(List<LatLng> stops) =>
       stops.map((p) => '${p.latitude},${p.longitude}').join('|');
 
-  /// LRU → saved file → network (8 s, decoded in an isolate) → `null`
-  /// (the view draws straight lines). `saved` tells the view whether the
-  /// route came from the phone instead of the network.
   Future<({PlanRoute route, bool saved})?> route(
     String planId,
     List<LatLng> stops,

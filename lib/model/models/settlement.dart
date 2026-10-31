@@ -11,7 +11,6 @@ class Settlement {
     required this.amount,
   });
 
-  // Keys match the `settlements` table columns, so a row is this plus `plan_id`.
   Map<String, dynamic> toJson() => {
     'id': id,
     'from_id': fromId,

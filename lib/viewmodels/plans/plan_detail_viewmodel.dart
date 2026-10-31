@@ -24,6 +24,12 @@ class PlanDetailViewModel extends ChangeNotifier {
     _queueSub = PendingWriteRepository.instance.changes.listen(
       (_) => _loadSaved(),
     );
+    _splitQueueSub = SplitOutboxRepository.instance.changes.listen(
+      (_) => _loadSaved(),
+    );
+    _crewQueueSub = CrewWriteQueue.instance.changes.listen(
+      (_) => notifyListeners(),
+    );
     _onPlanUpdate(plan);
     _sub = _planRepository.planById(plan.id).listen(_onPlanUpdate);
     loadSuggestions();
@@ -36,16 +42,8 @@ class PlanDetailViewModel extends ChangeNotifier {
   final _groupRepository = GroupRepository();
   late final StreamSubscription<Plan> _sub;
   late final StreamSubscription<void> _queueSub;
-  late final StreamSubscription<void> _crewQueueSub = CrewWriteQueue
-      .instance
-      .changes
-      .listen((_) {
-        notifyListeners();
-      });
-  late final StreamSubscription<void> _splitQueueSub = SplitOutboxRepository
-      .instance
-      .changes
-      .listen((_) => notifyListeners());
+  late final StreamSubscription<void> _crewQueueSub;
+  late final StreamSubscription<void> _splitQueueSub;
 
   final String _uid;
   Plan plan;
@@ -83,10 +81,16 @@ class PlanDetailViewModel extends ChangeNotifier {
   Future<void> _onPlanUpdate(Plan updated) async {
     plan = updated;
     final userIds = updated.invitations.map((i) => i.userId).toList();
-    activities = await _activityRepository.planActivities(
+    final loaded = await _activityRepository.planActivities(
       _uid,
       updated.activityIds,
     );
+    final position = {
+      for (var i = 0; i < updated.activityIds.length; i++)
+        updated.activityIds[i]: i,
+    };
+    loaded.sort((a, b) => position[a.id]!.compareTo(position[b.id]!));
+    activities = loaded;
     if (!setEquals(tags, updated.tags.toSet())) {
       _planRepository.updateTags(updated.id, tags);
     }

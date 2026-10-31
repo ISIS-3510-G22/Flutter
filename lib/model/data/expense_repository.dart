@@ -14,10 +14,8 @@ class ExpenseRepository {
 
   final _local = SplitLocalStore();
 
-  // A getter, never a field: the queue's constructor creates this repository.
   SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
 
-  /// Generated once on the phone, before the expense is built (R4).
   String newId(String planId) => _expenses(planId).doc().id;
 
   Expense _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
@@ -56,10 +54,6 @@ class ExpenseRepository {
     'customAmounts': expense.customAmounts,
   };
 
-  /// The saved copy first (`null` if never saved), then each server answer,
-  /// saved before it's emitted. Offline the listener stays silent (R2).
-  /// While the plan has queued writes, the local copy wins: a server answer
-  /// would drop an expense created offline or bring back one deleted offline.
   Stream<List<Expense>?> expensesForPlan(String planId) async* {
     yield await _local.expenses(planId);
     yield* _expenses(planId)
@@ -79,7 +73,6 @@ class ExpenseRepository {
   Future<List<Expense>?> savedExpenses(String planId) =>
       _local.expenses(planId);
 
-  /// Local copy first, then sent or queued. `true` sent, `false` queued.
   Future<bool> save(
     String planId,
     Expense expense, {
@@ -113,8 +106,6 @@ class ExpenseRepository {
       ),
     );
   }
-
-  // Server methods, called by the queue's `send`.
 
   Future<void> create(String planId, Expense expense) {
     return _expenses(planId).doc(expense.id).set(_toData(expense));
