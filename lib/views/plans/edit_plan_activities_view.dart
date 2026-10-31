@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/user.dart';
-import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/activities/my_activities_viewmodel.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/edit_plan_activities_viewmodel.dart';
 import 'package:plansync/views/activities/activity_card.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
@@ -45,7 +45,7 @@ class _EditPlanActivitiesBody extends StatelessWidget {
             child: TabTrack(
               children: [
                 TabButton(
-                  label: 'Private',
+                  label: 'Owned',
                   selected: vm.currentTab == ActivitiesTab.private,
                   onPressed: () => vm.selectTab(ActivitiesTab.private),
                 ),
