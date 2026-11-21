@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
-import 'package:plansync/model/services/local/activity_local_store.dart';
-import 'package:plansync/model/services/local/upload_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/services/local/activity_local_store.dart';
+import 'package:plansync/model/services/local/upload_store.dart';
 
 class ActivityRepository {
   final _activities = FirebaseFirestore.instance.collection("activities");
@@ -223,17 +223,21 @@ class ActivityRepository {
     return snapshot.docs.map(_fromDoc).toList();
   }
 
+  Future<List<Activity>> serverActivities(String uid, List<String> ids) async {
+    final activities = await getByIds(
+      ids,
+      source: Source.server,
+    ).timeout(const Duration(seconds: 8));
+    for (final activity in activities) {
+      await _local.upsert(uid, activity);
+    }
+    return activities;
+  }
+
   Future<List<Activity>> planActivities(String uid, List<String> ids) async {
     try {
       _connectivity.ensureOnline();
-      final activities = await getByIds(
-        ids,
-        source: Source.server,
-      ).timeout(const Duration(seconds: 8));
-      for (final activity in activities) {
-        await _local.upsert(uid, activity);
-      }
-      return activities;
+      return await serverActivities(uid, ids);
     } catch (_) {
       return _local.byIds(ids);
     }
