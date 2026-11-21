@@ -189,6 +189,7 @@ class _MyProfileBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   SegmentedButton<ThemePreference>(
+                    showSelectedIcon: false,
                     segments: const [
                       ButtonSegment(
                         value: ThemePreference.system,
