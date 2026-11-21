@@ -17,6 +17,8 @@ class PlanCard extends StatelessWidget {
     required this.going,
     required this.notification,
     required this.photoUrls,
+    required this.reviewed,
+    required this.onReviewed,
     this.pending = false,
   });
 
@@ -26,6 +28,8 @@ class PlanCard extends StatelessWidget {
   final AppNotification? notification;
   final List<String?> photoUrls;
   final bool pending;
+  final bool reviewed;
+  final VoidCallback onReviewed;
 
   @override
   Widget build(BuildContext context) {
@@ -134,14 +138,19 @@ class PlanCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     OutlinedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => LeaveReviewView(plan: plan),
-                        ),
-                      ),
+                      onPressed: () async {
+                        final submitted = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LeaveReviewView(plan: plan),
+                          ),
+                        );
+                        if (submitted == true) onReviewed();
+                      },
                       icon: const Icon(Icons.star_border, size: 18),
-                      label: const Text('Leave a Review'),
+                      label: Text(
+                        reviewed ? 'Update Review' : 'Leave a Review',
+                      ),
                     ),
                   ],
                 ),

@@ -87,6 +87,8 @@ class _PlanScreen extends StatelessWidget {
               notification: vm.notificationFor(plan),
               photoUrls: vm.photoUrlsFor(plan),
               pending: pending.contains(plan.id),
+              reviewed: vm.reviewedIds.contains(plan.id),
+              onReviewed: () => vm.markReviewed(plan.id),
             ),
           )
           .toList(),

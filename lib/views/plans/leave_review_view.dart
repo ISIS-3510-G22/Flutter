@@ -34,7 +34,9 @@ class _LeaveReviewBody extends StatelessWidget {
     final online = context.watch<ConnectivityViewModel>().isOnline;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Leave a Review')),
+      appBar: AppBar(
+        title: Text(vm.hasExistingReview ? 'Update Review' : 'Leave a Review'),
+      ),
       body: Column(
         children: [
           if (!online)
@@ -119,7 +121,7 @@ class _LeaveReviewBody extends StatelessWidget {
                   final messenger = ScaffoldMessenger.of(context);
                   final ok = await vm.submit();
                   if (!ok || !context.mounted) return;
-                  Navigator.pop(context);
+                  Navigator.pop(context, true);
                   messenger.showSnackBar(
                     SnackBar(
                       content: Text(
