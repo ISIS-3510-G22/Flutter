@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:plansync/model/services/local/local_database.dart';
 import 'package:plansync/model/models/activity.dart';
+import 'package:plansync/model/services/local/local_database.dart';
 import 'package:sqflite/sqflite.dart';
 
 enum ActivityList { owned, liked, recommended }
@@ -13,7 +13,7 @@ class ActivityLocalStore {
     'likedBy': jsonEncode(activity.likedBy),
   };
 
-  Activity _fromRow(Map<String, Object?> row) => Activity.fromJson({
+  static Activity fromRow(Map<String, Object?> row) => Activity.fromJson({
     ...row,
     'tags': jsonDecode(row['tags'] as String),
     'likedBy': jsonDecode(row['likedBy'] as String),
@@ -30,7 +30,7 @@ class ActivityLocalStore {
       ''',
       [uid, list.name],
     );
-    return rows.map(_fromRow).toList();
+    return rows.map(fromRow).toList();
   }
 
   Future<void> saveList(
@@ -117,6 +117,6 @@ class ActivityLocalStore {
       where: 'id IN (${List.filled(ids.length, '?').join(', ')})',
       whereArgs: ids,
     );
-    return rows.map(_fromRow).toList();
+    return rows.map(fromRow).toList();
   }
 }
