@@ -24,3 +24,5 @@ String formatTime(TimeOfDay time) {
   final period = time.period == DayPeriod.am ? 'AM' : 'PM';
   return '$hour:$minute $period';
 }
+
+String formatMonth(DateTime date) => '${_months[date.month - 1]} ${date.year}';

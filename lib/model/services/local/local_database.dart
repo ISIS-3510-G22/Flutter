@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -56,6 +56,7 @@ class LocalDatabase {
     await _createSplitTables(db);
     await _createCrewOutbox(db);
     await _createSplitOutbox(db);
+    await _createRecapTables(db);
   }
 
   static Future<void> _onUpgrade(
@@ -109,6 +110,10 @@ class LocalDatabase {
         "ALTER TABLE expenses ADD COLUMN custom_amounts TEXT NOT NULL "
         "DEFAULT '{}'",
       );
+    }
+
+    if (oldVersion < 10) {
+      await _createRecapTables(db);
     }
   }
 
@@ -217,5 +222,29 @@ class LocalDatabase {
         payload TEXT NOT NULL
       )
     ''');
+  }
+
+  static Future<void> _createRecapTables(Database db) async {
+    await db.execute('''
+    CREATE TABLE recap_months (
+      uid TEXT NOT NULL,
+      month TEXT NOT NULL,
+      plans INTEGER NOT NULL,
+      activities INTEGER NOT NULL,
+      spend REAL NOT NULL,
+      topTags TEXT NOT NULL,
+      updatedAt INTEGER NOT NULL,
+      PRIMARY KEY (uid, month)
+    )
+  ''');
+    await db.execute('''
+    CREATE TABLE recap_places (
+      uid TEXT NOT NULL,
+      month TEXT NOT NULL,
+      activityId TEXT NOT NULL REFERENCES activities(id),
+      times INTEGER NOT NULL,
+      PRIMARY KEY (uid, month, activityId)
+    )
+  ''');
   }
 }
