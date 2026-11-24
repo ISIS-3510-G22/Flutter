@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -53,6 +53,7 @@ class LocalDatabase {
       )
     ''');
     await _createCrewTables(db);
+    await _createGroupOutingsTables(db);
     await _createSplitTables(db);
     await _createCrewOutbox(db);
     await _createSplitOutbox(db);
@@ -110,6 +111,9 @@ class LocalDatabase {
         "DEFAULT '{}'",
       );
     }
+    if (oldVersion < 10) {
+      await _createGroupOutingsTables(db);
+    }
   }
 
   static Future<void> _createCrewTables(Database db) async {
@@ -150,6 +154,28 @@ class LocalDatabase {
       CREATE TABLE IF NOT EXISTS crew_cache_state (
         cacheKey TEXT PRIMARY KEY,
         value INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _createGroupOutingsTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS group_outings (
+        groupId TEXT NOT NULL REFERENCES crew_groups(id),
+        planId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        date INTEGER NOT NULL,
+        PRIMARY KEY (groupId, planId)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS outing_members (
+        groupId TEXT NOT NULL,
+        planId TEXT NOT NULL,
+        userId TEXT NOT NULL REFERENCES people(id),
+        PRIMARY KEY (groupId, planId, userId),
+        FOREIGN KEY (groupId, planId)
+          REFERENCES group_outings(groupId, planId)
       )
     ''');
   }

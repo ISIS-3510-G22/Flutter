@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:plansync/model/services/local/local_database.dart';
 import 'package:plansync/model/models/group.dart';
+import 'package:plansync/model/models/group_history.dart';
+import 'package:plansync/model/models/group_outing.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:sqflite/sqflite.dart';
@@ -297,6 +299,111 @@ class CrewLocalStore {
       orderBy: 'userId',
     );
     return rows.map((row) => row['userId'] as String).toList();
+  }
+
+  Future<void> saveGroupHistory(GroupHistory history) async {
+    final db = await _db;
+    await db.transaction((txn) async {
+      await txn.delete(
+        'outing_members',
+        where: 'groupId = ?',
+        whereArgs: [history.groupId],
+      );
+      await txn.delete(
+        'group_outings',
+        where: 'groupId = ?',
+        whereArgs: [history.groupId],
+      );
+
+      for (final outing in history.outings) {
+        await txn.insert('group_outings', {
+          'groupId': history.groupId,
+          'planId': outing.planId,
+          'name': outing.name,
+          'date': outing.date.millisecondsSinceEpoch,
+        });
+        for (final userId in outing.attendingMemberIds.toSet()) {
+          await txn.insert('outing_members', {
+            'groupId': history.groupId,
+            'planId': outing.planId,
+            'userId': userId,
+          });
+        }
+      }
+
+      await txn.insert('crew_cache_state', {
+        'cacheKey': 'outings_${history.groupId}',
+        'value': 1,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+  }
+
+  Future<GroupHistory?> groupHistoryFor(String groupId) async {
+    final db = await _db;
+    final marker = await db.query(
+      'crew_cache_state',
+      columns: ['value'],
+      where: 'cacheKey = ?',
+      whereArgs: ['outings_$groupId'],
+      limit: 1,
+    );
+    if (marker.isEmpty || marker.first['value'] != 1) return null;
+
+    final outingRows = await db.query(
+      'group_outings',
+      where: 'groupId = ?',
+      whereArgs: [groupId],
+      orderBy: 'date DESC, planId',
+    );
+    final memberRows = await db.query(
+      'outing_members',
+      columns: ['planId', 'userId'],
+      where: 'groupId = ?',
+      whereArgs: [groupId],
+      orderBy: 'planId, userId',
+    );
+    final membersByPlan = <String, List<String>>{};
+    for (final row in memberRows) {
+      (membersByPlan[row['planId'] as String] ??= <String>[]).add(
+        row['userId'] as String,
+      );
+    }
+
+    final rankingRows = await db.rawQuery(
+      '''
+      SELECT om.userId, COUNT(*) AS outingCount
+      FROM outing_members AS om
+      LEFT JOIN people AS p ON p.id = om.userId
+      WHERE om.groupId = ?
+      GROUP BY om.userId, p.name, p.lastName
+      ORDER BY outingCount DESC, p.name COLLATE NOCASE, p.lastName COLLATE NOCASE,
+        om.userId
+      ''',
+      [groupId],
+    );
+
+    return GroupHistory(
+      groupId: groupId,
+      outings: outingRows
+          .map(
+            (row) => GroupOuting(
+              planId: row['planId'] as String,
+              name: row['name'] as String,
+              date: DateTime.fromMillisecondsSinceEpoch(row['date'] as int),
+              attendingMemberIds:
+                  membersByPlan[row['planId'] as String] ?? const <String>[],
+            ),
+          )
+          .toList(),
+      attendanceRanking: rankingRows
+          .map(
+            (row) => GroupMemberAttendance(
+              userId: row['userId'] as String,
+              outingCount: row['outingCount'] as int,
+            ),
+          )
+          .toList(),
+    );
   }
 
   Future<Set<String>> invitedIds(String groupId) async {
