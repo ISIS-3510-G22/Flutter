@@ -3,7 +3,9 @@ import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
+import 'package:plansync/viewmodels/crew/group_outings_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/views/crew/group_outings_view.dart';
 import 'package:plansync/views/crew/invite_friends_view.dart';
 import 'package:plansync/views/theme/app_theme.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
@@ -36,6 +38,21 @@ class _GroupDetailViewState extends State<GroupDetailView> {
             ChangeNotifierProvider.value(value: widget.friendsViewModel),
           ],
           child: InviteFriendsView(group: widget.group),
+        ),
+      ),
+    );
+  }
+
+  void _openOurOutings() {
+    final uid = context.read<User>().id;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChangeNotifierProvider(
+          create: (_) => GroupOutingsViewModel(
+            groupId: widget.group.id,
+            uid: uid,
+          ),
+          child: GroupOutingsView(group: widget.group),
         ),
       ),
     );
@@ -144,6 +161,8 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                   ),
                 ],
                 const SizedBox(height: 24),
+                _OurOutingsEntry(onTap: _openOurOutings),
+                const SizedBox(height: 24),
                 FutureBuilder<List<User>>(
                   future: _membersFuture,
                   builder: (context, snapshot) {
@@ -183,6 +202,66 @@ class _GroupDetailViewState extends State<GroupDetailView> {
     1 => const Color(0xFFFF9467),
     _ => const Color(0xFFFFD7AE),
   };
+}
+
+class _OurOutingsEntry extends StatelessWidget {
+  const _OurOutingsEntry({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: colors.outline),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: colors.primaryContainer,
+                foregroundColor: colors.onPrimaryContainer,
+                child: const Icon(Icons.history),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Our outings',
+                      style: text.titleMedium?.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'See what your group has done together',
+                      style: text.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _MemberTile extends StatelessWidget {
