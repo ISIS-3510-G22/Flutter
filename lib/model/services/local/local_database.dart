@@ -57,6 +57,7 @@ class LocalDatabase {
     await _createSplitTables(db);
     await _createCrewOutbox(db);
     await _createSplitOutbox(db);
+    await _createRecapTables(db);
   }
 
   static Future<void> _onUpgrade(
@@ -111,8 +112,14 @@ class LocalDatabase {
         "DEFAULT '{}'",
       );
     }
+<<<<<<< HEAD
     if (oldVersion < 10) {
       await _createGroupOutingsTables(db);
+=======
+
+    if (oldVersion < 10) {
+      await _createRecapTables(db);
+>>>>>>> 0e9b6903701e4de2b00b1143d0b1d8fb82e12bf4
     }
   }
 
@@ -243,5 +250,29 @@ class LocalDatabase {
         payload TEXT NOT NULL
       )
     ''');
+  }
+
+  static Future<void> _createRecapTables(Database db) async {
+    await db.execute('''
+    CREATE TABLE recap_months (
+      uid TEXT NOT NULL,
+      month TEXT NOT NULL,
+      plans INTEGER NOT NULL,
+      activities INTEGER NOT NULL,
+      spend REAL NOT NULL,
+      topTags TEXT NOT NULL,
+      updatedAt INTEGER NOT NULL,
+      PRIMARY KEY (uid, month)
+    )
+  ''');
+    await db.execute('''
+    CREATE TABLE recap_places (
+      uid TEXT NOT NULL,
+      month TEXT NOT NULL,
+      activityId TEXT NOT NULL REFERENCES activities(id),
+      times INTEGER NOT NULL,
+      PRIMARY KEY (uid, month, activityId)
+    )
+  ''');
   }
 }
