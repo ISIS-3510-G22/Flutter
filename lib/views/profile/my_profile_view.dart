@@ -8,6 +8,7 @@ import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/global/theme_viewmodel.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
 import 'package:plansync/views/profile/edit_profile_view.dart';
+import 'package:plansync/views/profile/recap_view.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/view_header.dart';
@@ -188,7 +189,18 @@ class _MyProfileBody extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  ListTile(
+                    leading: const Icon(Icons.insights_outlined),
+                    title: const Text('Your Recap'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RecapView()),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   SegmentedButton<ThemePreference>(
+                    showSelectedIcon: false,
                     segments: const [
                       ButtonSegment(
                         value: ThemePreference.system,

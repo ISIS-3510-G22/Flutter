@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -112,14 +112,9 @@ class LocalDatabase {
         "DEFAULT '{}'",
       );
     }
-<<<<<<< HEAD
-    if (oldVersion < 10) {
+    if (oldVersion < 11) {
       await _createGroupOutingsTables(db);
-=======
-
-    if (oldVersion < 10) {
       await _createRecapTables(db);
->>>>>>> 0e9b6903701e4de2b00b1143d0b1d8fb82e12bf4
     }
   }
 

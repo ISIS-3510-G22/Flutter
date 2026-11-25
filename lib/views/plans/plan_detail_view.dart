@@ -14,7 +14,6 @@ import 'package:plansync/views/plans/create_edit_plan_view.dart';
 import 'package:plansync/views/plans/edit_plan_activities_view.dart';
 import 'package:plansync/views/plans/plan_expenses_view.dart';
 import 'package:plansync/views/plans/plan_route_view.dart';
-import 'package:plansync/views/theme/app_theme.dart';
 import 'package:plansync/views/widgets/avatar.dart';
 import 'package:plansync/views/widgets/decision_dialog.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
@@ -411,7 +410,7 @@ class _FriendPickerState extends State<_FriendPicker> {
                     Text(
                       'SUGGESTED',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppTheme.greyDark,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -444,7 +443,7 @@ class _FriendPickerState extends State<_FriendPicker> {
                     Text(
                       'FRIENDS',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppTheme.greyDark,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 2),

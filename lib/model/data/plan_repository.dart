@@ -4,12 +4,12 @@ import 'dart:isolate';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/crew_write_queue.dart';
-import 'package:plansync/model/services/local/json_file_store.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/invite_suggestion_ids.dart';
-import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/models/plan.dart';
+import 'package:plansync/model/services/local/json_file_store.dart';
 
 class PlanRepository {
   final _plans = FirebaseFirestore.instance.collection('plans');
@@ -89,6 +89,15 @@ class PlanRepository {
           );
           return plans;
         });
+  }
+
+  Future<List<Plan>> serverPlans(String uid) async {
+    final snapshot = await _plans
+        .where('participantsIds', arrayContains: uid)
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
+
+    return snapshot.docs.map((d) => _fromData(d.id, d.data())).toList();
   }
 
   Stream<Plan> planById(String id) {
