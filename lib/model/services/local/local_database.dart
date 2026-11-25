@@ -112,9 +112,11 @@ class LocalDatabase {
         "DEFAULT '{}'",
       );
     }
+    if (oldVersion < 10) {
+      await _createRecapTables(db);
+    }
     if (oldVersion < 11) {
       await _createGroupOutingsTables(db);
-      await _createRecapTables(db);
     }
   }
 
