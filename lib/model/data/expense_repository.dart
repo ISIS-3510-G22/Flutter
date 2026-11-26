@@ -70,6 +70,18 @@ class ExpenseRepository {
         });
   }
 
+  Future<List<Expense>> serverExpenses(String planId) async {
+    final snapshot = await _expenses(planId)
+        .orderBy('createdAt', descending: true)
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
+    final expenses = snapshot.docs.map(_fromDoc).toList();
+    if (!_queue.hasPendingFor(planId)) {
+      await _local.saveExpenses(planId, expenses);
+    }
+    return expenses;
+  }
+
   Future<List<Expense>?> savedExpenses(String planId) =>
       _local.expenses(planId);
 

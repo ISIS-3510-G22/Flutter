@@ -17,27 +17,40 @@ class SettlementRepository {
 
   String newId(String planId) => _settlements(planId).doc().id;
 
+  Settlement _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
+    final data = d.data()!;
+    return Settlement(
+      id: d.id,
+      fromId: data['fromId'] as String,
+      toId: data['toId'] as String,
+      amount: (data['amount'] as num).toDouble(),
+    );
+  }
+
   Stream<List<Settlement>?> settlementsForPlan(String planId) async* {
     yield await _local.settlements(planId);
     yield* _settlements(planId)
         .snapshots(includeMetadataChanges: true)
         .where((snapshot) => !snapshot.metadata.isFromCache)
         .asyncMap((snapshot) async {
-          final settlements = snapshot.docs.map((d) {
-            final data = d.data();
-            return Settlement(
-              id: d.id,
-              fromId: data['fromId'] as String,
-              toId: data['toId'] as String,
-              amount: (data['amount'] as num).toDouble(),
-            );
-          }).toList();
+          final settlements = snapshot.docs.map(_fromDoc).toList();
           if (_queue.hasPendingFor(planId)) {
             return await _local.settlements(planId) ?? settlements;
           }
           await _local.saveSettlements(planId, settlements);
           return settlements;
         });
+  }
+
+  Future<List<Settlement>> serverSettlements(String planId) async {
+    final snapshot = await _settlements(planId)
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 8));
+    final settlements = snapshot.docs.map(_fromDoc).toList();
+    if (!_queue.hasPendingFor(planId)) {
+      await _local.saveSettlements(planId, settlements);
+    }
+    return settlements;
   }
 
   Future<List<Settlement>?> savedSettlements(String planId) =>
