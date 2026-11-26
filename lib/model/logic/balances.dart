@@ -14,6 +14,21 @@ typedef PlanSplits = ({
   List<String> participantIds,
 });
 
+int planVersion(PlanSplits plan) => Object.hashAll([
+  Object.hashAll(plan.participantIds),
+  for (final e in plan.expenses)
+    Object.hash(
+      e.value,
+      e.paidById,
+      e.splitMethod,
+      Object.hashAll(e.splitAmongIds),
+      Object.hashAll([
+        for (final c in e.customAmounts.entries) Object.hash(c.key, c.value),
+      ]),
+    ),
+  for (final s in plan.settlements) Object.hash(s.fromId, s.toId, s.amount),
+]);
+
 Map<String, int> balancesCents(
   List<Expense> expenses,
   List<Settlement> settlements,
