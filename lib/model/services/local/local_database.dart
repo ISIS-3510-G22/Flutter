@@ -298,5 +298,11 @@ class LocalDatabase {
         PRIMARY KEY (uid, plan_id, user_id)
       )
     ''');
+    await db.execute('''
+      CREATE TABLE balance_saved (
+        uid TEXT PRIMARY KEY,
+        computed_at INTEGER NOT NULL
+      )
+    ''');
   }
 }
