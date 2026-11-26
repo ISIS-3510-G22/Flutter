@@ -4,11 +4,11 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/crew_write_queue.dart';
-import 'package:plansync/model/services/local/crew_local_store.dart';
-import 'package:plansync/model/services/local/json_file_store.dart';
 import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/group_invitation.dart';
 import 'package:plansync/model/models/pending_write.dart';
+import 'package:plansync/model/services/local/crew_local_store.dart';
+import 'package:plansync/model/services/local/json_file_store.dart';
 
 class GroupRepository {
   final _db = FirebaseFirestore.instance;
@@ -96,6 +96,21 @@ class GroupRepository {
     }
   }
 
+  Stream<List<String>> watchMemberIdsForGroup(String groupId) async* {
+    yield await _local.memberIds(groupId);
+    yield* _members
+        .where('groupId', isEqualTo: groupId)
+        .snapshots(includeMetadataChanges: true)
+        .where((snapshot) => !snapshot.metadata.isFromCache)
+        .asyncMap((snapshot) async {
+          final memberIds = snapshot.docs
+              .map((doc) => doc.data()['userId'] as String)
+              .toList();
+          await _local.saveMemberIds(groupId, memberIds);
+          return memberIds;
+        });
+  }
+
   Future<Group> createGroup({
     required String name,
     required String description,
@@ -126,18 +141,14 @@ class GroupRepository {
     String userId,
   ) async {
     final localStatus = await _local.membershipStatus(groupId, userId);
-    if (localStatus == 'member') {
-      throw StateError('This friend is already a group member.');
-    }
-    if (localStatus == 'invited') {
-      throw StateError('This friend already has a pending invitation.');
-    }
     if (ConnectivityRepository.instance.isOnline) {
+      var serverChecked = false;
       try {
         final membership = await _members
             .doc(_memberId(groupId, userId))
             .get(const GetOptions(source: Source.server));
         if (membership.exists) {
+          await memberIdsForGroup(groupId);
           throw StateError('This friend is already a group member.');
         }
         final sentInvitations = await _invitations
@@ -150,12 +161,24 @@ class GroupRepository {
         })) {
           throw StateError('This friend already has a pending invitation.');
         }
+        serverChecked = true;
       } on StateError {
         rethrow;
       } catch (_) {
         // The durable queue will retry the write if validation cannot reach
         // the server. Local membership and invitation state remains the guard.
       }
+
+      if (serverChecked) {
+        //previous local invitation may have been accepted by another user.
+        if (localStatus != null) {
+          await _local.removeMembership(groupId, userId);
+        }
+      } else {
+        _throwIfAlreadyMemberOrInvited(localStatus);
+      }
+    } else {
+      _throwIfAlreadyMemberOrInvited(localStatus);
     }
 
     final sentOn = DateTime.now();
@@ -182,6 +205,15 @@ class GroupRepository {
     return (synced: synced, invitationId: invitationRef.id);
   }
 
+  void _throwIfAlreadyMemberOrInvited(String? status) {
+    if (status == 'member') {
+      throw StateError('This friend is already a group member.');
+    }
+    if (status == 'invited') {
+      throw StateError('This friend already has a pending invitation.');
+    }
+  }
+
   Future<Set<String>> pendingInviteeIdsForGroup(String groupId) async {
     final localIds = await _local.invitedIds(groupId);
     try {
@@ -196,6 +228,22 @@ class GroupRepository {
     } catch (_) {
       return localIds;
     }
+  }
+
+  Stream<Set<String>> watchPendingInviteeIdsForGroup(String groupId) async* {
+    yield await _local.invitedIds(groupId);
+    yield* _invitations
+        .where('groupId', isEqualTo: groupId)
+        .snapshots(includeMetadataChanges: true)
+        .where((snapshot) => !snapshot.metadata.isFromCache)
+        .map(
+          (snapshot) => snapshot.docs
+              .where(
+                (doc) => doc.data()['status'] == InvitationStatus.pending.name,
+              )
+              .map((doc) => doc.data()['userId'] as String)
+              .toSet(),
+        );
   }
 
   Stream<List<GroupInvitation>> pendingInvitationsForUser(String uid) {
