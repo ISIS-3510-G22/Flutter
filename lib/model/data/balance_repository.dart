@@ -98,17 +98,19 @@ class BalanceRepository {
   }
 
   Future<List<FriendBalance>> _withProfiles(List<FriendBalance> friends) async {
-    final idsByPlan = <String, List<String>>{};
+    final idsByPlan = <String, Set<String>>{};
     for (final friend in friends) {
-      idsByPlan
-          .putIfAbsent(friend.plans.first.planId, () => [])
-          .add(friend.userId);
+      for (final plan in friend.plans) {
+        idsByPlan
+            .putIfAbsent(plan.planId, () => {...plan.participantIds})
+            .add(friend.userId);
+      }
     }
     final people = <String, User>{};
     for (final entry in idsByPlan.entries) {
       final users = await _paymentRepository.participants(
         entry.key,
-        entry.value,
+        entry.value.toList(),
       );
       for (final user in users) {
         people[user.id] = user;

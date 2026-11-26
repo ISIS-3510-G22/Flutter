@@ -98,6 +98,7 @@ myBalances(
               name: plan.name,
               date: plan.date,
               cents: owesMe ? t.amountCents : -t.amountCents,
+              participantIds: plan.participantIds,
             ),
           );
     }

@@ -206,6 +206,7 @@ class SplitLocalStore {
           'name': plan.name,
           'date': plan.date.millisecondsSinceEpoch,
           'computed_at': computedAt,
+          'participant_ids': jsonEncode(plan.participantIds),
         });
       }
       for (final friend in friends) {
@@ -248,7 +249,7 @@ class SplitLocalStore {
     );
     final details = await db.rawQuery(
       '''
-      SELECT b.user_id, b.plan_id, b.cents, p.name, p.date
+      SELECT b.user_id, b.plan_id, b.cents, p.name, p.date, p.participant_ids
       FROM balances b
       JOIN balance_plans p ON p.uid = b.uid AND p.plan_id = b.plan_id
       WHERE b.uid = ?
@@ -273,6 +274,9 @@ class SplitLocalStore {
                   name: row['name'] as String,
                   date: DateTime.fromMillisecondsSinceEpoch(row['date'] as int),
                   cents: row['cents'] as int,
+                  participantIds:
+                      (jsonDecode(row['participant_ids'] as String) as List)
+                          .cast<String>(),
                 ),
           ],
         ),

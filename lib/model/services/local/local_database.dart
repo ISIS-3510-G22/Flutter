@@ -285,6 +285,7 @@ class LocalDatabase {
         name TEXT NOT NULL,
         date INTEGER NOT NULL,
         computed_at INTEGER NOT NULL,
+        participant_ids TEXT NOT NULL,
         PRIMARY KEY (uid, plan_id)
       )
     ''');
