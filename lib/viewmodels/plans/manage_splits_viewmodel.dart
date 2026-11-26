@@ -8,14 +8,13 @@ import 'package:plansync/model/data/plan_payment_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/settlement_repository.dart';
 import 'package:plansync/model/data/split_outbox_repository.dart';
-import 'package:plansync/model/logic/custom_split.dart';
+import 'package:plansync/model/logic/balances.dart';
 import 'package:plansync/model/logic/debt_simplifier.dart';
 import 'package:plansync/model/logic/overdue.dart';
 import 'package:plansync/model/models/expense.dart';
 import 'package:plansync/model/models/overdue_debt.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/settlement.dart';
-import 'package:plansync/model/models/split_method.dart';
 import 'package:plansync/model/models/user.dart';
 
 class SplitRow {
@@ -210,54 +209,11 @@ class ManageSplitsViewModel extends ChangeNotifier {
     return methods.first;
   }
 
-  List<String> _splitIds(Expense expense) {
-    if (expense.splitAmongIds.isEmpty) {
-      return _participants.map((p) => p.id).toList();
-    }
-    return expense.splitAmongIds;
-  }
-
   String _nameOf(String userId) {
     for (final p in _participants) {
       if (p.id == userId) return '${p.name} ${p.lastName}';
     }
     return 'Unknown';
-  }
-
-  Map<String, int> _balancesCents() {
-    final balances = <String, int>{};
-    void add(String id, int cents) {
-      final current = balances[id];
-      if (current == null) {
-        balances[id] = cents;
-      } else {
-        balances[id] = current + cents;
-      }
-    }
-
-    for (final expense in _expenses!) {
-      if (expense.splitMethod == SplitMethod.custom) {
-        add(expense.paidById, toCents(expense.value));
-        customSharesCents(
-          expense.customAmounts,
-        ).forEach((id, cents) => add(id, -cents));
-        continue;
-      }
-      final splitIds = _splitIds(expense);
-      if (splitIds.isEmpty) continue;
-      final totalCents = toCents(expense.value);
-      final shares = splitCents(totalCents, splitIds.length);
-      add(expense.paidById, totalCents);
-      for (var i = 0; i < splitIds.length; i++) {
-        add(splitIds[i], -shares[i]);
-      }
-    }
-    for (final s in _settlements!) {
-      final cents = (s.amount * 100).round();
-      add(s.fromId, cents);
-      add(s.toId, -cents);
-    }
-    return balances;
   }
 
   void _recalculate() {
@@ -274,7 +230,11 @@ class ManageSplitsViewModel extends ChangeNotifier {
 
     youOwe = [];
     owedToYou = [];
-    final transfers = simplifyDebts(_balancesCents());
+    final transfers = simplifyDebts(
+      balancesCents(_expenses!, settlements!, [
+        for (final p in _participants) p.id,
+      ]),
+    );
     final days = _overdueDays();
     for (final t in transfers) {
       if (t.fromId == _currentUserId) {
@@ -297,7 +257,7 @@ class ManageSplitsViewModel extends ChangeNotifier {
 
     paidByYou = [];
     paidToYou = [];
-    for (final s in settlements!) {
+    for (final s in settlements) {
       if (s.fromId == _currentUserId) {
         paidByYou.add(
           SplitRow(
