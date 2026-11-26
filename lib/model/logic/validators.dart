@@ -54,6 +54,7 @@ String? validatePassword(String? value) {
   final password = value ?? '';
   if (password.isEmpty) return 'Password is required.';
   if (password.length < 8) return 'Use at least 8 characters.';
+  if (password.length > 64) return 'Password can be 64 characters at most.';
   if (!_passwordPattern.hasMatch(password)) {
     return 'Use letters and numbers only.';
   }
