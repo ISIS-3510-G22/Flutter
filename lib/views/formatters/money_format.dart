@@ -7,3 +7,7 @@ String formatMoney(int cents) {
   final decimals = (absolute % 100).toString().padLeft(2, '0');
   return '\$$pesos,$decimals';
 }
+
+String formatDebt(int cents) => cents > 0
+    ? 'owes you ${formatMoney(cents)}'
+    : 'you owe ${formatMoney(cents)}';

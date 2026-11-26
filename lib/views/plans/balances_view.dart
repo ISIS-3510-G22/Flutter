@@ -5,6 +5,7 @@ import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/balances_viewmodel.dart';
 import 'package:plansync/views/formatters/date_format.dart';
 import 'package:plansync/views/formatters/money_format.dart';
+import 'package:plansync/views/plans/friend_balance_view.dart';
 import 'package:plansync/views/widgets/avatar.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:provider/provider.dart';
@@ -81,7 +82,19 @@ class _BalancesBody extends StatelessWidget {
             owedToYouCents: vm.owedToYouCents,
           );
         }
-        return _FriendRow(friend: friends[index - 1]);
+        final friend = friends[index - 1];
+        return _FriendRow(
+          friend: friend,
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => FriendBalanceView(friend: friend),
+              ),
+            );
+            await vm.refresh();
+          },
+        );
       },
     );
   }
@@ -146,21 +159,19 @@ class _Totals extends StatelessWidget {
 }
 
 class _FriendRow extends StatelessWidget {
-  const _FriendRow({required this.friend});
+  const _FriendRow({required this.friend, required this.onTap});
 
   final FriendBalance friend;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final amount = formatMoney(friend.totalCents);
-
     return Card(
       child: ListTile(
         leading: UserAvatar(photoUrl: friend.photoUrl),
         title: Text(friend.name.isEmpty ? 'Unknown' : friend.name),
-        subtitle: Text(
-          friend.totalCents > 0 ? 'owes you $amount' : 'you owe $amount',
-        ),
+        subtitle: Text(formatDebt(friend.totalCents)),
+        onTap: onTap,
       ),
     );
   }

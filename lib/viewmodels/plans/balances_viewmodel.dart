@@ -50,6 +50,9 @@ class BalancesViewModel extends ChangeNotifier {
       if (result != null) {
         friends = [...result.friends]
           ..sort((a, b) => b.totalCents.abs().compareTo(a.totalCents.abs()));
+        for (final friend in friends!) {
+          friend.plans.sort((a, b) => b.date.compareTo(a.date));
+        }
         savedAt = result.savedAt;
       }
     } catch (_) {
