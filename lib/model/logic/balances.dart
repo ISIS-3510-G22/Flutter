@@ -1,8 +1,18 @@
 import 'package:plansync/model/logic/custom_split.dart';
 import 'package:plansync/model/logic/debt_simplifier.dart';
 import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/friend_balance.dart';
 import 'package:plansync/model/models/settlement.dart';
 import 'package:plansync/model/models/split_method.dart';
+
+typedef PlanSplits = ({
+  String planId,
+  String name,
+  DateTime date,
+  List<Expense> expenses,
+  List<Settlement> settlements,
+  List<String> participantIds,
+});
 
 Map<String, int> balancesCents(
   List<Expense> expenses,
@@ -43,4 +53,51 @@ Map<String, int> balancesCents(
     add(s.toId, -cents);
   }
   return balances;
+}
+
+({Map<String, List<Transfer>> computed, List<FriendBalance> friends})
+myBalances(
+  List<PlanSplits> plans,
+  Map<String, List<Transfer>> cached,
+  String uid,
+) {
+  final computed = <String, List<Transfer>>{};
+  final byFriend = <String, List<PlanBalance>>{};
+  for (final plan in plans) {
+    var transfers = cached[plan.planId];
+    if (transfers == null) {
+      transfers = simplifyDebts(
+        balancesCents(plan.expenses, plan.settlements, plan.participantIds),
+      );
+      computed[plan.planId] = transfers;
+    }
+    for (final t in transfers) {
+      if (t.fromId != uid && t.toId != uid) continue;
+      final owesMe = t.toId == uid;
+      final friendId = owesMe ? t.fromId : t.toId;
+      byFriend
+          .putIfAbsent(friendId, () => [])
+          .add(
+            PlanBalance(
+              planId: plan.planId,
+              name: plan.name,
+              date: plan.date,
+              cents: owesMe ? t.amountCents : -t.amountCents,
+            ),
+          );
+    }
+  }
+
+  final friends = <FriendBalance>[];
+  for (final entry in byFriend.entries) {
+    var total = 0;
+    for (final plan in entry.value) {
+      total += plan.cents;
+    }
+    if (total == 0) continue;
+    friends.add(
+      FriendBalance(userId: entry.key, totalCents: total, plans: entry.value),
+    );
+  }
+  return (computed: computed, friends: friends);
 }
