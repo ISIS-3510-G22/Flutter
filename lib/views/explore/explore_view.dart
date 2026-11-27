@@ -126,6 +126,15 @@ class _ExploreBody extends StatelessWidget {
                   ),
                 ),
                 Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    r'$ up to 50k · $$ up to 150k · $$$ above. Plans add up.',
+                    style: text.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,

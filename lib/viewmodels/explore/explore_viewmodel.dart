@@ -26,7 +26,8 @@ class ExploreViewModel extends ChangeNotifier {
   static const _next30Days = '30 days';
   static const _later = 'Later';
   static const whenOptions = [_next7Days, _next30Days, _later];
-  static const priceOptions = ['Free', r'$', r'$$', r'$$$'];
+  static const _free = 'Free';
+  static const priceOptions = [_free, r'$', r'$$', r'$$$'];
 
   static const _cheapMax = 50000.0;
   static const _midMax = 150000.0;
@@ -41,6 +42,7 @@ class ExploreViewModel extends ChangeNotifier {
 
   List<ExplorePlan> _plans = [];
   List<ExplorePlan> filteredPlans = [];
+  Set<String> _unpricedPlanIds = {};
   List<Activity> _activities = [];
   List<Activity> filteredActivities = [];
 
@@ -106,6 +108,12 @@ class ExploreViewModel extends ChangeNotifier {
     hasSnapshot = true;
     _activities = snapshot.activities;
     recommendedIds = snapshot.recommendedIds.toSet();
+    _unpricedPlanIds = {
+      for (final item in snapshot.plans)
+        if (item.plan.activityIds.isEmpty ||
+            !item.plan.activityIds.every(snapshot.planActivities.containsKey))
+          item.plan.id,
+    };
     _plans = _recommendedFirst(snapshot.plans, snapshot.recommendedIds);
     tagOptions = [allTags, ..._tagsByPopularity()];
     if (!tagOptions.contains(selectedTag)) selectedTag = allTags;
@@ -231,7 +239,8 @@ class ExploreViewModel extends ChangeNotifier {
       return matchesSearch &&
           matchesTag &&
           _matchesWhen(plan.date) &&
-          _matchesPrice(item.totalCost);
+          _matchesPrice(item.totalCost) &&
+          (selectedPrice != _free || !_unpricedPlanIds.contains(plan.id));
     }).toList();
   }
 
@@ -271,7 +280,7 @@ class ExploreViewModel extends ChangeNotifier {
     switch (selectedPrice) {
       case null:
         return true;
-      case 'Free':
+      case _free:
         return cost == 0;
       case r'$':
         return cost > 0 && cost <= _cheapMax;
