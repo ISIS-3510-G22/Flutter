@@ -49,7 +49,6 @@ class ActivityInfo extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(activity.name, style: Theme.of(context).textTheme.headlineSmall),
-          Text(activity.name, style: Theme.of(context).textTheme.headlineSmall),
           if (activity.visibility == ActivityVisibility.private) ...[
             const SizedBox(height: 4),
             const PrivateTag(),
