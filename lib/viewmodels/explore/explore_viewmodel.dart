@@ -50,6 +50,9 @@ class ExploreViewModel extends ChangeNotifier {
 
   bool get hasPlans => _plans.isNotEmpty;
 
+  bool get hasPlanOnlyFilters =>
+      selectedWhen != null || selectedRating != 'All';
+
   bool isRecommended(ExplorePlan item) => recommendedIds.contains(item.plan.id);
 
   Future<void> _load() async {
@@ -223,7 +226,6 @@ class ExploreViewModel extends ChangeNotifier {
   }
 
   List<Activity> _filterActivities() {
-    if (selectedWhen != null || selectedRating != 'All') return [];
     final query = searchQuery.toLowerCase();
     return _activities.where((activity) {
       final tags = activity.tags.map((t) => t.toLowerCase());

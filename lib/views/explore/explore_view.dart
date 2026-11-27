@@ -218,6 +218,16 @@ class _ExploreBody extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (vm.hasPlanOnlyFilters)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                      child: Text(
+                        'Date and rating filters apply to plans only.',
+                        style: text.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   if (vm.filteredActivities.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(
