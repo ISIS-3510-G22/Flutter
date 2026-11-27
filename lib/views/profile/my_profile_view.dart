@@ -7,6 +7,7 @@ import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/global/theme_viewmodel.dart';
 import 'package:plansync/viewmodels/profile/profile_viewmodel.dart';
+import 'package:plansync/views/plans/balances_view.dart';
 import 'package:plansync/views/profile/edit_profile_view.dart';
 import 'package:plansync/views/profile/recap_view.dart';
 import 'package:plansync/views/widgets/image_source_sheet.dart';
@@ -196,6 +197,15 @@ class _MyProfileBody extends StatelessWidget {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const RecapView()),
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.account_balance_wallet_outlined),
+                    title: const Text('Balances'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const BalancesView()),
                     ),
                   ),
                   const SizedBox(height: 16),

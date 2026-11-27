@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/data/balance_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/group_outings_repository.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
@@ -52,6 +53,7 @@ class ProfileViewModel extends ChangeNotifier {
     await PendingWriteRepository.instance.clear();
     await SplitOutboxRepository.instance.clear();
     RecapRepository.clearCache();
+    BalanceRepository.clearCache();
     await AuthRepository().signOut();
   }
 

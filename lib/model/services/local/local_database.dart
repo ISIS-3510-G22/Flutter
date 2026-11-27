@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -58,6 +58,7 @@ class LocalDatabase {
     await _createCrewOutbox(db);
     await _createSplitOutbox(db);
     await _createRecapTables(db);
+    await _createBalanceTables(db);
   }
 
   static Future<void> _onUpgrade(
@@ -117,6 +118,9 @@ class LocalDatabase {
     }
     if (oldVersion < 11) {
       await _createGroupOutingsTables(db);
+    }
+    if (oldVersion < 12) {
+      await _createBalanceTables(db);
     }
   }
 
@@ -271,5 +275,35 @@ class LocalDatabase {
       PRIMARY KEY (uid, month, activityId)
     )
   ''');
+  }
+
+  static Future<void> _createBalanceTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE balance_plans (
+        uid TEXT NOT NULL,
+        plan_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        date INTEGER NOT NULL,
+        computed_at INTEGER NOT NULL,
+        participant_ids TEXT NOT NULL,
+        PRIMARY KEY (uid, plan_id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE balances (
+        uid TEXT NOT NULL,
+        plan_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        cents INTEGER NOT NULL,
+        photo_url TEXT,
+        PRIMARY KEY (uid, plan_id, user_id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE balance_saved (
+        uid TEXT PRIMARY KEY,
+        computed_at INTEGER NOT NULL
+      )
+    ''');
   }
 }
