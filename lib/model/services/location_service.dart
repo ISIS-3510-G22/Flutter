@@ -16,7 +16,10 @@ class LocationResult {
 }
 
 class LocationService {
-  Future<LocationResult> currentPosition() async {
+  Future<LocationResult> currentPosition({
+    Duration timeLimit = const Duration(seconds: 15),
+    bool allowLastKnown = false,
+  }) async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       return const LocationResult.failure(LocationError.serviceDisabled);
     }
@@ -34,10 +37,12 @@ class LocationService {
       return const LocationResult.failure(LocationError.permissionDenied);
     }
 
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
+    Position? position;
+    if (allowLastKnown) position = await Geolocator.getLastKnownPosition();
+    position ??= await Geolocator.getCurrentPosition(
+      locationSettings: LocationSettings(
         accuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 15),
+        timeLimit: timeLimit,
       ),
     );
     return LocationResult.success(

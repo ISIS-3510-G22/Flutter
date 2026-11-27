@@ -22,9 +22,12 @@ class ExploreViewModel extends ChangeNotifier {
   StreamSubscription<ExploreSnapshot>? _snapshotSub;
 
   static const allTags = 'All';
-  static const whenOptions = ['Week', 'Month', 'Later'];
-  static const priceOptions = ['Free', r'$', r'$$', r'$$$'];
-  static const ratingOptions = ['4+', '3+', 'All'];
+  static const _next7Days = '7 days';
+  static const _next30Days = '30 days';
+  static const _later = 'Later';
+  static const whenOptions = [_next7Days, _next30Days, _later];
+  static const _free = 'Free';
+  static const priceOptions = [_free, r'$', r'$$', r'$$$'];
 
   static const _cheapMax = 50000.0;
   static const _midMax = 150000.0;
@@ -36,10 +39,10 @@ class ExploreViewModel extends ChangeNotifier {
   List<String> tagOptions = [allTags];
   String? selectedWhen;
   String? selectedPrice;
-  String selectedRating = 'All';
 
   List<ExplorePlan> _plans = [];
   List<ExplorePlan> filteredPlans = [];
+  Set<String> _unpricedPlanIds = {};
   List<Activity> _activities = [];
   List<Activity> filteredActivities = [];
 
@@ -50,6 +53,16 @@ class ExploreViewModel extends ChangeNotifier {
 
   bool get hasPlans => _plans.isNotEmpty;
 
+  bool get hasActivities => _activities.isNotEmpty;
+
+  bool get hasActiveFilters =>
+      searchQuery.isNotEmpty ||
+      selectedTag != allTags ||
+      selectedWhen != null ||
+      selectedPrice != null;
+
+  bool get hasPlanOnlyFilters => selectedWhen != null;
+
   bool isRecommended(ExplorePlan item) => recommendedIds.contains(item.plan.id);
 
   Future<void> _load() async {
@@ -59,9 +72,13 @@ class ExploreViewModel extends ChangeNotifier {
 
   void _restoreFilters(ExploreFilters saved) {
     selectedTag = saved.tag ?? allTags;
-    if (whenOptions.contains(saved.when)) selectedWhen = saved.when;
+    final when = switch (saved.when) {
+      'Week' => _next7Days,
+      'Month' => _next30Days,
+      _ => saved.when,
+    };
+    if (whenOptions.contains(when)) selectedWhen = when;
     if (priceOptions.contains(saved.price)) selectedPrice = saved.price;
-    if (ratingOptions.contains(saved.rating)) selectedRating = saved.rating!;
   }
 
   Future<void> refresh() => _loadSnapshot();
@@ -91,6 +108,12 @@ class ExploreViewModel extends ChangeNotifier {
     hasSnapshot = true;
     _activities = snapshot.activities;
     recommendedIds = snapshot.recommendedIds.toSet();
+    _unpricedPlanIds = {
+      for (final item in snapshot.plans)
+        if (item.plan.activityIds.isEmpty ||
+            !item.plan.activityIds.every(snapshot.planActivities.containsKey))
+          item.plan.id,
+    };
     _plans = _recommendedFirst(snapshot.plans, snapshot.recommendedIds);
     tagOptions = [allTags, ..._tagsByPopularity()];
     if (!tagOptions.contains(selectedTag)) selectedTag = allTags;
@@ -111,7 +134,7 @@ class ExploreViewModel extends ChangeNotifier {
   }
 
   void onSearchQueryChange(String query) {
-    searchQuery = query;
+    searchQuery = query.trim();
     _applyFilters();
   }
 
@@ -141,12 +164,12 @@ class ExploreViewModel extends ChangeNotifier {
     _saveFilters();
   }
 
-  void onRatingSelect(String rating) {
-    if (selectedRating == rating) {
-      selectedRating = 'All';
-    } else {
-      selectedRating = rating;
-    }
+  void clearFilters() {
+    searchController.clear();
+    searchQuery = '';
+    selectedTag = allTags;
+    selectedWhen = null;
+    selectedPrice = null;
     _applyFilters();
     _saveFilters();
   }
@@ -164,7 +187,6 @@ class ExploreViewModel extends ChangeNotifier {
           tag: selectedTag,
           when: selectedWhen,
           price: selectedPrice,
-          rating: selectedRating,
         ),
       ),
     );
@@ -218,12 +240,11 @@ class ExploreViewModel extends ChangeNotifier {
           matchesTag &&
           _matchesWhen(plan.date) &&
           _matchesPrice(item.totalCost) &&
-          _matchesRating(item.rating);
+          (selectedPrice != _free || !_unpricedPlanIds.contains(plan.id));
     }).toList();
   }
 
   List<Activity> _filterActivities() {
-    if (selectedWhen != null || selectedRating != 'All') return [];
     final query = searchQuery.toLowerCase();
     return _activities.where((activity) {
       final tags = activity.tags.map((t) => t.toLowerCase());
@@ -240,18 +261,17 @@ class ExploreViewModel extends ChangeNotifier {
 
   bool _matchesWhen(DateTime date) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final endOfWeek = today.add(Duration(days: 8 - today.weekday));
-    final endOfMonth = DateTime(today.year, today.month + 1);
+    final in7Days = DateTime(now.year, now.month, now.day + 7);
+    final in30Days = DateTime(now.year, now.month, now.day + 30);
     switch (selectedWhen) {
       case null:
         return true;
-      case 'Week':
-        return date.isBefore(endOfWeek);
-      case 'Month':
-        return date.isBefore(endOfMonth);
-      case 'Later':
-        return !date.isBefore(endOfMonth);
+      case _next7Days:
+        return date.isBefore(in7Days);
+      case _next30Days:
+        return date.isBefore(in30Days);
+      case _later:
+        return !date.isBefore(in30Days);
     }
     return true;
   }
@@ -260,7 +280,7 @@ class ExploreViewModel extends ChangeNotifier {
     switch (selectedPrice) {
       case null:
         return true;
-      case 'Free':
+      case _free:
         return cost == 0;
       case r'$':
         return cost > 0 && cost <= _cheapMax;
@@ -269,14 +289,6 @@ class ExploreViewModel extends ChangeNotifier {
       case r'$$$':
         return cost > _midMax;
     }
-    return true;
-  }
-
-  bool _matchesRating(double? rating) {
-    if (selectedRating == 'All') return true;
-    if (rating == null) return false;
-    if (selectedRating == '4+') return rating >= 4;
-    if (selectedRating == '3+') return rating >= 3;
     return true;
   }
 }
