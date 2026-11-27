@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/logic/validators.dart';
 import 'package:plansync/model/models/auth_failure.dart';
 
 class LoginViewModel extends ChangeNotifier {
+  LoginViewModel() {
+    emailController.addListener(notifyListeners);
+    passwordController.addListener(notifyListeners);
+  }
+
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final _authRepository = AuthRepository();
@@ -15,6 +21,10 @@ class LoginViewModel extends ChangeNotifier {
     obscurePassword = !obscurePassword;
     notifyListeners();
   }
+
+  bool get canLogin =>
+      validateEmail(emailController.text) == null &&
+      passwordController.text.isNotEmpty;
 
   Future<void> login() async {
     isLoading = true;

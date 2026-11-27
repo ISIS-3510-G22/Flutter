@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/auth/login_viewmodel.dart';
+import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/views/auth/reset_password_view.dart';
 import 'package:plansync/views/auth/sign_up_view.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
@@ -110,7 +110,7 @@ class _LoginForm extends StatelessWidget {
                           width: double.infinity,
                           height: 52,
                           child: FilledButton(
-                            onPressed: vm.isLoading || !online
+                            onPressed: vm.isLoading || !online || !vm.canLogin
                                 ? null
                                 : vm.login,
                             child: vm.isLoading
