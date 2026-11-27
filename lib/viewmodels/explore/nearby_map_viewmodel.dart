@@ -75,10 +75,7 @@ class NearbyMapViewModel extends ChangeNotifier {
     if (radiusOptions.contains(savedRadius)) radiusKm = savedRadius!;
 
     try {
-      final location = await _locationService.currentPosition(
-        timeLimit: _fixTimeLimit,
-        allowLastKnown: !ConnectivityRepository.instance.isOnline,
-      );
+      final location = await _currentLocation();
       if (location.error != null) {
         locationError = location.error;
         status = NearbyStatus.locationError;
@@ -94,7 +91,24 @@ class NearbyMapViewModel extends ChangeNotifier {
     _loadSnapshot();
   }
 
+  Future<LocationResult> _currentLocation() async {
+    final online = ConnectivityRepository.instance.isOnline;
+    try {
+      return await _locationService.currentPosition(
+        timeLimit: _fixTimeLimit,
+        allowLastKnown: !online,
+      );
+    } on TimeoutException {
+      if (!online) rethrow;
+      return _locationService.currentPosition(
+        timeLimit: _fixTimeLimit,
+        allowLastKnown: true,
+      );
+    }
+  }
+
   void _loadSnapshot() {
+    if (_disposed) return;
     _snapshotSub?.cancel();
     _snapshotSub = _repository
         .snapshot(_userId)
@@ -138,8 +152,16 @@ class NearbyMapViewModel extends ChangeNotifier {
     return _locationService.openSettings();
   }
 
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     _connectivitySub.cancel();
     _snapshotSub?.cancel();
     super.dispose();
