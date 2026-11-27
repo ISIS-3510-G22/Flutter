@@ -117,3 +117,35 @@ myBalances(
   }
   return (computed: computed, friends: friends);
 }
+
+List<({String planId, int cents})> splitPayment(
+  List<PlanBalance> plans,
+  int cents,
+) {
+  var total = 0;
+  for (final plan in plans) {
+    total += plan.cents;
+  }
+  if (cents == total.abs()) {
+    return [for (final plan in plans) (planId: plan.planId, cents: plan.cents)];
+  }
+  final oldestFirst = [...plans]..sort((a, b) => a.date.compareTo(b.date));
+  final parts = <({String planId, int cents})>[];
+  var remaining = cents;
+  for (final plan in oldestFirst) {
+    if (remaining == 0) break;
+    if (plan.cents.sign != total.sign) continue;
+    final part = remaining < plan.cents.abs() ? remaining : plan.cents.abs();
+    parts.add((planId: plan.planId, cents: part * total.sign));
+    remaining -= part;
+  }
+  return parts;
+}
+
+Settlement paymentBetween(String id, String uid, String friendId, int cents) =>
+    Settlement(
+      id: id,
+      fromId: cents > 0 ? friendId : uid,
+      toId: cents > 0 ? uid : friendId,
+      amount: cents.abs() / 100,
+    );

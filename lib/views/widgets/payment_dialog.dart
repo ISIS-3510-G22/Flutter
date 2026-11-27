@@ -11,6 +11,28 @@ Future<int?> showPaymentDialog(
   builder: (_) => _PaymentDialog(title: title, owedCents: owedCents),
 );
 
+void showPaymentResult(
+  ScaffoldMessengerState messenger,
+  String message, {
+  Future<String> Function()? undo,
+}) {
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(message),
+      persist: false,
+      action: undo == null
+          ? null
+          : SnackBarAction(
+              label: 'Undo',
+              onPressed: () async {
+                final undone = await undo();
+                messenger.showSnackBar(SnackBar(content: Text(undone)));
+              },
+            ),
+    ),
+  );
+}
+
 class _PaymentDialog extends StatefulWidget {
   const _PaymentDialog({required this.title, required this.owedCents});
 

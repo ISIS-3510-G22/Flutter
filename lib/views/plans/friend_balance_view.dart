@@ -146,23 +146,12 @@ class _PlanCard extends StatelessWidget {
     if (cents == null) return;
     final result = await vm.recordPayment(plan, cents);
     final settlementId = result.settlementId;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(result.message),
-        persist: false,
-        action: settlementId == null
-            ? null
-            : SnackBarAction(
-                label: 'Undo',
-                onPressed: () async {
-                  final message = await vm.undoPayment(
-                    plan.planId,
-                    settlementId,
-                  );
-                  messenger.showSnackBar(SnackBar(content: Text(message)));
-                },
-              ),
-      ),
+    showPaymentResult(
+      messenger,
+      result.message,
+      undo: settlementId == null
+          ? null
+          : () => vm.undoPayment(plan.planId, settlementId),
     );
   }
 }

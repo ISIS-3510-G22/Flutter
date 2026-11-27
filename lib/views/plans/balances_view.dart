@@ -8,6 +8,8 @@ import 'package:plansync/views/formatters/money_format.dart';
 import 'package:plansync/views/plans/friend_balance_view.dart';
 import 'package:plansync/views/widgets/avatar.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
+import 'package:plansync/views/widgets/payment_dialog.dart';
+import 'package:plansync/views/widgets/waiting_to_sync.dart';
 import 'package:provider/provider.dart';
 
 class BalancesView extends StatelessWidget {
@@ -35,7 +37,7 @@ class _BalancesBody extends StatelessWidget {
       body: Column(
         children: [
           if (!online) OfflineBanner(message: _offlineMessage(vm.savedAt)),
-          if (online && vm.isUpdating && !vm.isLoading)
+          if ((online && vm.isUpdating || vm.isSaving) && !vm.isLoading)
             const LinearProgressIndicator(),
           Expanded(
             child: vm.isLoading
@@ -85,8 +87,11 @@ class _BalancesBody extends StatelessWidget {
           );
         }
         final friend = friends[index - 1];
+        final pending = vm.isPending(friend);
         return _FriendRow(
           friend: friend,
+          pending: pending,
+          onPay: pending || vm.isSaving ? null : () => _pay(context, friend),
           onTap: () async {
             await Navigator.push(
               context,
@@ -100,6 +105,24 @@ class _BalancesBody extends StatelessWidget {
       },
     );
   }
+}
+
+Future<void> _pay(BuildContext context, FriendBalance friend) async {
+  final vm = context.read<BalancesViewModel>();
+  final messenger = ScaffoldMessenger.of(context);
+  final name = friend.name.isEmpty ? 'Unknown' : friend.name;
+  final cents = await showPaymentDialog(
+    context,
+    title: friend.totalCents > 0 ? '$name paid you' : 'You paid $name',
+    owedCents: friend.totalCents.abs(),
+  );
+  if (cents == null) return;
+  final result = await vm.recordPayment(friend, cents);
+  showPaymentResult(
+    messenger,
+    result.message,
+    undo: result.saved.isEmpty ? null : () => vm.undoPayment(result.saved),
+  );
 }
 
 class _Message extends StatelessWidget {
@@ -161,19 +184,47 @@ class _Totals extends StatelessWidget {
 }
 
 class _FriendRow extends StatelessWidget {
-  const _FriendRow({required this.friend, required this.onTap});
+  const _FriendRow({
+    required this.friend,
+    required this.pending,
+    required this.onPay,
+    required this.onTap,
+  });
 
   final FriendBalance friend;
+  final bool pending;
+  final VoidCallback? onPay;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: ListTile(
-        leading: UserAvatar(photoUrl: friend.photoUrl),
-        title: Text(friend.name.isEmpty ? 'Unknown' : friend.name),
-        subtitle: Text(formatDebt(friend.totalCents)),
-        onTap: onTap,
+      child: Column(
+        children: [
+          ListTile(
+            leading: UserAvatar(photoUrl: friend.photoUrl),
+            title: Text(friend.name.isEmpty ? 'Unknown' : friend.name),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(formatDebt(friend.totalCents)),
+                if (pending) const WaitingToSync(),
+              ],
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: onTap,
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 8, 4),
+              child: TextButton(
+                onPressed: onPay,
+                child: Text(friend.totalCents > 0 ? 'I got paid' : 'I paid'),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

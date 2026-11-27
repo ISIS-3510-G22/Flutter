@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:plansync/model/data/balance_repository.dart';
 import 'package:plansync/model/data/settlement_repository.dart';
 import 'package:plansync/model/data/split_outbox_repository.dart';
+import 'package:plansync/model/logic/balances.dart';
 import 'package:plansync/model/models/friend_balance.dart';
-import 'package:plansync/model/models/settlement.dart';
 
 class FriendBalanceViewModel extends ChangeNotifier {
   FriendBalanceViewModel(this._uid, FriendBalance friend)
@@ -35,12 +35,11 @@ class FriendBalanceViewModel extends ChangeNotifier {
     PlanBalance plan,
     int cents,
   ) async {
-    final received = plan.cents > 0;
-    final settlement = Settlement(
-      id: _settlementRepository.newId(plan.planId),
-      fromId: received ? _friendId : _uid,
-      toId: received ? _uid : _friendId,
-      amount: cents / 100,
+    final settlement = paymentBetween(
+      _settlementRepository.newId(plan.planId),
+      _uid,
+      _friendId,
+      cents * plan.cents.sign,
     );
     isSaving = true;
     notifyListeners();
