@@ -134,6 +134,15 @@ class _LoginForm extends StatelessWidget {
                                   ),
                           ),
                         ),
+                        if (vm.loginHint != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            vm.loginHint!,
+                            style: text.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,

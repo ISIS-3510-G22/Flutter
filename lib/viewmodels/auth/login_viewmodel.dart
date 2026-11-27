@@ -22,9 +22,11 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get canLogin =>
-      validateEmail(emailController.text) == null &&
-      passwordController.text.isNotEmpty;
+  String? get loginHint =>
+      validateEmail(emailController.text) ??
+      (passwordController.text.isEmpty ? 'Password is required.' : null);
+
+  bool get canLogin => loginHint == null;
 
   Future<void> login() async {
     isLoading = true;
