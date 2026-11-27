@@ -24,7 +24,6 @@ class ExploreViewModel extends ChangeNotifier {
   static const allTags = 'All';
   static const whenOptions = ['Week', 'Month', 'Later'];
   static const priceOptions = ['Free', r'$', r'$$', r'$$$'];
-  static const ratingOptions = ['4+', '3+', 'All'];
 
   static const _cheapMax = 50000.0;
   static const _midMax = 150000.0;
@@ -36,7 +35,6 @@ class ExploreViewModel extends ChangeNotifier {
   List<String> tagOptions = [allTags];
   String? selectedWhen;
   String? selectedPrice;
-  String selectedRating = 'All';
 
   List<ExplorePlan> _plans = [];
   List<ExplorePlan> filteredPlans = [];
@@ -50,8 +48,7 @@ class ExploreViewModel extends ChangeNotifier {
 
   bool get hasPlans => _plans.isNotEmpty;
 
-  bool get hasPlanOnlyFilters =>
-      selectedWhen != null || selectedRating != 'All';
+  bool get hasPlanOnlyFilters => selectedWhen != null;
 
   bool isRecommended(ExplorePlan item) => recommendedIds.contains(item.plan.id);
 
@@ -64,7 +61,6 @@ class ExploreViewModel extends ChangeNotifier {
     selectedTag = saved.tag ?? allTags;
     if (whenOptions.contains(saved.when)) selectedWhen = saved.when;
     if (priceOptions.contains(saved.price)) selectedPrice = saved.price;
-    if (ratingOptions.contains(saved.rating)) selectedRating = saved.rating!;
   }
 
   Future<void> refresh() => _loadSnapshot();
@@ -144,16 +140,6 @@ class ExploreViewModel extends ChangeNotifier {
     _saveFilters();
   }
 
-  void onRatingSelect(String rating) {
-    if (selectedRating == rating) {
-      selectedRating = 'All';
-    } else {
-      selectedRating = rating;
-    }
-    _applyFilters();
-    _saveFilters();
-  }
-
   void _applyFilters() {
     filteredPlans = _filterPlans();
     filteredActivities = _filterActivities();
@@ -167,7 +153,6 @@ class ExploreViewModel extends ChangeNotifier {
           tag: selectedTag,
           when: selectedWhen,
           price: selectedPrice,
-          rating: selectedRating,
         ),
       ),
     );
@@ -220,8 +205,7 @@ class ExploreViewModel extends ChangeNotifier {
       return matchesSearch &&
           matchesTag &&
           _matchesWhen(plan.date) &&
-          _matchesPrice(item.totalCost) &&
-          _matchesRating(item.rating);
+          _matchesPrice(item.totalCost);
     }).toList();
   }
 
@@ -271,14 +255,6 @@ class ExploreViewModel extends ChangeNotifier {
       case r'$$$':
         return cost > _midMax;
     }
-    return true;
-  }
-
-  bool _matchesRating(double? rating) {
-    if (selectedRating == 'All') return true;
-    if (rating == null) return false;
-    if (selectedRating == '4+') return rating >= 4;
-    if (selectedRating == '3+') return rating >= 3;
     return true;
   }
 }

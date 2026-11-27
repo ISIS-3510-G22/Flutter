@@ -100,39 +100,26 @@ class _ExploreBody extends StatelessWidget {
                     horizontal: 16,
                     vertical: 12,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _FilterGroupCard(
-                              title: 'WHEN',
-                              icon: Icons.calendar_today_outlined,
-                              options: ExploreViewModel.whenOptions,
-                              selected: vm.selectedWhen,
-                              onSelect: vm.onWhenSelect,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _FilterGroupCard(
-                              title: 'PRICE',
-                              icon: Icons.sell_outlined,
-                              options: ExploreViewModel.priceOptions,
-                              selected: vm.selectedPrice,
-                              onSelect: vm.onPriceSelect,
-                            ),
-                          ),
-                        ],
+                      Expanded(
+                        child: _FilterGroupCard(
+                          title: 'WHEN',
+                          icon: Icons.calendar_today_outlined,
+                          options: ExploreViewModel.whenOptions,
+                          selected: vm.selectedWhen,
+                          onSelect: vm.onWhenSelect,
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      _FilterGroupCard(
-                        title: 'RATING',
-                        icon: Icons.star_outline,
-                        options: ExploreViewModel.ratingOptions,
-                        selected: vm.selectedRating,
-                        onSelect: vm.onRatingSelect,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _FilterGroupCard(
+                          title: 'PRICE',
+                          icon: Icons.sell_outlined,
+                          options: ExploreViewModel.priceOptions,
+                          selected: vm.selectedPrice,
+                          onSelect: vm.onPriceSelect,
+                        ),
                       ),
                     ],
                   ),
@@ -222,7 +209,7 @@ class _ExploreBody extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                       child: Text(
-                        'Date and rating filters apply to plans only.',
+                        'The date filter applies to plans only.',
                         style: text.bodySmall?.copyWith(
                           color: colors.onSurfaceVariant,
                         ),
