@@ -35,6 +35,8 @@ class _BalancesBody extends StatelessWidget {
       body: Column(
         children: [
           if (!online) OfflineBanner(message: _offlineMessage(vm.savedAt)),
+          if (online && vm.isUpdating && !vm.isLoading)
+            const LinearProgressIndicator(),
           Expanded(
             child: vm.isLoading
                 ? const Center(child: CircularProgressIndicator())

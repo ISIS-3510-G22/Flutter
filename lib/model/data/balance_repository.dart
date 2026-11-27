@@ -33,6 +33,10 @@ class BalanceRepository {
   final _local = SplitLocalStore();
   final _connectivity = ConnectivityRepository.instance;
 
+  Future<({List<FriendBalance> friends, DateTime savedAt})?> savedBalances(
+    String uid,
+  ) => _local.balances(uid);
+
   Future<({List<FriendBalance> friends, DateTime? savedAt, bool fromServer})?>
   balances(String uid) async {
     try {
@@ -78,23 +82,28 @@ class BalanceRepository {
         .where('participantsIds', arrayContains: uid)
         .get(const GetOptions(source: Source.server))
         .timeout(const Duration(seconds: 8));
-    final plans = <PlanSplits>[];
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final goingIds = [
-        for (final i in data['invitations'] as List)
-          if (i['rsvp'] == RsvpStatus.going.name) i['userId'] as String,
-      ]..sort();
-      plans.add((
-        planId: doc.id,
-        name: data['name'] as String,
-        date: (data['date'] as Timestamp).toDate(),
-        expenses: await _expenseRepository.serverExpenses(doc.id),
-        settlements: await _settlementRepository.serverSettlements(doc.id),
-        participantIds: goingIds,
-      ));
-    }
-    return plans;
+    return Future.wait(snapshot.docs.map(_planSplits));
+  }
+
+  Future<PlanSplits> _planSplits(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) async {
+    final data = doc.data();
+    final goingIds = [
+      for (final i in data['invitations'] as List)
+        if (i['rsvp'] == RsvpStatus.going.name) i['userId'] as String,
+    ]..sort();
+    final expenses = _expenseRepository.serverExpenses(doc.id);
+    final settlements = _settlementRepository.serverSettlements(doc.id);
+    await Future.wait<Object>([expenses, settlements]);
+    return (
+      planId: doc.id,
+      name: data['name'] as String,
+      date: (data['date'] as Timestamp).toDate(),
+      expenses: await expenses,
+      settlements: await settlements,
+      participantIds: goingIds,
+    );
   }
 
   Future<List<FriendBalance>> _withProfiles(List<FriendBalance> friends) async {
@@ -106,16 +115,14 @@ class BalanceRepository {
             .add(friend.userId);
       }
     }
-    final people = <String, User>{};
-    for (final entry in idsByPlan.entries) {
-      final users = await _paymentRepository.participants(
-        entry.key,
-        entry.value.toList(),
-      );
-      for (final user in users) {
-        people[user.id] = user;
-      }
-    }
+    final usersByPlan = await Future.wait([
+      for (final entry in idsByPlan.entries)
+        _paymentRepository.participants(entry.key, entry.value.toList()),
+    ]);
+    final people = <String, User>{
+      for (final users in usersByPlan)
+        for (final user in users) user.id: user,
+    };
     return [
       for (final friend in friends)
         FriendBalance(

@@ -21,6 +21,7 @@ class BalancesViewModel extends ChangeNotifier {
   List<FriendBalance>? friends;
   DateTime? savedAt;
   bool isLoading = true;
+  bool isUpdating = false;
   bool failed = false;
 
   int get youOweCents {
@@ -42,25 +43,38 @@ class BalancesViewModel extends ChangeNotifier {
   Future<void> refresh() async {
     final load = ++_latestLoad;
     isLoading = friends == null;
+    isUpdating = true;
     failed = false;
     notifyListeners();
     try {
+      if (friends == null) {
+        final saved = await _repository.savedBalances(_uid);
+        if (load != _latestLoad) return;
+        if (saved != null) {
+          _show(saved.friends, saved.savedAt);
+          isLoading = false;
+          notifyListeners();
+        }
+      }
       final result = await _repository.balances(_uid);
       if (load != _latestLoad) return;
-      if (result != null) {
-        friends = [...result.friends]
-          ..sort((a, b) => b.totalCents.abs().compareTo(a.totalCents.abs()));
-        for (final friend in friends!) {
-          friend.plans.sort((a, b) => b.date.compareTo(a.date));
-        }
-        savedAt = result.savedAt;
-      }
+      if (result != null) _show(result.friends, result.savedAt);
     } catch (_) {
       if (load != _latestLoad) return;
       failed = true;
     }
     isLoading = false;
+    isUpdating = false;
     notifyListeners();
+  }
+
+  void _show(List<FriendBalance> loaded, DateTime? time) {
+    friends = [...loaded]
+      ..sort((a, b) => b.totalCents.abs().compareTo(a.totalCents.abs()));
+    for (final friend in friends!) {
+      friend.plans.sort((a, b) => b.date.compareTo(a.date));
+    }
+    savedAt = time;
   }
 
   bool _disposed = false;
