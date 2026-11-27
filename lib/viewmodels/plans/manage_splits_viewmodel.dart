@@ -287,12 +287,16 @@ class ManageSplitsViewModel extends ChangeNotifier {
       "Payment saved on your phone. Balances update for everyone when you're "
       'back online.';
 
-  Future<String?> markPaid(SplitRow row) {
+  Future<String?> recordPayment(
+    SplitRow row,
+    int cents, {
+    required bool received,
+  }) {
     final settlement = Settlement(
       id: _settlementRepository.newId(_planId),
-      fromId: _currentUserId,
-      toId: row.userId,
-      amount: row.amount,
+      fromId: received ? row.userId : _currentUserId,
+      toId: received ? _currentUserId : row.userId,
+      amount: cents / 100,
     );
     return _settlementRepository
         .markPaid(_planId, settlement)

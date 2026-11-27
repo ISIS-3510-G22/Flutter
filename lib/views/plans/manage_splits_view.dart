@@ -4,7 +4,9 @@ import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/plans/manage_splits_viewmodel.dart';
+import 'package:plansync/views/formatters/money_format.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
+import 'package:plansync/views/widgets/payment_dialog.dart';
 import 'package:plansync/views/widgets/waiting_to_sync.dart';
 import 'package:provider/provider.dart';
 
@@ -128,8 +130,8 @@ class _ManageSplitsBody extends StatelessWidget {
                             row: row,
                             preferredMethod: vm.preferredMethodOf(row.userId),
                             allMethods: vm.allMethodsOf(row.userId),
-                            paid: false,
-                            onToggle: (_) => _show(context, vm.markPaid(row)),
+                            actionLabel: 'I paid',
+                            onAction: () => _pay(context, vm, row, false),
                           ),
                         const SizedBox(height: 16),
                       ],
@@ -141,6 +143,8 @@ class _ManageSplitsBody extends StatelessWidget {
                             row: row,
                             subtitle: _owedSubtitle(row),
                             alert: row.overdueDays != null,
+                            actionLabel: 'I got paid',
+                            onAction: () => _pay(context, vm, row, true),
                           ),
                         const SizedBox(height: 16),
                       ],
@@ -152,12 +156,18 @@ class _ManageSplitsBody extends StatelessWidget {
                           _SplitCard(
                             row: row,
                             subtitle: 'You paid',
-                            paid: true,
                             pending: vm.pendingIds.contains(row.settlementId),
-                            onToggle: (_) => _show(context, vm.undoPaid(row)),
+                            actionLabel: 'Undo',
+                            onAction: () => _show(context, vm.undoPaid(row)),
                           ),
                         for (final row in vm.paidToYou)
-                          _SplitCard(row: row, subtitle: 'Paid you'),
+                          _SplitCard(
+                            row: row,
+                            subtitle: 'Paid you',
+                            pending: vm.pendingIds.contains(row.settlementId),
+                            actionLabel: 'Undo',
+                            onAction: () => _show(context, vm.undoPaid(row)),
+                          ),
                       ],
                     ],
                   ),
@@ -166,6 +176,21 @@ class _ManageSplitsBody extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _pay(
+  BuildContext context,
+  ManageSplitsViewModel vm,
+  SplitRow row,
+  bool received,
+) async {
+  final cents = await showPaymentDialog(
+    context,
+    title: received ? '${row.name} paid you' : 'You paid ${row.name}',
+    owedCents: (row.amount * 100).round(),
+  );
+  if (cents == null || !context.mounted) return;
+  _show(context, vm.recordPayment(row, cents, received: received));
 }
 
 String _owedSubtitle(SplitRow row) {
@@ -189,8 +214,8 @@ class _SplitCard extends StatelessWidget {
     this.alert = false,
     this.preferredMethod,
     this.allMethods,
-    this.paid,
-    this.onToggle,
+    this.actionLabel,
+    this.onAction,
     this.pending = false,
   });
 
@@ -201,8 +226,8 @@ class _SplitCard extends StatelessWidget {
 
   final ReimbursementMethod? preferredMethod;
   final List<ReimbursementMethod>? allMethods;
-  final bool? paid;
-  final ValueChanged<bool>? onToggle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
   final bool pending;
 
   @override
@@ -211,7 +236,7 @@ class _SplitCard extends StatelessWidget {
       context,
     ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold);
     final title = Text(row.name, style: bold);
-    final amount = Text('\$${row.amount.toStringAsFixed(2)}', style: bold);
+    final amount = Text(formatMoney((row.amount * 100).round()), style: bold);
     Widget? subtitleWidget;
     if (subtitle != null) {
       TextStyle? style;
@@ -259,19 +284,26 @@ class _SplitCard extends StatelessWidget {
       );
     }
 
-    if (paid != null && onToggle != null) {
-      return Card(
-        child: SwitchListTile(
-          title: title,
-          subtitle: subtitleWidget,
-          secondary: amount,
-          value: paid!,
-          onChanged: onToggle,
-        ),
-      );
-    }
+    final tile = ListTile(
+      title: title,
+      subtitle: subtitleWidget,
+      trailing: amount,
+    );
+    final label = actionLabel;
+    if (label == null) return Card(child: tile);
     return Card(
-      child: ListTile(title: title, subtitle: subtitleWidget, trailing: amount),
+      child: Column(
+        children: [
+          tile,
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 8, 4),
+              child: TextButton(onPressed: onAction, child: Text(label)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

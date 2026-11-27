@@ -11,3 +11,9 @@ String formatMoney(int cents) {
 String formatDebt(int cents) => cents > 0
     ? 'owes you ${formatMoney(cents)}'
     : 'you owe ${formatMoney(cents)}';
+
+int? parseMoney(String text) {
+  final value = double.tryParse(text.trim().replaceAll(',', '.'));
+  if (value == null || !value.isFinite) return null;
+  return (value * 100).round();
+}
