@@ -45,6 +45,7 @@ class NearbyMapViewModel extends ChangeNotifier {
 
   static const radiusOptions = [2.0, 5.0, 10.0];
   static const _defaultRadiusKm = 5.0;
+  static const _fixTimeLimit = Duration(seconds: 4);
 
   final String _userId;
   final _locationService = LocationService();
@@ -74,7 +75,10 @@ class NearbyMapViewModel extends ChangeNotifier {
     if (radiusOptions.contains(savedRadius)) radiusKm = savedRadius!;
 
     try {
-      final location = await _locationService.currentPosition();
+      final location = await _locationService.currentPosition(
+        timeLimit: _fixTimeLimit,
+        allowLastKnown: !ConnectivityRepository.instance.isOnline,
+      );
       if (location.error != null) {
         locationError = location.error;
         status = NearbyStatus.locationError;
