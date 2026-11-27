@@ -48,6 +48,14 @@ class ExploreViewModel extends ChangeNotifier {
 
   bool get hasPlans => _plans.isNotEmpty;
 
+  bool get hasActivities => _activities.isNotEmpty;
+
+  bool get hasActiveFilters =>
+      searchQuery.isNotEmpty ||
+      selectedTag != allTags ||
+      selectedWhen != null ||
+      selectedPrice != null;
+
   bool get hasPlanOnlyFilters => selectedWhen != null;
 
   bool isRecommended(ExplorePlan item) => recommendedIds.contains(item.plan.id);
@@ -136,6 +144,16 @@ class ExploreViewModel extends ChangeNotifier {
     } else {
       selectedPrice = price;
     }
+    _applyFilters();
+    _saveFilters();
+  }
+
+  void clearFilters() {
+    searchController.clear();
+    searchQuery = '';
+    selectedTag = allTags;
+    selectedWhen = null;
+    selectedPrice = null;
     _applyFilters();
     _saveFilters();
   }

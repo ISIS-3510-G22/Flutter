@@ -87,6 +87,7 @@ class _ExploreBody extends StatelessWidget {
                   child: _SearchRow(
                     controller: vm.searchController,
                     onQueryChange: vm.onSearchQueryChange,
+                    onClear: vm.hasActiveFilters ? vm.clearFilters : null,
                   ),
                 ),
                 if (vm.tagOptions.length > 1)
@@ -162,19 +163,11 @@ class _ExploreBody extends StatelessWidget {
                     ),
                   )
                 else if (vm.filteredPlans.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Text(
-                      vm.hasPlans
-                          ? 'No plans match your filters.'
-                          : 'No public plans',
-                      style: text.bodyMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
+                  _EmptyMessage(
+                    message: vm.hasPlans
+                        ? 'No plans match your filters.'
+                        : 'No public plans',
+                    onClear: vm.hasPlans ? vm.clearFilters : null,
                   )
                 else
                   for (final item in vm.filteredPlans)
@@ -216,17 +209,11 @@ class _ExploreBody extends StatelessWidget {
                       ),
                     ),
                   if (vm.filteredActivities.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Text(
-                        'No activities match your filters.',
-                        style: text.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
+                    _EmptyMessage(
+                      message: vm.hasActivities
+                          ? 'No activities match your filters.'
+                          : 'No public activities',
+                      onClear: vm.hasActivities ? vm.clearFilters : null,
                     )
                   else
                     for (final activity in vm.filteredActivities)
@@ -241,16 +228,48 @@ class _ExploreBody extends StatelessWidget {
   }
 }
 
-class _SearchRow extends StatelessWidget {
-  const _SearchRow({required this.controller, required this.onQueryChange});
+class _EmptyMessage extends StatelessWidget {
+  const _EmptyMessage({required this.message, required this.onClear});
 
-  final TextEditingController controller;
-  final ValueChanged<String> onQueryChange;
+  final String message;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
 
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (onClear != null)
+            TextButton(onPressed: onClear, child: const Text('Clear filters')),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchRow extends StatelessWidget {
+  const _SearchRow({
+    required this.controller,
+    required this.onQueryChange,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onQueryChange;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -268,14 +287,16 @@ class _SearchRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: colors.primary,
-            borderRadius: BorderRadius.circular(16),
+        IconButton.filled(
+          tooltip: 'Clear filters',
+          onPressed: onClear,
+          style: IconButton.styleFrom(
+            fixedSize: const Size(56, 56),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
-          child: Icon(Icons.tune, color: colors.onPrimary),
+          icon: const Icon(Icons.filter_alt_off_outlined),
         ),
       ],
     );
