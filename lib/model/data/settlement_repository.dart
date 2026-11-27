@@ -47,9 +47,10 @@ class SettlementRepository {
         .get(const GetOptions(source: Source.server))
         .timeout(const Duration(seconds: 8));
     final settlements = snapshot.docs.map(_fromDoc).toList();
-    if (!_queue.hasPendingFor(planId)) {
-      await _local.saveSettlements(planId, settlements);
+    if (_queue.hasPendingFor(planId)) {
+      return await _local.settlements(planId) ?? settlements;
     }
+    await _local.saveSettlements(planId, settlements);
     return settlements;
   }
 

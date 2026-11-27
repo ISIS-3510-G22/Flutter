@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:plansync/model/services/local/local_database.dart';
+import 'package:plansync/model/logic/balances.dart';
 import 'package:plansync/model/models/expense.dart';
 import 'package:plansync/model/models/friend_balance.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
@@ -189,17 +190,17 @@ class SplitLocalStore {
     };
   }
 
-  Future<void> saveBalances(String uid, List<FriendBalance> friends) async {
+  Future<void> saveBalances(
+    String uid,
+    List<FriendBalance> friends,
+    List<PlanSplits> plans,
+  ) async {
     final db = await _db;
     final computedAt = DateTime.now().millisecondsSinceEpoch;
-    final plans = {
-      for (final friend in friends)
-        for (final plan in friend.plans) plan.planId: plan,
-    };
     await db.transaction((txn) async {
       await txn.delete('balances', where: 'uid = ?', whereArgs: [uid]);
       await txn.delete('balance_plans', where: 'uid = ?', whereArgs: [uid]);
-      for (final plan in plans.values) {
+      for (final plan in plans) {
         await txn.insert('balance_plans', {
           'uid': uid,
           'plan_id': plan.planId,
@@ -289,6 +290,33 @@ class SplitLocalStore {
       ),
     );
   }
+
+  Future<
+    List<
+      ({String planId, String name, DateTime date, List<String> participantIds})
+    >
+  >
+  balancePlans(String uid) async {
+    final db = await _db;
+    final rows = await db.query(
+      'balance_plans',
+      where: 'uid = ?',
+      whereArgs: [uid],
+    );
+    return [
+      for (final row in rows)
+        (
+          planId: row['plan_id'] as String,
+          name: row['name'] as String,
+          date: DateTime.fromMillisecondsSinceEpoch(row['date'] as int),
+          participantIds: (jsonDecode(row['participant_ids'] as String) as List)
+              .cast<String>(),
+        ),
+    ];
+  }
+
+  Future<String> personName(String userId) async =>
+      _personName(await _db, userId);
 
   Future<String> _personName(DatabaseExecutor db, String userId) async {
     final rows = await db.query(

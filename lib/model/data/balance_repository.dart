@@ -35,30 +35,50 @@ class BalanceRepository {
 
   Future<({List<FriendBalance> friends, DateTime savedAt})?> savedBalances(
     String uid,
-  ) => _local.balances(uid);
+  ) async {
+    final stored = await _local.balances(uid);
+    if (stored == null) return null;
+    final plans = <PlanSplits>[];
+    for (final plan in await _local.balancePlans(uid)) {
+      final expenses = await _expenseRepository.savedExpenses(plan.planId);
+      final settlements = await _settlementRepository.savedSettlements(
+        plan.planId,
+      );
+      if (expenses == null || settlements == null) return stored;
+      plans.add((
+        planId: plan.planId,
+        name: plan.name,
+        date: plan.date,
+        expenses: expenses,
+        settlements: settlements,
+        participantIds: plan.participantIds,
+      ));
+    }
+    final known = {for (final friend in stored.friends) friend.userId: friend};
+    final friends = <FriendBalance>[];
+    for (final friend in await _compute(plans, uid)) {
+      friends.add(
+        FriendBalance(
+          userId: friend.userId,
+          name:
+              known[friend.userId]?.name ??
+              await _local.personName(friend.userId),
+          photoUrl: known[friend.userId]?.photoUrl,
+          totalCents: friend.totalCents,
+          plans: friend.plans,
+        ),
+      );
+    }
+    return (friends: friends, savedAt: stored.savedAt);
+  }
 
   Future<({List<FriendBalance> friends, DateTime? savedAt, bool fromServer})?>
   balances(String uid) async {
     try {
       _connectivity.ensureOnline();
       final plans = await _serverPlanSplits(uid);
-
-      final versions = <String, int>{};
-      final cached = <String, List<Transfer>>{};
-      for (final plan in plans) {
-        final version = planVersion(plan);
-        versions[plan.planId] = version;
-        final transfers = _cache.get(plan.planId, version);
-        if (transfers != null) cached[plan.planId] = transfers;
-      }
-
-      final result = await _computeInIsolate(plans, cached, uid);
-      for (final entry in result.computed.entries) {
-        _cache.put(entry.key, versions[entry.key]!, entry.value);
-      }
-
-      final friends = await _withProfiles(result.friends);
-      await _local.saveBalances(uid, friends);
+      final friends = await _withProfiles(await _compute(plans, uid));
+      await _local.saveBalances(uid, friends, plans);
       return (friends: friends, savedAt: DateTime.now(), fromServer: true);
     } catch (e) {
       if (e is! OfflineException &&
@@ -66,7 +86,7 @@ class BalanceRepository {
           e is! FirebaseException) {
         rethrow;
       }
-      final stored = await _local.balances(uid);
+      final stored = await savedBalances(uid);
       if (stored == null) return null;
       return (
         friends: stored.friends,
@@ -74,6 +94,25 @@ class BalanceRepository {
         fromServer: false,
       );
     }
+  }
+
+  Future<List<FriendBalance>> _compute(
+    List<PlanSplits> plans,
+    String uid,
+  ) async {
+    final versions = <String, int>{};
+    final cached = <String, List<Transfer>>{};
+    for (final plan in plans) {
+      final version = planVersion(plan);
+      versions[plan.planId] = version;
+      final transfers = _cache.get(plan.planId, version);
+      if (transfers != null) cached[plan.planId] = transfers;
+    }
+    final result = await _computeInIsolate(plans, cached, uid);
+    for (final entry in result.computed.entries) {
+      _cache.put(entry.key, versions[entry.key]!, entry.value);
+    }
+    return result.friends;
   }
 
   Future<List<PlanSplits>> _serverPlanSplits(String uid) async {

@@ -11,7 +11,7 @@ class FriendBalanceViewModel extends ChangeNotifier {
   FriendBalanceViewModel(this._uid, FriendBalance friend)
     : _friendId = friend.userId,
       plans = friend.plans {
-    _hadPending = _hasPending;
+    _hadPending = _queue.hasPending;
     _queueSub = _queue.changes.listen((_) => _onQueueChanged());
   }
 
@@ -28,8 +28,6 @@ class FriendBalanceViewModel extends ChangeNotifier {
   SplitOutboxRepository get _queue => SplitOutboxRepository.instance;
 
   bool isPending(String planId) => _queue.hasPendingFor(planId);
-
-  bool get _hasPending => plans.any((p) => isPending(p.planId));
 
   Future<({String message, String? settlementId})> recordPayment(
     PlanBalance plan,
@@ -81,7 +79,7 @@ class FriendBalanceViewModel extends ChangeNotifier {
       : "Saved on your phone. It will sync when you're back online.";
 
   Future<void> _onQueueChanged() async {
-    final pending = _hasPending;
+    final pending = _queue.hasPending;
     final caughtUp = _hadPending && !pending;
     _hadPending = pending;
     notifyListeners();
@@ -91,7 +89,7 @@ class FriendBalanceViewModel extends ChangeNotifier {
   Future<void> reload() async {
     try {
       final result = await _balanceRepository.balances(_uid);
-      if (result == null || !result.fromServer) return;
+      if (result == null) return;
       plans = [
         for (final friend in result.friends)
           if (friend.userId == _friendId) ...friend.plans,

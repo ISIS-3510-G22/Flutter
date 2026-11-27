@@ -44,8 +44,8 @@ class _FriendBalanceBody extends StatelessWidget {
           if (!online)
             const OfflineBanner(
               message:
-                  "You're offline. Payments you record are saved and sync "
-                  'later; the amounts here update after that.',
+                  "You're offline. Payments you record show here now and sync "
+                  'when you reconnect.',
             ),
           if (vm.isSaving) const LinearProgressIndicator(),
           Expanded(
@@ -125,7 +125,7 @@ class _PlanCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(0, 0, 8, 4),
               child: TextButton(
-                onPressed: pending || saving ? null : () => _pay(context),
+                onPressed: saving ? null : () => _pay(context),
                 child: Text(plan.cents > 0 ? 'I got paid' : 'I paid'),
               ),
             ),

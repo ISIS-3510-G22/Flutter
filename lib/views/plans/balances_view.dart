@@ -39,6 +39,11 @@ class _BalancesBody extends StatelessWidget {
           if (!online) OfflineBanner(message: _offlineMessage(vm.savedAt)),
           if ((online && vm.isUpdating || vm.isSaving) && !vm.isLoading)
             const LinearProgressIndicator(),
+          if (vm.hasPendingChanges)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: WaitingToSync(),
+            ),
           Expanded(
             child: vm.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -59,8 +64,8 @@ class _BalancesBody extends StatelessWidget {
     final time =
         '${formatShortDate(savedAt)}, '
         '${formatTime(TimeOfDay.fromDateTime(savedAt))}';
-    return "You're offline. Balances as of $time; expenses added since then "
-        "aren't counted yet.";
+    return "You're offline. Balances as of $time plus your changes on this "
+        "phone; others' newer changes aren't counted yet.";
   }
 
   Widget _content(BuildContext context, BalancesViewModel vm, bool online) {
@@ -91,7 +96,7 @@ class _BalancesBody extends StatelessWidget {
         return _FriendRow(
           friend: friend,
           pending: pending,
-          onPay: pending || vm.isSaving ? null : () => _pay(context, friend),
+          onPay: vm.isSaving ? null : () => _pay(context, friend),
           onTap: () async {
             await Navigator.push(
               context,

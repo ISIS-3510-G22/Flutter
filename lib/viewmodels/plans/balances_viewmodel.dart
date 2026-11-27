@@ -88,6 +88,8 @@ class BalancesViewModel extends ChangeNotifier {
     savedAt = time;
   }
 
+  bool get hasPendingChanges => _queue.hasPending;
+
   bool isPending(FriendBalance friend) =>
       friend.plans.any((p) => _queue.hasPendingFor(p.planId));
 

@@ -76,9 +76,10 @@ class ExpenseRepository {
         .get(const GetOptions(source: Source.server))
         .timeout(const Duration(seconds: 8));
     final expenses = snapshot.docs.map(_fromDoc).toList();
-    if (!_queue.hasPendingFor(planId)) {
-      await _local.saveExpenses(planId, expenses);
+    if (_queue.hasPendingFor(planId)) {
+      return await _local.expenses(planId) ?? expenses;
     }
+    await _local.saveExpenses(planId, expenses);
     return expenses;
   }
 
