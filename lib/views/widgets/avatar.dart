@@ -44,17 +44,23 @@ class UserAvatar extends StatelessWidget {
   const UserAvatar({required this.photoUrl, super.key});
 
   final String? photoUrl;
+  static const _radius = 16.0;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final decodeWidth = (_radius * 2 * MediaQuery.devicePixelRatioOf(context))
+        .round();
 
     return CircleAvatar(
-      radius: 16,
+      radius: _radius,
       backgroundColor: colors.surfaceContainerHighest,
       foregroundImage: photoUrl == null
           ? null
-          : CachedNetworkImageProvider(photoUrl!),
+          : ResizeImage(
+              CachedNetworkImageProvider(photoUrl!),
+              width: decodeWidth,
+            ),
       child: Icon(
         Icons.person_outline,
         size: 18,
