@@ -22,7 +22,10 @@ class ExploreViewModel extends ChangeNotifier {
   StreamSubscription<ExploreSnapshot>? _snapshotSub;
 
   static const allTags = 'All';
-  static const whenOptions = ['Week', 'Month', 'Later'];
+  static const _next7Days = '7 days';
+  static const _next30Days = '30 days';
+  static const _later = 'Later';
+  static const whenOptions = [_next7Days, _next30Days, _later];
   static const priceOptions = ['Free', r'$', r'$$', r'$$$'];
 
   static const _cheapMax = 50000.0;
@@ -67,7 +70,12 @@ class ExploreViewModel extends ChangeNotifier {
 
   void _restoreFilters(ExploreFilters saved) {
     selectedTag = saved.tag ?? allTags;
-    if (whenOptions.contains(saved.when)) selectedWhen = saved.when;
+    final when = switch (saved.when) {
+      'Week' => _next7Days,
+      'Month' => _next30Days,
+      _ => saved.when,
+    };
+    if (whenOptions.contains(when)) selectedWhen = when;
     if (priceOptions.contains(saved.price)) selectedPrice = saved.price;
   }
 
@@ -244,18 +252,17 @@ class ExploreViewModel extends ChangeNotifier {
 
   bool _matchesWhen(DateTime date) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final endOfWeek = today.add(Duration(days: 8 - today.weekday));
-    final endOfMonth = DateTime(today.year, today.month + 1);
+    final in7Days = DateTime(now.year, now.month, now.day + 7);
+    final in30Days = DateTime(now.year, now.month, now.day + 30);
     switch (selectedWhen) {
       case null:
         return true;
-      case 'Week':
-        return date.isBefore(endOfWeek);
-      case 'Month':
-        return date.isBefore(endOfMonth);
-      case 'Later':
-        return !date.isBefore(endOfMonth);
+      case _next7Days:
+        return date.isBefore(in7Days);
+      case _next30Days:
+        return date.isBefore(in30Days);
+      case _later:
+        return !date.isBefore(in30Days);
     }
     return true;
   }
