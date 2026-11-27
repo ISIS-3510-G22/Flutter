@@ -26,7 +26,7 @@ class GroupDetailView extends StatefulWidget {
 }
 
 class _GroupDetailViewState extends State<GroupDetailView> {
-  Future<List<User>>? _membersFuture;
+  Stream<List<User>>? _membersStream;
 
   void _openInviteFriends() {
     final groupVm = context.read<CrewViewmodel>();
@@ -61,7 +61,7 @@ class _GroupDetailViewState extends State<GroupDetailView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _membersFuture ??= context.read<CrewViewmodel>().membersForGroup(
+    _membersStream ??= context.read<CrewViewmodel>().watchMembersForGroup(
       widget.group.id,
     );
   }
@@ -69,6 +69,7 @@ class _GroupDetailViewState extends State<GroupDetailView> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CrewViewmodel>();
+    final memberCount = vm.memberCountFor(widget.group.id);
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final online = context.watch<ConnectivityViewModel>().isOnline;
@@ -134,22 +135,13 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                   ),
                 ],
                 const SizedBox(height: 4),
-                FutureBuilder<List<User>>(
-                  future: _membersFuture,
-                  builder: (context, snapshot) {
-                    final count = snapshot.hasData
-                        ? snapshot.data!.length
-                        : vm.memberCountFor(widget.group.id);
-                    final summary = count == 0
-                        ? 'Active group'
-                        : 'Active group · $count members';
-                    return Text(
-                      summary,
-                      style: text.bodyLarge?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    );
-                  },
+                Text(
+                  memberCount == 0
+                      ? 'Active group'
+                      : 'Active group · $memberCount members',
+                  style: text.bodyLarge?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
                 if (widget.group.description.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -163,8 +155,8 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                 const SizedBox(height: 24),
                 _OurOutingsEntry(onTap: _openOurOutings),
                 const SizedBox(height: 24),
-                FutureBuilder<List<User>>(
-                  future: _membersFuture,
+                StreamBuilder<List<User>>(
+                  stream: _membersStream,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -276,14 +268,16 @@ class _MemberTile extends StatelessWidget {
         .split(RegExp(r'\s+'))
         .where((word) => word.isNotEmpty)
         .toList();
-    return words.take(2).map((word) => word[0].toUpperCase()).join();
+    final initials = words.take(2).map((word) => word[0].toUpperCase()).join();
+    return initials.isEmpty ? '?' : initials;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final name = '${user.name} ${user.lastName}'.trim();
+    final fullName = '${user.name} ${user.lastName}'.trim();
+    final name = fullName.isEmpty ? 'Member' : fullName;
 
     return SizedBox(
       width: 70,
