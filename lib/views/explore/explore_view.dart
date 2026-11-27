@@ -166,7 +166,10 @@ class _ExploreBody extends StatelessWidget {
                   _EmptyMessage(
                     message: vm.hasPlans
                         ? 'No plans match your filters.'
-                        : 'No public plans',
+                        : online
+                        ? 'No public plans'
+                        : 'No upcoming plans in your saved copy. Connect to '
+                              'see new ones.',
                     onClear: vm.hasPlans ? vm.clearFilters : null,
                   )
                 else
@@ -278,7 +281,7 @@ class _SearchRow extends StatelessWidget {
             controller: controller,
             onChanged: onQueryChange,
             decoration: InputDecoration(
-              hintText: 'Search plans or tags',
+              hintText: 'Search plans, activities or tags',
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),

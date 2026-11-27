@@ -126,7 +126,7 @@ class ExploreViewModel extends ChangeNotifier {
   }
 
   void onSearchQueryChange(String query) {
-    searchQuery = query;
+    searchQuery = query.trim();
     _applyFilters();
   }
 
