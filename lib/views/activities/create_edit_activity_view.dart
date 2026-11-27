@@ -166,7 +166,7 @@ class _CreateEditActivityForm extends StatelessWidget {
                       errorText: vm.tagError,
                       counterText: "",
                     ),
-                    maxLength: 50,
+                    maxLength: 20,
                   ),
                   const SizedBox(height: 16),
                   const Text('NOTES'),
