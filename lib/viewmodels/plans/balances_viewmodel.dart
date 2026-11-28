@@ -6,6 +6,7 @@ import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/settlement_repository.dart';
 import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/logic/balances.dart';
+import 'package:plansync/model/models/balances_filter.dart';
 import 'package:plansync/model/models/friend_balance.dart';
 
 class BalancesViewModel extends ChangeNotifier {
@@ -15,6 +16,8 @@ class BalancesViewModel extends ChangeNotifier {
     });
     _hadPending = _queue.hasPending;
     _queueSub = _queue.changes.listen((_) => _onQueueChanged());
+    _loadFilter();
+    _loadSeen();
     refresh();
   }
 
@@ -34,6 +37,72 @@ class BalancesViewModel extends ChangeNotifier {
   bool isLoading = true;
   bool isUpdating = false;
   bool failed = false;
+
+  BalancesFilter filter = BalancesFilter.all;
+  bool _filterChosen = false;
+  Map<String, int>? _seen;
+
+  List<FriendBalance>? get filteredFriends {
+    final all = friends;
+    if (all == null) return null;
+    return switch (filter) {
+      BalancesFilter.all => all,
+      BalancesFilter.youOwe => [
+        for (final f in all)
+          if (f.totalCents < 0) f,
+      ],
+      BalancesFilter.owedToYou => [
+        for (final f in all)
+          if (f.totalCents > 0) f,
+      ],
+    };
+  }
+
+  void _loadFilter() {
+    _repository
+        .savedFilter()
+        .then((saved) {
+          if (_filterChosen) return;
+          filter = saved;
+          notifyListeners();
+        })
+        .catchError((Object _) {});
+  }
+
+  void selectFilter(BalancesFilter value) {
+    _filterChosen = true;
+    if (value == filter) return;
+    filter = value;
+    notifyListeners();
+    _repository.saveFilter(value).catchError((Object _) {});
+  }
+
+  void _loadSeen() {
+    _repository
+        .seenBalances(_uid)
+        .then((seen) {
+          _seen = seen;
+          notifyListeners();
+        })
+        .catchError((Object _) {});
+  }
+
+  int? changeSinceLastVisit(FriendBalance friend) {
+    final before = _seen?[friend.userId];
+    if (before == null) return null;
+    final change = friend.totalCents - before;
+    return change == 0 ? null : change;
+  }
+
+  void _saveSeen() {
+    final current = friends;
+    if (current == null) return;
+    final seen = <String, int>{
+      for (final id in (_seen ?? const <String, int>{}).keys) id: 0,
+      for (final friend in current) friend.userId: friend.totalCents,
+    };
+    _repository.saveSeenBalances(_uid, seen).catchError((Object _) {});
+  }
 
   int get youOweCents {
     var total = 0;
@@ -57,8 +126,8 @@ class BalancesViewModel extends ChangeNotifier {
     isUpdating = true;
     failed = false;
     notifyListeners();
-    try {
-      if (friends == null) {
+    if (friends == null) {
+      try {
         final saved = await _repository.savedBalances(_uid);
         if (load != _latestLoad) return;
         if (saved != null) {
@@ -66,14 +135,27 @@ class BalancesViewModel extends ChangeNotifier {
           isLoading = false;
           notifyListeners();
         }
+      } catch (_) {
+        if (load != _latestLoad) return;
+        _finishLoad(failed: true);
+        return;
       }
-      final result = await _repository.balances(_uid);
-      if (load != _latestLoad) return;
-      if (result != null) _show(result.friends, result.savedAt);
-    } catch (_) {
-      if (load != _latestLoad) return;
-      failed = true;
     }
+    return _repository
+        .balances(_uid)
+        .then((result) {
+          if (load != _latestLoad) return;
+          if (result != null) _show(result.friends, result.savedAt);
+          _finishLoad(failed: false);
+        })
+        .catchError((Object _) {
+          if (load != _latestLoad) return;
+          _finishLoad(failed: true);
+        });
+  }
+
+  void _finishLoad({required bool failed}) {
+    this.failed = failed;
     isLoading = false;
     isUpdating = false;
     notifyListeners();
@@ -162,6 +244,7 @@ class BalancesViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _saveSeen();
     _connectivitySub.cancel();
     _queueSub.cancel();
     super.dispose();
