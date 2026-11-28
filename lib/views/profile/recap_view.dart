@@ -142,10 +142,13 @@ class _RecapBody extends StatelessWidget {
   Widget _stat(BuildContext context, String value, String label) => Expanded(
     child: Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         child: Column(
           children: [
-            Text(value, style: Theme.of(context).textTheme.titleLarge),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value, style: Theme.of(context).textTheme.titleLarge),
+            ),
             Text(label, style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
