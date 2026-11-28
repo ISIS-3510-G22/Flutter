@@ -4,8 +4,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:plansync/model/data/auth_repository.dart';
+import 'package:plansync/model/data/balance_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
+import 'package:plansync/model/data/group_outings_repository.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
+import 'package:plansync/model/data/recap_repository.dart';
 import 'package:plansync/model/data/split_outbox_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/user.dart';
@@ -46,8 +49,11 @@ class ProfileViewModel extends ChangeNotifier {
 
   Future<void> signOut() async {
     _queueSub.cancel();
+    GroupOutingsRepository.clearCache();
     await PendingWriteRepository.instance.clear();
     await SplitOutboxRepository.instance.clear();
+    RecapRepository.clearCache();
+    BalanceRepository.clearCache();
     await AuthRepository().signOut();
   }
 

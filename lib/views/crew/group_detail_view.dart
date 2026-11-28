@@ -3,7 +3,9 @@ import 'package:plansync/model/models/group.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/friend_viewmodel.dart';
+import 'package:plansync/viewmodels/crew/group_outings_viewmodel.dart';
 import 'package:plansync/viewmodels/crew/group_viewmodel.dart';
+import 'package:plansync/views/crew/group_outings_view.dart';
 import 'package:plansync/views/crew/invite_friends_view.dart';
 import 'package:plansync/views/theme/app_theme.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
@@ -24,7 +26,7 @@ class GroupDetailView extends StatefulWidget {
 }
 
 class _GroupDetailViewState extends State<GroupDetailView> {
-  Future<List<User>>? _membersFuture;
+  Stream<List<User>>? _membersStream;
 
   void _openInviteFriends() {
     final groupVm = context.read<CrewViewmodel>();
@@ -41,10 +43,25 @@ class _GroupDetailViewState extends State<GroupDetailView> {
     );
   }
 
+  void _openOurOutings() {
+    final uid = context.read<User>().id;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChangeNotifierProvider(
+          create: (_) => GroupOutingsViewModel(
+            groupId: widget.group.id,
+            uid: uid,
+          ),
+          child: GroupOutingsView(group: widget.group),
+        ),
+      ),
+    );
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _membersFuture ??= context.read<CrewViewmodel>().membersForGroup(
+    _membersStream ??= context.read<CrewViewmodel>().watchMembersForGroup(
       widget.group.id,
     );
   }
@@ -52,6 +69,7 @@ class _GroupDetailViewState extends State<GroupDetailView> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CrewViewmodel>();
+    final memberCount = vm.memberCountFor(widget.group.id);
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final online = context.watch<ConnectivityViewModel>().isOnline;
@@ -117,22 +135,13 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                   ),
                 ],
                 const SizedBox(height: 4),
-                FutureBuilder<List<User>>(
-                  future: _membersFuture,
-                  builder: (context, snapshot) {
-                    final count = snapshot.hasData
-                        ? snapshot.data!.length
-                        : vm.memberCountFor(widget.group.id);
-                    final summary = count == 0
-                        ? 'Active group'
-                        : 'Active group · $count members';
-                    return Text(
-                      summary,
-                      style: text.bodyLarge?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    );
-                  },
+                Text(
+                  memberCount == 0
+                      ? 'Active group'
+                      : 'Active group · $memberCount members',
+                  style: text.bodyLarge?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
                 if (widget.group.description.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -144,8 +153,10 @@ class _GroupDetailViewState extends State<GroupDetailView> {
                   ),
                 ],
                 const SizedBox(height: 24),
-                FutureBuilder<List<User>>(
-                  future: _membersFuture,
+                _OurOutingsEntry(onTap: _openOurOutings),
+                const SizedBox(height: 24),
+                StreamBuilder<List<User>>(
+                  stream: _membersStream,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -185,6 +196,66 @@ class _GroupDetailViewState extends State<GroupDetailView> {
   };
 }
 
+class _OurOutingsEntry extends StatelessWidget {
+  const _OurOutingsEntry({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: colors.outline),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: colors.primaryContainer,
+                foregroundColor: colors.onPrimaryContainer,
+                child: const Icon(Icons.history),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Our outings',
+                      style: text.titleMedium?.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'See what your group has done together',
+                      style: text.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MemberTile extends StatelessWidget {
   const _MemberTile({required this.user, required this.color});
 
@@ -197,14 +268,16 @@ class _MemberTile extends StatelessWidget {
         .split(RegExp(r'\s+'))
         .where((word) => word.isNotEmpty)
         .toList();
-    return words.take(2).map((word) => word[0].toUpperCase()).join();
+    final initials = words.take(2).map((word) => word[0].toUpperCase()).join();
+    return initials.isEmpty ? '?' : initials;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final name = '${user.name} ${user.lastName}'.trim();
+    final fullName = '${user.name} ${user.lastName}'.trim();
+    final name = fullName.isEmpty ? 'Member' : fullName;
 
     return SizedBox(
       width: 70,

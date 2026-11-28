@@ -237,6 +237,7 @@ class _ProfileField extends StatelessWidget {
             controller: controller,
             keyboardType: keyboardType,
             obscureText: obscureText,
+            autovalidateMode: AutovalidateMode.onUnfocus,
             validator:
                 validator ??
                 (value) => value == null || value.trim().isEmpty

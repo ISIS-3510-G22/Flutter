@@ -19,8 +19,8 @@ class InviteFriendsView extends StatefulWidget {
 }
 
 class _InviteFriendsViewState extends State<InviteFriendsView> {
-  Future<List<User>>? _membersFuture;
-  Future<Set<String>>? _pendingInvitesFuture;
+  Stream<List<User>>? _membersStream;
+  Stream<Set<String>>? _pendingInvitesStream;
   final Set<String> _busyUserIds = {};
   final Set<String> _sentUserIds = {};
 
@@ -28,8 +28,8 @@ class _InviteFriendsViewState extends State<InviteFriendsView> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final groupVm = context.read<CrewViewmodel>();
-    _membersFuture ??= groupVm.membersForGroup(widget.group.id);
-    _pendingInvitesFuture ??= groupVm.pendingInviteeIdsForGroup(
+    _membersStream ??= groupVm.watchMembersForGroup(widget.group.id);
+    _pendingInvitesStream ??= groupVm.watchPendingInviteeIdsForGroup(
       widget.group.id,
     );
   }
@@ -106,8 +106,8 @@ class _InviteFriendsViewState extends State<InviteFriendsView> {
                       ),
                     ),
                   )
-                : FutureBuilder<List<User>>(
-                    future: _membersFuture,
+                : StreamBuilder<List<User>>(
+                    stream: _membersStream,
                     builder: (context, membersSnapshot) {
                       if (membersSnapshot.connectionState ==
                           ConnectionState.waiting) {
@@ -124,8 +124,8 @@ class _InviteFriendsViewState extends State<InviteFriendsView> {
                           .map((user) => user.id)
                           .toSet();
 
-                      return FutureBuilder<Set<String>>(
-                        future: _pendingInvitesFuture,
+                      return StreamBuilder<Set<String>>(
+                        stream: _pendingInvitesStream,
                         builder: (context, invitationsSnapshot) {
                           if (invitationsSnapshot.connectionState ==
                               ConnectionState.waiting) {

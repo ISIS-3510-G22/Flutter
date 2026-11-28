@@ -21,6 +21,7 @@ class CrewViewmodel extends ChangeNotifier {
   List<GroupInvitation> _invitations = [];
 
   final Map<String, int> _memberCounts = {};
+  final Map<String, StreamSubscription<List<String>>> _groupMemberSubs = {};
   final Map<String, Group> _invitedGroups = {};
   final Set<String> _waitingIds = {};
   final Map<String, String> _waitingPairDocIds = {};
@@ -70,8 +71,37 @@ class CrewViewmodel extends ChangeNotifier {
         .toList();
   }
 
+  Stream<List<User>> watchMembersForGroup(String groupId) async* {
+    await for (final memberIds in _repository.watchMemberIdsForGroup(groupId)) {
+      var users = <User>[];
+      try {
+        users = await _userRepository.cachedUsersByIds(memberIds);
+      } catch (_) {}
+      try {
+        final fetched = await _userRepository.getUsers(memberIds);
+        users = [...users, ...fetched];
+      } catch (_) {}
+      final usersById = {for (final user in users) user.id: user};
+      yield [
+        for (final id in memberIds)
+          usersById[id] ??
+              User(
+                id: id,
+                name: '',
+                lastName: '',
+                username: '',
+                email: '',
+                phone: '',
+              ),
+      ];
+    }
+  }
+
   Future<Set<String>> pendingInviteeIdsForGroup(String groupId) =>
       _repository.pendingInviteeIdsForGroup(groupId);
+
+  Stream<Set<String>> watchPendingInviteeIdsForGroup(String groupId) =>
+      _repository.watchPendingInviteeIdsForGroup(groupId);
 
   Future<bool> inviteFriend(String groupId, String userId) async {
     error = null;
@@ -108,6 +138,7 @@ class CrewViewmodel extends ChangeNotifier {
               _memberCounts.remove(group.id);
             }
             await _loadMemberCounts(groups.map((g) => g.id));
+            _watchGroupMemberCounts(groups.map((group) => group.id));
             _groupsLoaded = true;
             _notify();
           },
@@ -177,6 +208,27 @@ class CrewViewmodel extends ChangeNotifier {
     }
   }
 
+  void _watchGroupMemberCounts(Iterable<String> groupIds) {
+    final ids = groupIds.toSet();
+    for (final groupId in _groupMemberSubs.keys.toList()) {
+      if (!ids.contains(groupId)) {
+        _groupMemberSubs.remove(groupId)?.cancel();
+      }
+    }
+    for (final groupId in ids) {
+      if (_groupMemberSubs.containsKey(groupId)) continue;
+      _groupMemberSubs[groupId] = _repository
+          .watchMemberIdsForGroup(groupId)
+          .listen(
+            (memberIds) {
+              _memberCounts[groupId] = memberIds.length;
+              _notify();
+            },
+            onError: (Object _) {},
+          );
+    }
+  }
+
   Future<void> _loadInvitedGroups(List<GroupInvitation> invitations) async {
     try {
       final ids = invitations.map((invitation) => invitation.groupId).toSet();
@@ -208,6 +260,7 @@ class CrewViewmodel extends ChangeNotifier {
         _groups = [..._groups, group];
         _memberCounts[group.id] = 1;
       }
+      _watchGroupMemberCounts(_groups.map((item) => item.id));
       if (CrewWriteQueue.instance.pendingDocIds.contains(group.id)) {
         _waitingIds.add(group.id);
       }
@@ -241,6 +294,7 @@ class CrewViewmodel extends ChangeNotifier {
         group: group,
         itemName: group?.name,
       );
+      _watchGroupMemberCounts(_groups.map((item) => item.id));
       if (!synced) _waitingIds.add(invitation.id);
     }, 'Could not accept the invitation');
   }
@@ -288,6 +342,9 @@ class CrewViewmodel extends ChangeNotifier {
     _groupsSub.cancel();
     _invitationsSub.cancel();
     _queueSub.cancel();
+    for (final subscription in _groupMemberSubs.values) {
+      subscription.cancel();
+    }
     super.dispose();
   }
 }

@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:plansync/model/services/local/local_database.dart';
+import 'package:plansync/model/logic/balances.dart';
 import 'package:plansync/model/models/expense.dart';
+import 'package:plansync/model/models/friend_balance.dart';
 import 'package:plansync/model/models/reimbursement_method.dart';
 import 'package:plansync/model/models/settlement.dart';
 import 'package:plansync/model/models/user.dart';
@@ -186,6 +188,146 @@ class SplitLocalStore {
       for (final row in rows)
         row['user_id'] as String: row['chosen_method_id'] as String,
     };
+  }
+
+  Future<void> saveBalances(
+    String uid,
+    List<FriendBalance> friends,
+    List<PlanSplits> plans,
+  ) async {
+    final db = await _db;
+    final computedAt = DateTime.now().millisecondsSinceEpoch;
+    await db.transaction((txn) async {
+      await txn.delete('balances', where: 'uid = ?', whereArgs: [uid]);
+      await txn.delete('balance_plans', where: 'uid = ?', whereArgs: [uid]);
+      for (final plan in plans) {
+        await txn.insert('balance_plans', {
+          'uid': uid,
+          'plan_id': plan.planId,
+          'name': plan.name,
+          'date': plan.date.millisecondsSinceEpoch,
+          'computed_at': computedAt,
+          'participant_ids': jsonEncode(plan.participantIds),
+        });
+      }
+      for (final friend in friends) {
+        for (final plan in friend.plans) {
+          await txn.insert('balances', {
+            'uid': uid,
+            'plan_id': plan.planId,
+            'user_id': friend.userId,
+            'cents': plan.cents,
+            'photo_url': friend.photoUrl,
+          });
+        }
+      }
+      await txn.insert('balance_saved', {
+        'uid': uid,
+        'computed_at': computedAt,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+  }
+
+  Future<({List<FriendBalance> friends, DateTime savedAt})?> balances(
+    String uid,
+  ) async {
+    final db = await _db;
+    final saved = await db.query(
+      'balance_saved',
+      where: 'uid = ?',
+      whereArgs: [uid],
+    );
+    if (saved.isEmpty) return null;
+    final totals = await db.rawQuery(
+      '''
+      SELECT user_id, MAX(photo_url) AS photo_url, SUM(cents) AS cents
+      FROM balances
+      WHERE uid = ?
+      GROUP BY user_id
+      HAVING SUM(cents) != 0
+      ''',
+      [uid],
+    );
+    final details = await db.rawQuery(
+      '''
+      SELECT b.user_id, b.plan_id, b.cents, p.name, p.date, p.participant_ids
+      FROM balances b
+      JOIN balance_plans p ON p.uid = b.uid AND p.plan_id = b.plan_id
+      WHERE b.uid = ?
+      ORDER BY p.date DESC
+      ''',
+      [uid],
+    );
+    final friends = <FriendBalance>[];
+    for (final total in totals) {
+      final userId = total['user_id'] as String;
+      friends.add(
+        FriendBalance(
+          userId: userId,
+          name: await _personName(db, userId),
+          photoUrl: total['photo_url'] as String?,
+          totalCents: total['cents'] as int,
+          plans: [
+            for (final row in details)
+              if (row['user_id'] == userId)
+                PlanBalance(
+                  planId: row['plan_id'] as String,
+                  name: row['name'] as String,
+                  date: DateTime.fromMillisecondsSinceEpoch(row['date'] as int),
+                  cents: row['cents'] as int,
+                  participantIds:
+                      (jsonDecode(row['participant_ids'] as String) as List)
+                          .cast<String>(),
+                ),
+          ],
+        ),
+      );
+    }
+    return (
+      friends: friends,
+      savedAt: DateTime.fromMillisecondsSinceEpoch(
+        saved.first['computed_at'] as int,
+      ),
+    );
+  }
+
+  Future<
+    List<
+      ({String planId, String name, DateTime date, List<String> participantIds})
+    >
+  >
+  balancePlans(String uid) async {
+    final db = await _db;
+    final rows = await db.query(
+      'balance_plans',
+      where: 'uid = ?',
+      whereArgs: [uid],
+    );
+    return [
+      for (final row in rows)
+        (
+          planId: row['plan_id'] as String,
+          name: row['name'] as String,
+          date: DateTime.fromMillisecondsSinceEpoch(row['date'] as int),
+          participantIds: (jsonDecode(row['participant_ids'] as String) as List)
+              .cast<String>(),
+        ),
+    ];
+  }
+
+  Future<String> personName(String userId) async =>
+      _personName(await _db, userId);
+
+  Future<String> _personName(DatabaseExecutor db, String userId) async {
+    final rows = await db.query(
+      'plan_people',
+      columns: ['name', 'last_name'],
+      where: "user_id = ? AND name != ''",
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return '';
+    return '${rows.first['name']} ${rows.first['last_name']}';
   }
 
   Future<bool> _isSaved(DatabaseExecutor db, String planId, String list) async {

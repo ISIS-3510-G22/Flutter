@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:plansync/model/data/pending_write_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
+import 'package:plansync/model/data/review_repository.dart';
 import 'package:plansync/model/data/user_repository.dart';
 import 'package:plansync/model/models/app_notification.dart';
 import 'package:plansync/model/models/invitations.dart';
@@ -21,6 +22,9 @@ class MyPlansViewModel extends ChangeNotifier {
   final String _userId;
   final _planRepository = PlanRepository();
   final _userRepository = UserRepository();
+  final _reviewRepository = ReviewRepository();
+
+  final reviewedIds = <String>{};
 
   StreamSubscription<List<Plan>>? _sub;
   late final StreamSubscription<void> _queueSub;
@@ -69,6 +73,25 @@ class MyPlansViewModel extends ChangeNotifier {
 
   void selectTab(PlanTab tab) {
     selectedTab = tab;
+    notifyListeners();
+    if (tab == PlanTab.past) _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    final unchecked = visiblePlans
+        .where((p) => !reviewedIds.contains(p.id))
+        .toList();
+    final reviews = await Future.wait(
+      unchecked.map((p) => _reviewRepository.reviewBy(p.id, _userId)),
+    );
+    for (var i = 0; i < unchecked.length; i++) {
+      if (reviews[i] != null) reviewedIds.add(unchecked[i].id);
+    }
+    notifyListeners();
+  }
+
+  void markReviewed(String planId) {
+    reviewedIds.add(planId);
     notifyListeners();
   }
 

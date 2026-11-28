@@ -12,7 +12,7 @@ class LocalDatabase {
     final path = join(await getDatabasesPath(), 'plansync.db');
     return openDatabase(
       path,
-      version: 9,
+      version: 12,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -53,9 +53,12 @@ class LocalDatabase {
       )
     ''');
     await _createCrewTables(db);
+    await _createGroupOutingsTables(db);
     await _createSplitTables(db);
     await _createCrewOutbox(db);
     await _createSplitOutbox(db);
+    await _createRecapTables(db);
+    await _createBalanceTables(db);
   }
 
   static Future<void> _onUpgrade(
@@ -110,6 +113,15 @@ class LocalDatabase {
         "DEFAULT '{}'",
       );
     }
+    if (oldVersion < 10) {
+      await _createRecapTables(db);
+    }
+    if (oldVersion < 11) {
+      await _createGroupOutingsTables(db);
+    }
+    if (oldVersion < 12) {
+      await _createBalanceTables(db);
+    }
   }
 
   static Future<void> _createCrewTables(Database db) async {
@@ -150,6 +162,28 @@ class LocalDatabase {
       CREATE TABLE IF NOT EXISTS crew_cache_state (
         cacheKey TEXT PRIMARY KEY,
         value INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _createGroupOutingsTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS group_outings (
+        groupId TEXT NOT NULL REFERENCES crew_groups(id),
+        planId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        date INTEGER NOT NULL,
+        PRIMARY KEY (groupId, planId)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS outing_members (
+        groupId TEXT NOT NULL,
+        planId TEXT NOT NULL,
+        userId TEXT NOT NULL REFERENCES people(id),
+        PRIMARY KEY (groupId, planId, userId),
+        FOREIGN KEY (groupId, planId)
+          REFERENCES group_outings(groupId, planId)
       )
     ''');
   }
@@ -215,6 +249,60 @@ class LocalDatabase {
         kind TEXT NOT NULL,
         docId TEXT NOT NULL,
         payload TEXT NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _createRecapTables(Database db) async {
+    await db.execute('''
+    CREATE TABLE recap_months (
+      uid TEXT NOT NULL,
+      month TEXT NOT NULL,
+      plans INTEGER NOT NULL,
+      activities INTEGER NOT NULL,
+      spend REAL NOT NULL,
+      topTags TEXT NOT NULL,
+      updatedAt INTEGER NOT NULL,
+      PRIMARY KEY (uid, month)
+    )
+  ''');
+    await db.execute('''
+    CREATE TABLE recap_places (
+      uid TEXT NOT NULL,
+      month TEXT NOT NULL,
+      activityId TEXT NOT NULL REFERENCES activities(id),
+      times INTEGER NOT NULL,
+      PRIMARY KEY (uid, month, activityId)
+    )
+  ''');
+  }
+
+  static Future<void> _createBalanceTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE balance_plans (
+        uid TEXT NOT NULL,
+        plan_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        date INTEGER NOT NULL,
+        computed_at INTEGER NOT NULL,
+        participant_ids TEXT NOT NULL,
+        PRIMARY KEY (uid, plan_id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE balances (
+        uid TEXT NOT NULL,
+        plan_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        cents INTEGER NOT NULL,
+        photo_url TEXT,
+        PRIMARY KEY (uid, plan_id, user_id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE balance_saved (
+        uid TEXT PRIMARY KEY,
+        computed_at INTEGER NOT NULL
       )
     ''');
   }

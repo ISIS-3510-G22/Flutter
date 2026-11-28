@@ -25,7 +25,6 @@ class ExploreRepository {
   static const _tagKey = 'explore_tag';
   static const _dateKey = 'explore_date';
   static const _priceKey = 'explore_price';
-  static const _ratingKey = 'explore_rating';
   static const _radiusKey = 'map_radius_km';
 
   Stream<ExploreSnapshot> snapshot(String uid) async* {
@@ -161,14 +160,12 @@ class ExploreRepository {
     tag: await _prefs.getString(_tagKey),
     when: await _prefs.getString(_dateKey),
     price: await _prefs.getString(_priceKey),
-    rating: await _prefs.getString(_ratingKey),
   );
 
   Future<void> saveFilters(ExploreFilters filters) async {
     await _saveOrRemove(_tagKey, filters.tag);
     await _saveOrRemove(_dateKey, filters.when);
     await _saveOrRemove(_priceKey, filters.price);
-    await _saveOrRemove(_ratingKey, filters.rating);
   }
 
   Future<double?> savedRadiusKm() => _prefs.getDouble(_radiusKey);
