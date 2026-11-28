@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:plansync/model/data/balance_repository.dart';
 import 'package:plansync/model/data/connectivity_repository.dart';
 import 'package:plansync/model/data/expense_repository.dart';
 import 'package:plansync/model/data/overdue_debt_repository.dart';
@@ -8,7 +9,6 @@ import 'package:plansync/model/data/plan_payment_repository.dart';
 import 'package:plansync/model/data/plan_repository.dart';
 import 'package:plansync/model/data/settlement_repository.dart';
 import 'package:plansync/model/data/split_outbox_repository.dart';
-import 'package:plansync/model/logic/balances.dart';
 import 'package:plansync/model/logic/debt_simplifier.dart';
 import 'package:plansync/model/logic/overdue.dart';
 import 'package:plansync/model/models/expense.dart';
@@ -104,6 +104,7 @@ class ManageSplitsViewModel extends ChangeNotifier {
   final _paymentRepository = PlanPaymentRepository();
   final _planRepository = PlanRepository();
   final _overdueRepository = OverdueDebtRepository();
+  final _balanceRepository = BalanceRepository();
   DateTime? _planDate;
   var _syncedOverdue = '';
   StreamSubscription<List<Expense>?>? _expensesSub;
@@ -230,10 +231,11 @@ class ManageSplitsViewModel extends ChangeNotifier {
 
     youOwe = [];
     owedToYou = [];
-    final transfers = simplifyDebts(
-      balancesCents(_expenses!, settlements!, [
-        for (final p in _participants) p.id,
-      ]),
+    final transfers = _balanceRepository.planTransfers(
+      _planId,
+      _expenses!,
+      settlements!,
+      [for (final p in _participants) p.id],
     );
     final days = _overdueDays();
     for (final t in transfers) {
