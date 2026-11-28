@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:plansync/model/models/balances_filter.dart';
 import 'package:plansync/model/models/friend_balance.dart';
 import 'package:plansync/model/models/user.dart';
 import 'package:plansync/viewmodels/global/connectivity_viewmodel.dart';
@@ -80,10 +81,11 @@ class _BalancesBody extends StatelessWidget {
     if (friends.isEmpty) {
       return const _Message(text: "You're all settled up");
     }
+    final shown = vm.filteredFriends ?? friends;
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
-      itemCount: friends.length + 1,
+      itemCount: 2 + (shown.isEmpty ? 1 : shown.length),
       itemBuilder: (context, index) {
         if (index == 0) {
           return _Totals(
@@ -91,11 +93,20 @@ class _BalancesBody extends StatelessWidget {
             owedToYouCents: vm.owedToYouCents,
           );
         }
-        final friend = friends[index - 1];
+        if (index == 1) {
+          return _FilterChips(selected: vm.filter, onSelect: vm.selectFilter);
+        }
+        if (shown.isEmpty) {
+          return _EmptyFilter(
+            onShowAll: () => vm.selectFilter(BalancesFilter.all),
+          );
+        }
+        final friend = shown[index - 2];
         final pending = vm.isPending(friend);
         return _FriendRow(
           friend: friend,
           pending: pending,
+          change: vm.changeSinceLastVisit(friend),
           onPay: vm.isSaving ? null : () => _pay(context, friend),
           onTap: () async {
             await Navigator.push(
@@ -188,21 +199,86 @@ class _Totals extends StatelessWidget {
   }
 }
 
+class _FilterChips extends StatelessWidget {
+  const _FilterChips({required this.selected, required this.onSelect});
+
+  final BalancesFilter selected;
+  final ValueChanged<BalancesFilter> onSelect;
+
+  static const _labels = {
+    BalancesFilter.all: 'All',
+    BalancesFilter.youOwe: 'You owe',
+    BalancesFilter.owedToYou: 'Owed to you',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final entry in _labels.entries)
+            ChoiceChip(
+              label: Text(entry.value),
+              selected: entry.key == selected,
+              onSelected: (_) => onSelect(entry.key),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyFilter extends StatelessWidget {
+  const _EmptyFilter({required this.onShowAll});
+
+  final VoidCallback onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          Text(
+            'Nothing in this filter',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: onShowAll, child: const Text('Show all')),
+        ],
+      ),
+    );
+  }
+}
+
 class _FriendRow extends StatelessWidget {
   const _FriendRow({
     required this.friend,
     required this.pending,
+    required this.change,
     required this.onPay,
     required this.onTap,
   });
 
   final FriendBalance friend;
   final bool pending;
+  final int? change;
   final VoidCallback? onPay;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final change = this.change;
+
     return Card(
       child: Column(
         children: [
@@ -213,6 +289,14 @@ class _FriendRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(formatDebt(friend.totalCents)),
+                if (change != null)
+                  Text(
+                    '${change > 0 ? '+' : '\u2212'}${formatMoney(change)} '
+                    'since your last visit',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 if (pending) const WaitingToSync(),
               ],
             ),

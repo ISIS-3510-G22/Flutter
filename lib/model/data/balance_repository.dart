@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:isolate';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,11 +10,14 @@ import 'package:plansync/model/data/plan_payment_repository.dart';
 import 'package:plansync/model/data/settlement_repository.dart';
 import 'package:plansync/model/logic/balances.dart';
 import 'package:plansync/model/logic/debt_simplifier.dart';
+import 'package:plansync/model/models/balances_filter.dart';
 import 'package:plansync/model/models/friend_balance.dart';
 import 'package:plansync/model/models/invitations.dart';
 import 'package:plansync/model/models/offline_exception.dart';
 import 'package:plansync/model/models/user.dart';
+import 'package:plansync/model/services/local/json_file_store.dart';
 import 'package:plansync/model/services/local/split_local_store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<({Map<String, List<Transfer>> computed, List<FriendBalance> friends})>
 _computeInIsolate(
@@ -27,11 +31,42 @@ class BalanceRepository {
 
   static void clearCache() => _cache.clear();
 
+  static const _filterKey = 'balances_filter';
+
+  static String _seenFile(String uid) => 'balances_seen_$uid.json';
+
   final _expenseRepository = ExpenseRepository();
   final _settlementRepository = SettlementRepository();
   final _paymentRepository = PlanPaymentRepository();
   final _local = SplitLocalStore();
   final _connectivity = ConnectivityRepository.instance;
+  final _prefs = SharedPreferencesAsync();
+  final _files = JsonFileStore();
+
+  Future<BalancesFilter> savedFilter() async {
+    final saved = await _prefs.getString(_filterKey);
+    return BalancesFilter.values.asNameMap()[saved] ?? BalancesFilter.all;
+  }
+
+  Future<void> saveFilter(BalancesFilter filter) =>
+      _prefs.setString(_filterKey, filter.name);
+
+  Future<Map<String, int>?> seenBalances(String uid) async {
+    final text = await _files.read(_seenFile(uid));
+    if (text == null) return null;
+    try {
+      final decoded = jsonDecode(text) as Map<String, dynamic>;
+      return {
+        for (final entry in decoded.entries)
+          entry.key: (entry.value as num).toInt(),
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveSeenBalances(String uid, Map<String, int> cents) =>
+      _files.write(_seenFile(uid), jsonEncode(cents));
 
   Future<({List<FriendBalance> friends, DateTime savedAt})?> savedBalances(
     String uid,
