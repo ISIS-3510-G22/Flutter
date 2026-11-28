@@ -111,7 +111,7 @@ class _RecapBody extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 24),
-        Text('Places you went', style: text.titleMedium),
+        Text('Places of this months\' plans', style: text.titleMedium),
         const SizedBox(height: 8),
         for (final place in recap.places)
           ListTile(
