@@ -33,6 +33,8 @@ class _ExploreBody extends StatelessWidget {
     final vm = context.watch<ExploreViewModel>();
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
+    final plans = vm.filteredPlans;
+    final activities = vm.filteredActivities;
 
     return Column(
       children: [
@@ -45,192 +47,214 @@ class _ExploreBody extends StatelessWidget {
         Expanded(
           child: RefreshIndicator(
             onRefresh: vm.refresh,
-            child: ListView(
+            child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 16),
-              children: [
-                Row(
-                  children: [
-                    const Expanded(child: ViewHeader(title: 'Explore')),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: SegmentedButton<bool>(
-                        showSelectedIcon: false,
-                        segments: const [
-                          ButtonSegment(
-                            value: false,
-                            icon: Icon(Icons.view_list_outlined),
-                            label: Text('List'),
-                          ),
-                          ButtonSegment(
-                            value: true,
-                            icon: Icon(Icons.map_outlined),
-                            label: Text('Map'),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(child: ViewHeader(title: 'Explore')),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: SegmentedButton<bool>(
+                              showSelectedIcon: false,
+                              segments: const [
+                                ButtonSegment(
+                                  value: false,
+                                  icon: Icon(Icons.view_list_outlined),
+                                  label: Text('List'),
+                                ),
+                                ButtonSegment(
+                                  value: true,
+                                  icon: Icon(Icons.map_outlined),
+                                  label: Text('Map'),
+                                ),
+                              ],
+                              selected: const {false},
+                              onSelectionChanged: (selection) {
+                                if (!selection.first) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const NearbyMapView(),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ],
-                        selected: const {false},
-                        onSelectionChanged: (selection) {
-                          if (!selection.first) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const NearbyMapView(),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: _SearchRow(
+                          controller: vm.searchController,
+                          onQueryChange: vm.onSearchQueryChange,
+                          onClear: vm.hasActiveFilters ? vm.clearFilters : null,
+                        ),
+                      ),
+                      if (vm.tagOptions.length > 1)
+                        _TagChipsRow(
+                          options: vm.tagOptions,
+                          selected: vm.selectedTag,
+                          onSelect: vm.onTagSelect,
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _FilterGroupCard(
+                                title: 'WHEN',
+                                icon: Icons.calendar_today_outlined,
+                                options: ExploreViewModel.whenOptions,
+                                selected: vm.selectedWhen,
+                                onSelect: vm.onWhenSelect,
+                              ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: _SearchRow(
-                    controller: vm.searchController,
-                    onQueryChange: vm.onSearchQueryChange,
-                    onClear: vm.hasActiveFilters ? vm.clearFilters : null,
-                  ),
-                ),
-                if (vm.tagOptions.length > 1)
-                  _TagChipsRow(
-                    options: vm.tagOptions,
-                    selected: vm.selectedTag,
-                    onSelect: vm.onTagSelect,
-                  ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _FilterGroupCard(
-                          title: 'WHEN',
-                          icon: Icons.calendar_today_outlined,
-                          options: ExploreViewModel.whenOptions,
-                          selected: vm.selectedWhen,
-                          onSelect: vm.onWhenSelect,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _FilterGroupCard(
+                                title: 'PRICE',
+                                icon: Icons.sell_outlined,
+                                options: ExploreViewModel.priceOptions,
+                                selected: vm.selectedPrice,
+                                onSelect: vm.onPriceSelect,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _FilterGroupCard(
-                          title: 'PRICE',
-                          icon: Icons.sell_outlined,
-                          options: ExploreViewModel.priceOptions,
-                          selected: vm.selectedPrice,
-                          onSelect: vm.onPriceSelect,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          r'$ up to 50k · $$ up to 150k · $$$ above. Plans add up.',
+                          style: text.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: _DashedDivider(color: colors.primary),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          'Featured Plans',
+                          style: text.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (!vm.hasSnapshot && vm.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (!vm.hasSnapshot)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Text(
+                            'Connect to discover plans',
+                            style: text.bodyMedium?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      else if (vm.filteredPlans.isEmpty)
+                        _EmptyMessage(
+                          message: vm.hasPlans
+                              ? 'No plans match your filters.'
+                              : online
+                              ? 'No public plans'
+                              : 'No upcoming plans in your saved copy. Connect to '
+                                    'see new ones.',
+                          onClear: vm.hasPlans ? vm.clearFilters : null,
+                        ),
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    r'$ up to 50k · $$ up to 150k · $$$ above. Plans add up.',
-                    style: text.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: _DashedDivider(color: colors.primary),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    'Featured Plans',
-                    style: text.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                if (!vm.hasSnapshot && vm.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (!vm.hasSnapshot)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Text(
-                      'Connect to discover plans',
-                      style: text.bodyMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  )
-                else if (vm.filteredPlans.isEmpty)
-                  _EmptyMessage(
-                    message: vm.hasPlans
-                        ? 'No plans match your filters.'
-                        : online
-                        ? 'No public plans'
-                        : 'No upcoming plans in your saved copy. Connect to '
-                              'see new ones.',
-                    onClear: vm.hasPlans ? vm.clearFilters : null,
-                  )
-                else
-                  for (final item in vm.filteredPlans)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: _FeaturedPlanCard(
-                        item: item,
-                        recommended: vm.isRecommended(item),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                PublicPlanDetailView(plan: item.plan),
+                if (vm.hasSnapshot && plans.isNotEmpty)
+                  SliverList.builder(
+                    itemCount: plans.length,
+                    itemBuilder: (context, index) {
+                      final item = plans[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: _FeaturedPlanCard(
+                          item: item,
+                          recommended: vm.isRecommended(item),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PublicPlanDetailView(plan: item.plan),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
+                  ),
                 if (vm.hasSnapshot) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Text(
-                      'Activities',
-                      style: text.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                          child: Text(
+                            'Activities',
+                            style: text.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        if (vm.hasPlanOnlyFilters)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                            child: Text(
+                              'The date filter applies to plans only.',
+                              style: text.bodySmall?.copyWith(
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        if (vm.filteredActivities.isEmpty)
+                          _EmptyMessage(
+                            message: vm.hasActivities
+                                ? 'No activities match your filters.'
+                                : 'No public activities',
+                            onClear: vm.hasActivities ? vm.clearFilters : null,
+                          ),
+                      ],
                     ),
                   ),
-                  if (vm.hasPlanOnlyFilters)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                      child: Text(
-                        'The date filter applies to plans only.',
-                        style: text.bodySmall?.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
+                  if (activities.isNotEmpty)
+                    SliverList.builder(
+                      itemCount: activities.length,
+                      itemBuilder: (context, index) =>
+                          ActivityCard(activity: activities[index]),
                     ),
-                  if (vm.filteredActivities.isEmpty)
-                    _EmptyMessage(
-                      message: vm.hasActivities
-                          ? 'No activities match your filters.'
-                          : 'No public activities',
-                      onClear: vm.hasActivities ? vm.clearFilters : null,
-                    )
-                  else
-                    for (final activity in vm.filteredActivities)
-                      ActivityCard(activity: activity),
                 ],
+                const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
               ],
             ),
           ),
