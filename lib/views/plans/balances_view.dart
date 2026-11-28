@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:plansync/model/models/balances_filter.dart';
 import 'package:plansync/model/models/friend_balance.dart';
@@ -7,7 +8,6 @@ import 'package:plansync/viewmodels/plans/balances_viewmodel.dart';
 import 'package:plansync/views/formatters/date_format.dart';
 import 'package:plansync/views/formatters/money_format.dart';
 import 'package:plansync/views/plans/friend_balance_view.dart';
-import 'package:plansync/views/widgets/avatar.dart';
 import 'package:plansync/views/widgets/offline_banner.dart';
 import 'package:plansync/views/widgets/payment_dialog.dart';
 import 'package:plansync/views/widgets/waiting_to_sync.dart';
@@ -283,7 +283,10 @@ class _FriendRow extends StatelessWidget {
       child: Column(
         children: [
           ListTile(
-            leading: UserAvatar(photoUrl: friend.photoUrl),
+            leading: _FriendAvatar(
+              name: friend.name,
+              photoUrl: friend.photoUrl,
+            ),
             title: Text(friend.name.isEmpty ? 'Unknown' : friend.name),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,6 +317,57 @@ class _FriendRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FriendAvatar extends StatelessWidget {
+  const _FriendAvatar({required this.name, required this.photoUrl});
+
+  final String name;
+  final String? photoUrl;
+
+  static const _size = 32.0;
+
+  String get _initials {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+    return parts.take(2).map((p) => p[0].toUpperCase()).join();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final initials = _initials;
+    final fallback = CircleAvatar(
+      radius: _size / 2,
+      backgroundColor: colors.surfaceContainerHighest,
+      child: initials.isEmpty
+          ? Icon(Icons.person_outline, size: 18, color: colors.onSurfaceVariant)
+          : Text(
+              initials,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+    );
+    final url = photoUrl;
+    if (url == null || url.isEmpty) return fallback;
+    final cacheSize = (_size * MediaQuery.devicePixelRatioOf(context)).round();
+
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: url,
+        width: _size,
+        height: _size,
+        fit: BoxFit.cover,
+        memCacheWidth: cacheSize,
+        memCacheHeight: cacheSize,
+        fadeInDuration: Duration.zero,
+        fadeOutDuration: Duration.zero,
+        placeholder: (_, _) => fallback,
+        errorWidget: (_, _, _) => fallback,
       ),
     );
   }
