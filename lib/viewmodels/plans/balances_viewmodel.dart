@@ -57,8 +57,8 @@ class BalancesViewModel extends ChangeNotifier {
     isUpdating = true;
     failed = false;
     notifyListeners();
-    try {
-      if (friends == null) {
+    if (friends == null) {
+      try {
         final saved = await _repository.savedBalances(_uid);
         if (load != _latestLoad) return;
         if (saved != null) {
@@ -66,14 +66,27 @@ class BalancesViewModel extends ChangeNotifier {
           isLoading = false;
           notifyListeners();
         }
+      } catch (_) {
+        if (load != _latestLoad) return;
+        _finishLoad(failed: true);
+        return;
       }
-      final result = await _repository.balances(_uid);
-      if (load != _latestLoad) return;
-      if (result != null) _show(result.friends, result.savedAt);
-    } catch (_) {
-      if (load != _latestLoad) return;
-      failed = true;
     }
+    return _repository
+        .balances(_uid)
+        .then((result) {
+          if (load != _latestLoad) return;
+          if (result != null) _show(result.friends, result.savedAt);
+          _finishLoad(failed: false);
+        })
+        .catchError((Object _) {
+          if (load != _latestLoad) return;
+          _finishLoad(failed: true);
+        });
+  }
+
+  void _finishLoad({required bool failed}) {
+    this.failed = failed;
     isLoading = false;
     isUpdating = false;
     notifyListeners();
