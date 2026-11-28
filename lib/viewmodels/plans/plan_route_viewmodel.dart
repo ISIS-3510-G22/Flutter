@@ -45,6 +45,7 @@ class PlanRouteViewModel extends ChangeNotifier {
       );
     }
     _savedStops = List.of(stops);
+    _stopPoints = _pointsOf(stops);
     _connectivitySub = ConnectivityRepository.instance.changes.listen((online) {
       if (online && shown == RouteShown.straightLines) loadRoute();
     });
@@ -80,11 +81,17 @@ class PlanRouteViewModel extends ChangeNotifier {
 
   bool get usingStraightLines => shown == RouteShown.straightLines;
 
-  List<LatLng> get stopPoints => stops.map((s) => s.point).toList();
+  List<LatLng> _stopPoints = const [];
+  int stopsVersion = 0;
+
+  List<LatLng> get stopPoints => _stopPoints;
+
+  static List<LatLng> _pointsOf(List<RouteStop> stops) =>
+      List.unmodifiable([for (final s in stops) s.point]);
 
   List<LatLng> get linePoints {
     final current = route;
-    if (current == null) return stopPoints;
+    if (current == null) return _stopPoints;
     return current.points;
   }
 
@@ -112,6 +119,8 @@ class PlanRouteViewModel extends ChangeNotifier {
     stops
       ..clear()
       ..addAll(renumbered);
+    _stopPoints = _pointsOf(stops);
+    stopsVersion++;
   }
 
   void moveStop(int oldIndex, int newIndex) {

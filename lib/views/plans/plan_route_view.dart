@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:plansync/model/models/activity.dart';
 import 'package:plansync/model/models/plan.dart';
 import 'package:plansync/model/models/plan_route.dart';
@@ -39,11 +40,12 @@ class _PlanRouteBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final online = context.watch<ConnectivityViewModel>().isOnline;
-    final vm = context.watch<PlanRouteViewModel>();
+    final hasStops = context.select<PlanRouteViewModel, bool>(
+      (vm) => vm.stops.isNotEmpty,
+    );
 
     Widget content;
-    if (vm.stops.isEmpty) {
+    if (!hasStops) {
       content = const Center(
         child: Padding(
           padding: EdgeInsets.all(32),
@@ -55,36 +57,21 @@ class _PlanRouteBody extends StatelessWidget {
         ),
       );
     } else {
-      content = _RouteMap(vm: vm, online: online);
+      content = const _RouteContent();
     }
 
     return Scaffold(
       body: Stack(
         children: [
           Positioned.fill(child: content),
-          Positioned(
+          const Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    _TopBar(vm: vm),
-                    if (!online && vm.shown == RouteShown.saved) ...[
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: const OfflineBanner(
-                          message:
-                              "You're offline. Showing the saved route; areas "
-                              "you haven't viewed may look blank.",
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                padding: EdgeInsets.all(12),
+                child: RepaintBoundary(child: _TopOverlay()),
               ),
             ),
           ),
@@ -94,14 +81,46 @@ class _PlanRouteBody extends StatelessWidget {
   }
 }
 
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.vm});
+class _TopOverlay extends StatelessWidget {
+  const _TopOverlay();
 
-  final PlanRouteViewModel vm;
+  @override
+  Widget build(BuildContext context) {
+    final online = context.select<ConnectivityViewModel, bool>(
+      (c) => c.isOnline,
+    );
+    final savedShown = context.select<PlanRouteViewModel, bool>(
+      (vm) => vm.shown == RouteShown.saved,
+    );
+
+    return Column(
+      children: [
+        const _TopBar(),
+        if (!online && savedShown) ...[
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: const OfflineBanner(
+              message:
+                  "You're offline. Showing the saved route; areas "
+                  "you haven't viewed may look blank.",
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar();
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final name = context.select<PlanRouteViewModel, String>(
+      (vm) => vm.plan.name,
+    );
 
     return Row(
       children: [
@@ -115,7 +134,7 @@ class _TopBar extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Text(
-                vm.plan.name,
+                name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(
@@ -130,16 +149,42 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _RouteMap extends StatelessWidget {
-  const _RouteMap({required this.vm, required this.online});
+class _RouteContent extends StatelessWidget {
+  const _RouteContent();
 
-  final PlanRouteViewModel vm;
-  final bool online;
+  @override
+  Widget build(BuildContext context) {
+    return const Stack(
+      children: [
+        RepaintBoundary(child: _RouteMap()),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: SafeArea(
+            top: false,
+            child: RepaintBoundary(child: _RouteSummary()),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
+class _RouteMap extends StatefulWidget {
+  const _RouteMap();
+
+  @override
+  State<_RouteMap> createState() => _RouteMapState();
+}
+
+class _RouteMapState extends State<_RouteMap> {
   static const _topOverlay = 72.0;
   static const _bottomOverlay = 230.0;
 
-  CameraFit _fit(BuildContext context) {
+  MapOptions? _options;
+
+  CameraFit _fit(List<LatLng> points) {
     final safe = MediaQuery.paddingOf(context);
     final padding = EdgeInsets.fromLTRB(
       40,
@@ -147,84 +192,84 @@ class _RouteMap extends StatelessWidget {
       40,
       safe.bottom + _bottomOverlay,
     );
-    if (vm.stops.length == 1) {
+    if (points.length == 1) {
       return CameraFit.coordinates(
-        coordinates: vm.stopPoints,
+        coordinates: points,
         padding: padding,
         maxZoom: 16,
       );
     }
     return CameraFit.bounds(
-      bounds: LatLngBounds.fromPoints(vm.stopPoints),
+      bounds: LatLngBounds.fromPoints(points),
       padding: padding,
       maxZoom: 17,
     );
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _options ??= MapOptions(
+      initialCameraFit: _fit(context.read<PlanRouteViewModel>().stopPoints),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final (linePoints, _, straightLines) = context
+        .select<PlanRouteViewModel, (List<LatLng>, int, bool)>(
+          (vm) => (vm.linePoints, vm.stopsVersion, vm.usingStraightLines),
+        );
+    final stops = Provider.of<PlanRouteViewModel>(context, listen: false).stops;
 
-    return Stack(
+    return FlutterMap(
+      options: _options!,
       children: [
-        FlutterMap(
-          options: MapOptions(initialCameraFit: _fit(context)),
-          children: [
-            TileLayer(
-              urlTemplate:
-                  'https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}',
-              additionalOptions: const {'apiKey': _geoapifyKey},
-              userAgentPackageName: 'com.example.plansync',
-              tileProvider: NetworkTileProvider(
-                cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
-                  overrideFreshAge: const Duration(days: 30),
+        TileLayer(
+          urlTemplate:
+              'https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}',
+          additionalOptions: const {'apiKey': _geoapifyKey},
+          userAgentPackageName: 'com.example.plansync',
+          tileProvider: NetworkTileProvider(
+            cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
+              overrideFreshAge: const Duration(days: 30),
+            ),
+          ),
+        ),
+        if (stops.length > 1)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: linePoints,
+                strokeWidth: 5,
+                color: colors.primary,
+                pattern: straightLines
+                    ? StrokePattern.dashed(segments: const [12, 8])
+                    : const StrokePattern.solid(),
+              ),
+            ],
+          ),
+        MarkerLayer(
+          markers: [
+            for (final stop in stops)
+              Marker(
+                point: stop.point,
+                width: 36,
+                height: 36,
+                child: _StopMarker(
+                  number: stop.number,
+                  onTap: () => _openActivity(context, stop.activity),
                 ),
               ),
-            ),
-            if (vm.stops.length > 1)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: vm.linePoints,
-                    strokeWidth: 5,
-                    color: colors.primary,
-                    pattern: vm.usingStraightLines
-                        ? StrokePattern.dashed(segments: const [12, 8])
-                        : const StrokePattern.solid(),
-                  ),
-                ],
-              ),
-            MarkerLayer(
-              markers: [
-                for (final stop in vm.stops)
-                  Marker(
-                    point: stop.point,
-                    width: 36,
-                    height: 36,
-                    child: _StopMarker(
-                      number: stop.number,
-                      onTap: () => _openActivity(context, stop.activity),
-                    ),
-                  ),
-              ],
-            ),
-            const RichAttributionWidget(
-              alignment: AttributionAlignment.bottomLeft,
-              attributions: [
-                TextSourceAttribution('Powered by Geoapify'),
-                TextSourceAttribution('© OpenStreetMap contributors'),
-              ],
-            ),
           ],
         ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: SafeArea(
-            top: false,
-            child: _RouteSummary(vm: vm, online: online),
-          ),
+        const RichAttributionWidget(
+          alignment: AttributionAlignment.bottomLeft,
+          attributions: [
+            TextSourceAttribution('Powered by Geoapify'),
+            TextSourceAttribution('© OpenStreetMap contributors'),
+          ],
         ),
       ],
     );
@@ -275,15 +320,17 @@ class _StopMarker extends StatelessWidget {
 }
 
 class _RouteSummary extends StatelessWidget {
-  const _RouteSummary({required this.vm, required this.online});
-
-  final PlanRouteViewModel vm;
-  final bool online;
+  const _RouteSummary();
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
+    final (_, orderPending, canReorder) = context
+        .select<PlanRouteViewModel, (int, bool, bool)>(
+          (vm) => (vm.stopsVersion, vm.orderPending, vm.canReorder),
+        );
+    final vm = Provider.of<PlanRouteViewModel>(context, listen: false);
 
     return Container(
       margin: const EdgeInsets.all(12),
@@ -300,26 +347,10 @@ class _RouteSummary extends StatelessWidget {
           if (vm.stops.length > 1)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
+              child: const Row(
                 children: [
-                  Expanded(
-                    child: _RouteTotals(vm: vm, online: online),
-                  ),
-                  SegmentedButton<TravelMode>(
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(
-                        value: TravelMode.walk,
-                        icon: Icon(Icons.directions_walk),
-                      ),
-                      ButtonSegment(
-                        value: TravelMode.drive,
-                        icon: Icon(Icons.directions_car),
-                      ),
-                    ],
-                    selected: {vm.mode},
-                    onSelectionChanged: (s) => vm.selectMode(s.first),
-                  ),
+                  Expanded(child: _RouteTotals()),
+                  _ModeSelector(),
                 ],
               ),
             ),
@@ -334,19 +365,19 @@ class _RouteSummary extends StatelessWidget {
                 style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
               ),
             ),
-          if (vm.orderPending || (vm.canReorder && vm.stops.length > 1))
+          if (orderPending || (canReorder && vm.stops.length > 1))
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
               child: Row(
                 children: [
-                  if (vm.canReorder && vm.stops.length > 1)
+                  if (canReorder && vm.stops.length > 1)
                     TextButton.icon(
                       onPressed: () => _openReorderSheet(context, vm),
                       icon: const Icon(Icons.swap_vert),
                       label: const Text('Reorder stops'),
                     ),
                   const Spacer(),
-                  if (vm.orderPending) const WaitingToSync(),
+                  if (orderPending) const WaitingToSync(),
                 ],
               ),
             ),
@@ -374,6 +405,34 @@ class _RouteSummary extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ModeSelector extends StatelessWidget {
+  const _ModeSelector();
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = context.select<PlanRouteViewModel, TravelMode>(
+      (vm) => vm.mode,
+    );
+
+    return SegmentedButton<TravelMode>(
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment(
+          value: TravelMode.walk,
+          icon: Icon(Icons.directions_walk),
+        ),
+        ButtonSegment(
+          value: TravelMode.drive,
+          icon: Icon(Icons.directions_car),
+        ),
+      ],
+      selected: {mode},
+      onSelectionChanged: (s) =>
+          context.read<PlanRouteViewModel>().selectMode(s.first),
     );
   }
 }
@@ -470,18 +529,21 @@ class _ReorderSheet extends StatelessWidget {
 }
 
 class _RouteTotals extends StatelessWidget {
-  const _RouteTotals({required this.vm, required this.online});
-
-  final PlanRouteViewModel vm;
-  final bool online;
+  const _RouteTotals();
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
-    final route = vm.route;
+    final online = context.select<ConnectivityViewModel, bool>(
+      (c) => c.isOnline,
+    );
+    final (isLoading, route) = context
+        .select<PlanRouteViewModel, (bool, PlanRoute?)>(
+          (vm) => (vm.isLoading, vm.route),
+        );
 
-    if (vm.isLoading) {
+    if (isLoading) {
       return const Align(
         alignment: Alignment.centerLeft,
         child: SizedBox(
